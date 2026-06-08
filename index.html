@@ -130,7 +130,6 @@
             margin-bottom: 15px;
             border-radius: 8px;
             border: 2px solid #ff4500;
-            display: none;
             position: relative;
         }
         .painel-calibracao {
@@ -154,14 +153,13 @@
             <input type="file" id="arquivoPlanilha" accept=".pdf, .xlsx, .xls, .csv, .txt">
         </div>
          
-        <button onclick="processarPlanilha()">Carregar e Analisar Arquivo</button>
+        <button onclick="processarPlanilha()">Carregar Rota</button>
     </div>
 
     <div class="card" id="secaoConferencia" style="display: none;">
         <h2>Passo 2: Roteirização e Mapa</h2>
         
         <div id="mapa-container"></div>
-        <button id="btnGerarMapa" onclick="gerarMapaEEncontrarRotas()" style="background-color: #007bff; margin-bottom: 15px;">🗺️ Roteirizar e Visualizar Mapa</button>
 
         <div class="painel-calibracao">
             <label for="ajusteOffset">🔢 Ajuste Manual de Paradas (Se necessário):</label>
@@ -320,6 +318,7 @@
             document.getElementById('secaoConferencia').style.display = 'block';
 
             recalculaVisualizacaoConferencia();
+            gerarMapaEEncontrarRotas();
         }
 
         function inicializarMapaBase() {
@@ -332,16 +331,10 @@
         }
 
         async function gerarMapaEEncontrarRotas() {
-            const containerMapa = document.getElementById('mapa-container');
-            containerMapa.style.display = 'block';
-            
-            // Inicializa e força a atualização do tamanho do contêiner para o mapa carregar visível
             inicializarMapaBase();
             setTimeout(() => { map.invalidateSize(); }, 200);
 
             if(listaEnderecosExtraidos.length === 0) {
-                alert("Nenhuma coluna estruturada de endereço foi detectada. Plotando marcador base na sua região operacional padrão.");
-                // Centraliza em ponto genérico ativo caso não ache strings de rua na planilha
                 map.setView([-23.5505, -46.6333], 10); 
                 return;
             }
