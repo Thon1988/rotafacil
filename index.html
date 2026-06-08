@@ -15,7 +15,7 @@
             padding: 15px;
             background-color: #f4f4f9;
             color: #333;
-            padding-bottom: 220px; /* Espaço para o painel de entrega inferior estilo Circuit */
+            padding-bottom: 220px;
         }
         h1, h2 {
             text-align: center;
@@ -72,10 +72,17 @@
         }
         .btn-maps {
             background-color: #28a745;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         .btn-maps:hover {
             background-color: #218838;
+        }
+        .btn-circuit {
+            background-color: #6f42c1;
+            margin-bottom: 10px;
+        }
+        .btn-circuit:hover {
+            background-color: #5a32a3;
         }
         #reader {
             width: 100%;
@@ -127,8 +134,6 @@
             margin-top: 15px;
             border: 1px solid #ccc;
         }
-
-        /* POPUP MODAL FIXO INFERIOR (ESTILO CIRCUIT APP) */
         .circuit-popup {
             position: fixed;
             bottom: 0;
@@ -226,7 +231,8 @@ Av. Paulista, 1000"></textarea>
         <h2>Passo 2: Gestão da Rota & Scanner</h2>
         <div class="info-rota" id="statusRota"></div>
         
-        <button class="btn-maps" onclick="abrirNoGoogleMaps()">🗺️ Abrir Rota no Google Maps</button>
+        <button class="btn-maps" onclick="abrirNoGoogleMaps()">🗺️ Abrir no Google Maps</button>
+        <button class="btn-circuit" onclick="abrirNoCircuit()">🔄 Jogar Rota para o App Circuit</button>
         
         <div id="reader"></div>
         <div id="resultado" class="aguardando">Aguardando leitura do código...</div>
@@ -237,4 +243,10 @@ Av. Paulista, 1000"></textarea>
     </div>
 
     <div id="popupCircuit" class="circuit-popup">
-        <div
+        <div class="circuit-popup-header">
+            <div id="popupParadaNumero" class="circuit-popup-title">📌 PARADA: --</div>
+            <div id="popupCodigoTexto" class="circuit-popup-codigo">------</div>
+        </div>
+        <div class="circuit-actions">
+            <button class="btn-action btn-falhou" onclick="registrarEntrega(false)">❌ Não Entregue</button>
+            <button class="btn-action btn-entregue" onclick="registrarEntrega(true)">✅
