@@ -114,7 +114,7 @@
 
     <script>
         let bancoDeDadosRotas = [];
-        let isProcessing = false; // Controle para evitar repetições contínuas do mesmo código
+        let isProcessing = false;
 
         function processarPlanilha() {
             const input = document.getElementById('arquivoPlanilha');
@@ -142,11 +142,11 @@
                         const linhasTexto = dados.split('\n');
                         bancoDeDadosRotas = linhasTexto
                             .map(linha => linha.trim().toUpperCase())
-                            .filter(linha => tabular => linha.length > 0);
+                            .filter(linha => validarCodigoRastreio(linha));
                     }
 
                     if (bancoDeDadosRotas.length === 0) {
-                        alert('Nenhum código de rastreio ou endereço válido foi identificado na planilha. Verifique o arquivo.');
+                        alert('Nenhum código de rastreio válido (padrão Shopee/Circuit) foi identificado na planilha. Verifique o arquivo.');
                         return;
                     }
 
@@ -168,13 +168,29 @@
             }
         }
 
+        // Valida se o texto realmente se parece com um código de barras de rastreio
+        function validarCodigoRastreio(texto) {
+            if (!texto) return false;
+            
+            // Padrões comuns: 
+            // - Padrão Shopee/Correios: BR023948239482A ou BR234234234234
+            // - Padrões de Logística/IDs longos: Letras seguidas de vários números (ex: LP000342342) ou apenas números longos (mínimo 9 dígitos)
+            const padraoShopee = /^[A-Z]{2}\d{9,15}[A-Z]?$/;
+            const padraoNumericoLongo = /^\d{9,25}$/;
+            const padraoGenericoRastreio = /^[A-Z0-9]{10,20}$/;
+
+            return padraoShopee.test(texto) || padraoNumericoLongo.test(texto) || (padraoGenericoRastreio.test(texto) && !/^[A-Z\s]+$/.test(texto));
+        }
+
         function extrairCodigosDeMatriz(matriz) {
             let codigos = [];
             for (let i = 0; i < matriz.length; i++) {
                 for (let j = 0; j < matriz[i].length; j++) {
                     if (matriz[i][j] !== undefined && matriz[i][j] !== null) {
                         let valor = String(matriz[i][j]).trim().toUpperCase();
-                        if (valor && valor.length > 4 && valor !== "CÓDIGO" && valor !== "RASTREIO" && valor !== "TRACKING") {
+                        
+                        // Executa o filtro de formato de rastreio para ignorar endereços, nomes e lixo
+                        if (validarCodigoRastreio(valor)) {
                             if (!codigos.includes(valor)) {
                                 codigos.push(valor);
                             }
@@ -193,7 +209,6 @@
         }
 
         function onScanSuccess(decodedText, decodedResult) {
-            // Se já estiver processando um código recente, ignora as próximas leituras instantâneas
             if (isProcessing) return;
             
             isProcessing = true;
@@ -213,7 +228,6 @@
                 falarTexto("Não encontrado");
             }
 
-            // Aguarda 3 segundos antes de resetar o scanner para o próximo pacote
             setTimeout(() => {
                 divResultado.className = "aguardando";
                 divResultado.innerHTML = "Aguardando leitura do próximo código...";
@@ -227,9 +241,7 @@
 
         function falarTexto(texto) {
             if ('speechSynthesis' in window) {
-                // Cancela falas anteriores que possam estar na fila
                 window.speechSynthesis.cancel();
-                
                 const utterance = new SpeechSynthesisUtterance(texto);
                 utterance.lang = 'pt-BR';
                 window.speechSynthesis.speak(utterance);
