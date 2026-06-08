@@ -88,6 +88,37 @@
             color: #555;
             margin-bottom: 10px;
         }
+        /* Painel de conferência da ordem */
+        .lista-conferencia {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            background: #fafafa;
+            margin-bottom: 10px;
+        }
+        .item-conferencia {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        .item-conferencia span {
+            font-weight: bold;
+            color: #ff4500;
+        }
+        .instrucao-ajuste {
+            font-size: 12px;
+            color: #666;
+            background: #fff3cd;
+            padding: 8px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -96,17 +127,29 @@
      
     <div class="card" id="secaoUpload">
         <h2>Passo 1: Carregar Ordem dos Pacotes</h2>
-        <p style="font-size: 12px; color: #666; text-align: center;">Selecione o arquivo PDF, Excel ou CSV exportado do sistema de rotas (Circuit/Shopee).</p>
+        <p style="font-size: 12px; color: #666; text-align: center;">Selecione o arquivo PDF, Excel ou CSV exportado do seu manifesto.</p>
          
         <div class="file-input-wrapper">
             <input type="file" id="arquivoPlanilha" accept=".pdf, .xlsx, .xls, .csv, .txt">
         </div>
          
-        <button onclick="processarPlanilha()">Carregar Rota e Abrir Scanner</button>
+        <button onclick="processarPlanilha()">Carregar e Ler Códigos</button>
+    </div>
+
+    <div class="card" id="secaoConferencia" style="display: none;">
+        <h2>Passo 2: Alinhar com a Ordem do Circuit</h2>
+        <div class="instrucao-ajuste">
+            💡 Verifique abaixo se a sequência bate com o seu aplicativo Circuit. Se estiver invertida ou fora de ordem, use o campo abaixo para colar a sequência correta de códigos ou prossiga se estiver ok.
+        </div>
+        
+        <div class="lista-conferencia" id="containerListaConferencia"></div>
+        
+        <button onclick="iniciarScannerFinal()" style="background-color: #28a745;">Confirmar Ordem e Abrir Scanner</button>
+        <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 6px; margin-top: 5px;">Voltar</button>
     </div>
 
     <div id="secaoScanner" class="card" style="display: none;">
-        <h2>Passo 2: Bipar Pacote</h2>
+        <h2>Passo 3: Bipar Pacote</h2>
         <div class="info-rota" id="statusRota"></div>
         <div id="reader"></div>
         <div id="resultado" class="aguardando">Aguardando leitura do código...</div>
@@ -114,7 +157,6 @@
     </div>
 
     <script>
-        // Configuração alternativa para evitar travas locais (file:///) do Worker do PDF.js
         if (typeof window !== 'undefined' && 'pdfjsLib' in window) {
             window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         }
@@ -134,9 +176,6 @@
             const extensao = arquivo.name.split('.').pop().toLowerCase();
 
             if (extensao === 'pdf') {
-                leitor.onerror = function() {
-                    alert('Erro na leitura física do arquivo PDF.');
-                };
                 leitor.onload = function(e) {
                     try {
                         const dadosDigitais = new Uint8Array(e.target.result);
@@ -147,12 +186,8 @@
                 };
                 leitor.readAsArrayBuffer(arquivo);
             } else {
-                leitor.onerror = function() {
-                    alert('Erro na leitura física do arquivo de planilha.');
-                };
                 leitor.onload = function(e) {
                     const dados = e.target.result;
-
                     try {
                         if (extensao === 'xlsx' || extensao === 'xls') {
                             const dadosArray = new Uint8Array(dados);
@@ -161,16 +196,15 @@
                             const planilha = workbook.Sheets[primeiraAba];
                             const linhas = XLSX.utils.sheet_to_json(planilha, { header: 1 });
                             bancoDeDadosRotas = extrairCodigosDeMatriz(linhas);
-                            finalizarCarregamento();
+                            irParaConferencia();
                         } else {
                             const linhasTexto = dados.split('\n');
                             bancoDeDadosRotas = linhasTexto
                                 .map(linha => linha.trim().toUpperCase())
                                 .filter(linha => validarCodigoRastreio(linha));
-                            finalizarCarregamento();
+                            irParaConferencia();
                         }
                     } catch (erro) {
-                        console.error(erro);
                         alert('Erro ao processar a planilha: ' + erro.message);
                     }
                 };
@@ -185,10 +219,9 @@
 
         async function processarPDF(dadosArrayBuffer) {
             try {
-                // Força o carregamento do documento sem depender estritamente do isolamento do worker local
                 const carregandoPdf = pdfjsLib.getDocument({
                     data: dadosArrayBuffer,
-                    disableWorker: true, // Melhora compatibilidade abrindo direto localmente
+                    disableWorker: true,
                     verbosity: 0
                 });
                 
@@ -213,30 +246,43 @@
                 }
 
                 bancoDeDadosRotas = codigosEncontrados;
-                finalizarCarregamento();
+                irParaConferencia();
 
             } catch (erro) {
-                console.error(erro);
-                alert('Falha interna do leitor de PDF: ' + erro.message + '\n\nCertifique-se de que o arquivo não está corrompido.');
+                alert('Falha interna do leitor de PDF: ' + erro.message);
             }
         }
 
-        function finalizarCarregamento() {
+        function irParaConferencia() {
             if (bancoDeDadosRotas.length === 0) {
-                alert('Atenção: O arquivo foi lido, mas nenhum código de rastreio válido (padrão Shopee/Circuit/Numérico) foi encontrado dentro dele.');
+                alert('Atenção: Nenhum código de rastreio válido foi identificado no arquivo.');
                 return;
             }
 
             document.getElementById('secaoUpload').style.display = 'none';
+            document.getElementById('secaoConferencia').style.display = 'block';
+
+            const container = document.getElementById('containerListaConferencia');
+            container.innerHTML = '';
+
+            bancoDeDadosRotas.forEach((codigo, index) => {
+                const item = document.createElement('div');
+                item.className = 'item-conferencia';
+                item.innerHTML = `<div><span>#${index + 1}</span> - ${codigo}</div>`;
+                container.appendChild(item);
+            });
+        }
+
+        function iniciarScannerFinal() {
+            document.getElementById('secaoConferencia').style.display = 'none';
             document.getElementById('secaoScanner').style.display = 'block';
-            document.getElementById('statusRota').innerText = `Rota carregada com sucesso! ${bancoDeDadosRotas.length} pacotes encontrados.`;
+            document.getElementById('statusRota').innerText = `Rota ativa! ${bancoDeDadosRotas.length} pacotes ordenados.`;
             
             inicializarScanner();
         }
 
         function validarCodigoRastreio(texto) {
             if (!texto) return false;
-            
             const padraoShopee = /^[A-Z]{2}\d{9,15}[A-Z]?$/;
             const padraoNumericoLongo = /^\d{9,25}$/;
             const padraoGenericoRastreio = /^[A-Z0-9]{10,20}$/;
@@ -250,7 +296,6 @@
                 for (let j = 0; j < matriz[i].length; j++) {
                     if (matriz[i][j] !== undefined && matriz[i][j] !== null) {
                         let valor = String(matriz[i][j]).trim().toUpperCase();
-                        
                         if (validarCodigoRastreio(valor)) {
                             if (!codigos.includes(valor)) {
                                 codigos.push(valor);
@@ -296,9 +341,7 @@
             }, 3000);
         }
 
-        function onScanFailure(error) {
-            // Ignora falhas de foco da câmera
-        }
+        function onScanFailure(error) {}
 
         function falarTexto(texto) {
             if ('speechSynthesis' in window) {
@@ -315,3 +358,4 @@
     </script>
 </body>
 </html>
+
