@@ -249,4 +249,331 @@
         let markerGroup = null;
 
         function alternarAba(idAba, botao) {
-            // Remove a classe ativa
+            // Remove a classe ativa usando display, mas preservando o estado interno do DOM
+            document.querySelectorAll('.conteudo-aba').forEach(aba => aba.classList.remove('ativa'));
+            document.querySelectorAll('.aba-botao').forEach(btn => btn.classList.remove('ativa'));
+            
+            document.getElementById(idAba).classList.add('ativa');
+            botao.classList.add('ativa');
+
+            // Recalcula o tamanho do mapa imediatamente ao alternar abas para não quebrar a exibição
+            if (map !== null) {
+                map.invalidateSize();
+            }
+        }
+
+        function processarPlanilha() {
+            const input = document.getElementById('arquivoPlanilha');
+            if (!input || input.files.length === 0) {
+                alert('Por favor, selecione um arquivo válido primeiro.');
+                return;
+            }
+
+            const arquivo = input.files[0];
+            const leitor = new FileReader();
+            const extensao = arquivo.name.split('.').pop().toLowerCase();
+
+            if (extensao === 'pdf') {
+                leitor.onload = function(e) {
+                    try {
+                        const dadosDigitais = new Uint8Array(e.target.result);
+                        processarPDF(dadosDigitais);
+                    } catch (err) {
+                        alert('Erro ao iniciar processamento do PDF: ' + err.message);
+                    }
+                };
+                leitor.readAsArrayBuffer(arquivo);
+            } else {
+                leitor.onload = function(e) {
+                    const dados = e.target.result;
+                    try {
+                        if (extensao === 'xlsx' || extensao === 'xls') {
+                            const dadosArray = new Uint8Array(dados);
+                            const workbook = XLSX.read(dadosArray, { type: 'array' });
+                            const primeiraAba = workbook.SheetNames[0];
+                            const planilha = workbook.Sheets[primeiraAba];
+                            const linhas = XLSX.utils.sheet_to_json(planilha, { header: 1 });
+                            
+                            bancoDeDadosRotas = extrairCodigosDeMatriz(linhas);
+                            tentarMapearEnderecosExcel(linhas);
+                            irParaConferencia();
+                        } else {
+                            const linhasTexto = dados.split('\n');
+                            bancoDeDadosRotas = linhasTexto
+                                .map(linha => linha.trim().toUpperCase())
+                                .filter(linha => validarCodigoRastreio(linha));
+                            irParaConferencia();
+                        }
+                    } catch (erro) {
+                        alert('Erro ao processar a planilha: ' + erro.message);
+                    }
+                };
+
+                if (extensao === 'xlsx' || extensao === 'xls') {
+                    leitor.readAsArrayBuffer(arquivo);
+                } else {
+                    leitor.readAsText(arquivo, 'UTF-8');
+                }
+            }
+        }
+
+        async function processarPDF(dadosArrayBuffer) {
+            try {
+                const carregandoPdf = pdfjsLib.getDocument({
+                    data: dadosArrayBuffer,
+                    disableWorker: true,
+                    verbosity: 0
+                });
+                
+                const pdf = await carregandoPdf.promise;
+                let codigosEncontrados = [];
+
+                for (let numPagina = 1; numPagina <= pdf.numPages; numPagina++) {
+                    const pagina = await pdf.getPage(numPagina);
+                    const conteudoTexto = await pagina.getTextContent();
+                    
+                    const textoPagina = conteudoTexto.items.map(item => item.str).join(' ');
+                    const palavras = textoPagina.split(/[\s,;|\n]+/);
+
+                    palavras.forEach(palavra => {
+                        let codigoLimpo = palavra.trim().toUpperCase();
+                        if (validarCodigoRastreio(codigoLimpo)) {
+                            if (!codigosEncontrados.includes(codigoLimpo)) {
+                                codigosEncontrados.push(codigoLimpo);
+                            }
+                        }
+                    });
+                }
+
+                bancoDeDadosRotas = codigosEncontrados;
+                irParaConferencia();
+
+            } catch (erro) {
+                alert('Falha interna do leitor de PDF: ' + erro.message);
+            }
+        }
+
+        function tentarMapearEnderecosExcel(linhas) {
+            listaEnderecosExtraidos = [];
+            if(linhas.length < 2) return;
+            
+            let cabecalho = linhas[0].map(c => String(c).toLowerCase());
+            let idxEndereco = cabecalho.findIndex(c => c.includes('endereço') || c.includes('rua') || c.includes('logradouro') || c.includes('address'));
+            let idxCidade = cabecalho.findIndex(c => c.includes('cidade') || c.includes('municipio') || c.includes('city'));
+
+            if(idxEndereco !== -1) {
+                for(let i = 1; i < linhas.length; i++) {
+                    if(linhas[i][idxEndereco]) {
+                        let compl = idxCidade !== -1 && linhas[i][idxCidade] ? ', ' + linhas[i][idxCidade] : '';
+                        listaEnderecosExtraidos.push(String(linhas[i][idxEndereco]) + compl);
+                    }
+                }
+            }
+        }
+
+        function irParaConferencia() {
+            if (bancoDeDadosRotas.length === 0) {
+                alert('Atenção: Nenhum código de rastreio com padrão inicial válido foi identificado.');
+                return;
+            }
+
+            document.getElementById('secaoUpload').style.display = 'none';
+            document.getElementById('secaoConferencia').style.display = 'block';
+
+            recalculaVisualizacaoConferencia();
+            renderizarListaEnderecosBrutos();
+            gerarMapaEEncontrarRotas();
+        }
+
+        function inicializarMapaBase() {
+            if (map !== null) return;
+            map = L.map('mapa-container').setView([-15.7801, -47.9292], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            markerGroup = L.layerGroup().addTo(map);
+        }
+
+        async function gerarMapaEEncontrarRotas() {
+            inicializarMapaBase();
+            
+            // Força o contêiner do mapa a se ajustar às dimensões reais antes do fetch geométrico
+            setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+
+            if(listaEnderecosExtraidos.length === 0) {
+                map.setView([-23.5505, -46.6333], 10); 
+                return;
+            }
+
+            markerGroup.clearLayers();
+            let coordenadasRota = [];
+
+            for (let i = 0; i < Math.min(listaEnderecosExtraidos.length, 25); i++) { 
+                try {
+                    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(listaEnderecosExtraidos[i])}&limit=1`;
+                    let resposta = await fetch(url);
+                    let dados = await resposta.json();
+                    
+                    if(dados && dados.length > 0) {
+                        let lat = parseFloat(dados[0].lat);
+                        let lon = parseFloat(dados[0].lon);
+                        coordenadasRota.push([lat, lon]);
+
+                        L.marker([lat, lon])
+                            .addTo(markerGroup)
+                            .bindPopup(`<b>Parada #${i+1}</b><br>${listaEnderecosExtraidos[i]}`);
+                    }
+                } catch(e) {
+                    console.log("Erro na busca do ponto: " + i);
+                }
+            }
+
+            if(coordenadasRota.length > 1) {
+                let linhaRota = L.polyline(coordenadasRota, {color: '#ff4500', weight: 4}).addTo(markerGroup);
+                map.fitBounds(linhaRota.getBounds());
+            } else if(coordenadasRota.length === 1) {
+                map.setView(coordenadasRota[0], 14);
+            }
+        }
+
+        function renderizarListaEnderecosBrutos() {
+            const container = document.getElementById('containerListaEnderecos');
+            container.innerHTML = '';
+            
+            if(listaEnderecosExtraidos.length === 0) {
+                container.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">Nenhum endereço de texto bruto mapeado na planilha.</div>';
+                return;
+            }
+
+            listaEnderecosExtraidos.forEach((end, idx) => {
+                const item = document.createElement('div');
+                item.className = 'item-conferencia';
+                item.innerHTML = `<div><span>Ponto #${idx+1}</span> - ${end}</div>`;
+                container.appendChild(item);
+            });
+        }
+
+        function aplicarOrdenacaoManual() {
+            const texto = document.getElementById('textoOrdemManual').value;
+            if (!texto.trim()) return;
+
+            const potenciaisCodigos = texto.split(/[\s,;|\n]+/);
+            let novaOrdem = [];
+
+            potenciaisCodigos.forEach(item => {
+                let limpo = item.trim().toUpperCase();
+                if (validarCodigoRastreio(limpo) && !novaOrdem.includes(limpo)) {
+                    novaOrdem.push(limpo);
+                }
+            });
+
+            if (novaOrdem.length > 0) {
+                bancoDeDadosRotas = novaOrdem;
+                recalculaVisualizacaoConferencia();
+            }
+        }
+
+        function recalculaVisualizacaoConferencia() {
+            const container = document.getElementById('containerListaConferencia');
+            container.innerHTML = '';
+            const offset = parseInt(document.getElementById('ajusteOffset').value, 10);
+
+            bancoDeDadosRotas.forEach((codigo, index) => {
+                const item = document.createElement('div');
+                item.className = 'item-conferencia';
+                const numeroExibido = (index + 1) + offset;
+                item.innerHTML = `<div><span>#${numeroExibido}</span> - ${codigo}</div>`;
+                container.appendChild(item);
+            });
+        }
+
+        function iniciarScannerFinal() {
+            document.getElementById('secaoConferencia').style.display = 'none';
+            document.getElementById('secaoScanner').style.display = 'block';
+            document.getElementById('statusRota').innerText = `Rota ativa! ${bancoDeDadosRotas.length} pacotes carregados em memória.`;
+            
+            inicializarScanner();
+        }
+
+        function validarCodigoRastreio(texto) {
+            if (!texto) return false;
+            const padraoLetrasIniciais = /^[A-Z]{2}\d{9,15}[A-Z]?$/; 
+            return padraoLetrasIniciais.test(texto);
+        }
+
+        function extrairCodigosDeMatriz(matriz) {
+            let codigos = [];
+            for (let i = 0; i < matriz.length; i++) {
+                for (let j = 0; j < matriz[i].length; j++) {
+                    if (matriz[i][j] !== undefined && matriz[i][j] !== null) {
+                        let valor = String(matriz[i][j]).trim().toUpperCase();
+                        if (validarCodigoRastreio(valor) && !codigos.includes(valor)) {
+                            codigos.push(valor);
+                        }
+                    }
+                }
+            }
+            return codigos;
+        }
+
+        function determinarPosicaoFinal(codigoBipado) {
+            let index = bancoDeDadosRotas.indexOf(codigoBipado);
+            if (index !== -1) return index;
+            for (let i = 0; i < bancoDeDadosRotas.length; i++) {
+                if (bancoDeDadosRotas[i].includes(codigoBipado) || codigoBipado.includes(bancoDeDadosRotas[i])) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        function inicializarScanner() {
+            const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 15, qrbox: 260 });
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            if (isProcessing) return;
+            isProcessing = true;
+            
+            const codigoBipado = decodedText.trim().toUpperCase();
+            const divResultado = document.getElementById('resultado');
+            const posicao = determinarPosicaoFinal(codigoBipado);
+
+            if (posicao !== -1) {
+                const offset = parseInt(document.getElementById('ajusteOffset').value, 10);
+                const numeroParada = (posicao + 1) + offset;
+                
+                divResultado.className = "sucesso";
+                divResultado.innerHTML = `📌 PARADA: ${numeroParada}<br><span style="font-size:14px;">Código: ${codigoBipado}</span>`;
+                falarTexto Levantamento(`Parada ${numeroParada}`);
+            } else {
+                divResultado.className = "erro";
+                divResultado.innerHTML = `❌ NÃO ENCONTRADO<br><span style="font-size:14px;">Código: ${codigoBipado}</span>`;
+                falarTexto("Não encontrado");
+            }
+
+            setTimeout(() => {
+                divResultado.className = "aguardando";
+                divResultado.innerHTML = "Aguardando leitura do próximo código...";
+                isProcessing = false;
+            }, 3000);
+        }
+
+        function onScanFailure(error) {}
+
+        function falarTexto(texto) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(texto);
+                utterance.lang = 'pt-BR';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function reiniciarApp() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>
