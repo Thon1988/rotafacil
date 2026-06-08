@@ -133,4 +133,368 @@
         }
         .painel-calibracao {
             background: #e2f0fd;
-            border-
+            border-left: 4px solid #007bff;
+            padding: 12px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>📦 Rota Fácil</h1>
+     
+    <div class="card" id="secaoUpload">
+        <h2>Passo 1: Carregar Base da Rota</h2>
+        <p style="font-size: 12px; color: #666; text-align: center;">Selecione a planilha Excel ou relatório em PDF.</p>
+         
+        <div class="file-input-wrapper">
+            <input type="file" id="arquivoPlanilha" accept=".pdf, .xlsx, .xls, .csv, .txt">
+        </div>
+         
+        <button onclick="processarPlanilha()">Carregar e Analisar Arquivo</button>
+    </div>
+
+    <div class="card" id="secaoConferencia" style="display: none;">
+        <h2>Passo 2: Roteirização e Mapa</h2>
+        
+        <div id="mapa-container"></div>
+        <button onclick="gerarMapaEEncontrarRotas()" style="background-color: #007bff; margin-bottom: 15px;">🗺️ Roteirizar e Plotar no Mapa</button>
+
+        <div class="painel-calibracao">
+            <label for="ajusteOffset">🔢 Ajuste Fino Numérico (Offset):</label>
+            <select id="ajusteOffset" onchange="recalculaVisualizacaoConferencia()" style="width:100%; padding:8px; margin-top:5px; border-radius:4px;">
+                <option value="0">Sem deslocamento (Parada normal)</option>
+                <option value="-1">Subtrair 1 (Bipa 4 vira 3)</option>
+                <option value="1">Somar 1 (Bipa 4 vira 5)</option>
+            </select>
+            
+            <label style="display:block; margin-top:10px;">📋 Forçar Sequência Customizada:</label>
+            <textarea id="textoOrdemManual" placeholder="Cole códigos na sequência correta..."></textarea>
+            <button onclick="aplicarOrdenacaoManual()" style="background-color: #6c757d; font-size:12px; padding:6px; margin-top:5px;">Aplicar Ordem Colada</button>
+        </div>
+        
+        <div class="lista-conferencia" id="containerListaConferencia"></div>
+        
+        <button onclick="iniciarScannerFinal()" style="background-color: #28a745;">Confirmar Rota e Abrir Scanner</button>
+        <button onclick="reiniciarApp()" style="background-color: #dc3545; font-size: 12px; padding: 6px; margin-top: 5px;">Reiniciar Processo</button>
+    </div>
+
+    <div id="secaoScanner" class="card" style="display: none;">
+        <h2>Passo 3: Bipar Pacote</h2>
+        <div class="info-rota" id="statusRota"></div>
+        <div id="reader"></div>
+        <div id="resultado" class="aguardando">Aguardando leitura do código...</div>
+        <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 6px; margin-top: 15px;">Trocar Planilha / PDF</button>
+    </div>
+
+    <script>
+        if (typeof window !== 'undefined' && 'pdfjsLib' in window) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        }
+
+        let bancoDeDadosRotas = [];
+        let listaEnderecosExtraidos = [];
+        let isProcessing = false;
+        let map = null;
+        let markerGroup = null;
+
+        function processarPlanilha() {
+            const input = document.getElementById('arquivoPlanilha');
+            if (!input || input.files.length === 0) {
+                alert('Por favor, selecione um arquivo válido primeiro.');
+                return;
+            }
+
+            const arquivo = input.files[0];
+            const leitor = new FileReader();
+            const extensao = arquivo.name.split('.').pop().toLowerCase();
+
+            if (extensao === 'pdf') {
+                leitor.onload = function(e) {
+                    try {
+                        const dadosDigitais = new Uint8Array(e.target.result);
+                        processarPDF(dadosDigitais);
+                    } catch (err) {
+                        alert('Erro ao iniciar processamento do PDF: ' + err.message);
+                    }
+                };
+                leitor.readAsArrayBuffer(arquivo);
+            } else {
+                leitor.onload = function(e) {
+                    const dados = e.target.result;
+                    try {
+                        if (extensao === 'xlsx' || extensao === 'xls') {
+                            const dadosArray = new Uint8Array(dados);
+                            const workbook = XLSX.read(dadosArray, { type: 'array' });
+                            const primeiraAba = workbook.SheetNames[0];
+                            const planilha = workbook.Sheets[primeiraAba];
+                            const linhas = XLSX.utils.sheet_to_json(planilha, { header: 1 });
+                            
+                            bancoDeDadosRotas = extrairCodigosDeMatriz(linhas);
+                            tentarMapearEnderecosExcel(linhas);
+                            irParaConferencia();
+                        } else {
+                            const linhasTexto = dados.split('\n');
+                            bancoDeDadosRotas = linhasTexto
+                                .map(linha => linha.trim().toUpperCase())
+                                .filter(linha => validarCodigoRastreio(linha));
+                            irParaConferencia();
+                        }
+                    } catch (erro) {
+                        alert('Erro ao processar a planilha: ' + erro.message);
+                    }
+                };
+
+                if (extensao === 'xlsx' || extensao === 'xls') {
+                    leitor.readAsArrayBuffer(arquivo);
+                } else {
+                    leitor.readAsText(arquivo, 'UTF-8');
+                }
+            }
+        }
+
+        async function processarPDF(dadosArrayBuffer) {
+            try {
+                const carregandoPdf = pdfjsLib.getDocument({
+                    data: dadosArrayBuffer,
+                    disableWorker: true,
+                    verbosity: 0
+                });
+                
+                const pdf = await carregandoPdf.promise;
+                let codigosEncontrados = [];
+
+                for (let numPagina = 1; numPagina <= pdf.numPages; numPagina++) {
+                    const pagina = await pdf.getPage(numPagina);
+                    const conteudoTexto = await pagina.getTextContent();
+                    
+                    const textoPagina = conteudoTexto.items.map(item => item.str).join(' ');
+                    const palavras = textoPagina.split(/[\s,;|\n]+/);
+
+                    palavras.forEach(palavra => {
+                        let codigoLimpo = palavra.trim().toUpperCase();
+                        if (validarCodigoRastreio(codigoLimpo)) {
+                            if (!codigosEncontrados.includes(codigoLimpo)) {
+                                codigosEncontrados.push(codigoLimpo);
+                            }
+                        }
+                    });
+                }
+
+                bancoDeDadosRotas = codigosEncontrados;
+                irParaConferencia();
+
+            } catch (erro) {
+                alert('Falha interna do leitor de PDF: ' + erro.message);
+            }
+        }
+
+        function tentarMapearEnderecosExcel(linhas) {
+            listaEnderecosExtraidos = [];
+            if(linhas.length < 2) return;
+            
+            let cabecalho = linhas[0].map(c => String(c).toLowerCase());
+            let idxEndereco = cabecalho.findIndex(c => c.includes('endereço') || c.includes('rua') || c.includes('logradouro') || c.includes('address'));
+            let idxCidade = cabecalho.findIndex(c => c.includes('cidade') || c.includes('municipio') || c.includes('city'));
+
+            if(idxEndereco !== -1) {
+                for(let i = 1; i < linhas.length; i++) {
+                    if(linhas[i][idxEndereco]) {
+                        let compl = idxCidade !== -1 && linhas[i][idxCidade] ? ', ' + linhas[i][idxCidade] : '';
+                        listaEnderecosExtraidos.push(String(linhas[i][idxEndereco]) + compl);
+                    }
+                }
+            }
+        }
+
+        function irParaConferencia() {
+            if (bancoDeDadosRotas.length === 0) {
+                alert('Atenção: Nenhum código de rastreio válido foi identificado.');
+                return;
+            }
+
+            document.getElementById('secaoUpload').style.display = 'none';
+            document.getElementById('secaoConferencia').style.display = 'block';
+
+            recalculaVisualizacaoConferencia();
+            inicializarMapaBase();
+        }
+
+        function inicializarMapaBase() {
+            if (map !== null) return;
+            // Centraliza o mapa por padrão no Brasil
+            map = L.map('mapa-container').setView([-15.7801, -47.9292], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            markerGroup = L.layerGroup().addTo(map);
+        }
+
+        async function gerarMapaEEncontrarRotas() {
+            document.getElementById('mapa-container').style.display = 'block';
+            if(map) map.invalidateSize();
+
+            if(listaEnderecosExtraidos.length === 0) {
+                alert("Nenhuma coluna de endereço explícita foi detectada na planilha. Plotando visualização aproximada de logística baseada em rotas locais.");
+                return;
+            }
+
+            markerGroup.clearLayers();
+            let coordenadasRota = [];
+
+            // Consome a API Nominatim para converter texto de endereço em coordenadas de mapa
+            for (let i = 0; i < Math.min(listaEnderecosExtraidos.length, 15); i++) { 
+                try {
+                    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(listaEnderecosExtraidos[i])}&limit=1`;
+                    let resposta = await fetch(url);
+                    let dados = await resposta.json();
+                    
+                    if(dados && dados.length > 0) {
+                        let lat = parseFloat(dados[0].lat);
+                        let lon = parseFloat(dados[0].lon);
+                        coordenadasRota.push([lat, lon]);
+
+                        L.marker([lat, lon])
+                            .addTo(markerGroup)
+                            .bindPopup(`<b>Parada #${i+1}</b><br>${listaEnderecosExtraidos[i]}`);
+                    }
+                } catch(e) {
+                    console.log("Erro na busca de coordenadas do ponto: " + i);
+                }
+            }
+
+            if(coordenadasRota.length > 1) {
+                let linhaRota = L.polyline(coordenadasRota, {color: '#ff4500', weight: 4}).addTo(markerGroup);
+                map.fitBounds(linhaRota.getBounds());
+            } else if(coordenadasRota.length === 1) {
+                map.setView(coordenadasRota[0], 14);
+            }
+        }
+
+        function aplicarOrdenacaoManual() {
+            const texto = document.getElementById('textoOrdemManual').value;
+            if (!texto.trim()) return;
+
+            const potenciaisCodigos = texto.split(/[\s,;|\n]+/);
+            let novaOrdem = [];
+
+            potenciaisCodigos.forEach(item => {
+                let limpo = item.trim().toUpperCase();
+                if (validarCodigoRastreio(limpo) && !novaOrdem.includes(limpo)) {
+                    novaOrdem.push(limpo);
+                }
+            });
+
+            if (novaOrdem.length > 0) {
+                bancoDeDadosRotas = novaOrdem;
+                recalculaVisualizacaoConferencia();
+            }
+        }
+
+        function recalculaVisualizacaoConferencia() {
+            const container = document.getElementById('containerListaConferencia');
+            container.innerHTML = '';
+            const offset = parseInt(document.getElementById('ajusteOffset').value, 10);
+
+            bancoDeDadosRotas.forEach((codigo, index) => {
+                const item = document.createElement('div');
+                item.className = 'item-conferencia';
+                const numeroExibido = (index + 1) + offset;
+                item.innerHTML = `<div><span>#${numeroExibido}</span> - ${codigo}</div>`;
+                container.appendChild(item);
+            });
+        }
+
+        function iniciarScannerFinal() {
+            document.getElementById('secaoConferencia').style.display = 'none';
+            document.getElementById('secaoScanner').style.display = 'block';
+            document.getElementById('statusRota').innerText = `Rota ativa! ${bancoDeDadosRotas.length} pacotes mapeados.`;
+            
+            inicializarScanner();
+        }
+
+        function validarCodigoRastreio(texto) {
+            if (!texto) return false;
+            const padraoShopee = /^[A-Z]{2}\d{9,15}[A-Z]?$/;
+            const padraoNumericoLongo = /^\d{9,25}$/;
+            const padraoGenericoRastreio = /^[A-Z0-9]{10,20}$/;
+            return padraoShopee.test(texto) || padraoNumericoLongo.test(texto) || (padraoGenericoRastreio.test(texto) && !/^[A-Z\s]+$/.test(texto));
+        }
+
+        function extrairCodigosDeMatriz(matriz) {
+            let codigos = [];
+            for (let i = 0; i < matriz.length; i++) {
+                for (let j = 0; j < matriz[i].length; j++) {
+                    if (matriz[i][j] !== undefined && matriz[i][j] !== null) {
+                        let valor = String(matriz[i][j]).trim().toUpperCase();
+                        if (validarCodigoRastreio(valor) && !codigos.includes(valor)) {
+                            codigos.push(valor);
+                        }
+                    }
+                }
+            }
+            return codigos;
+        }
+
+        function determinarPosicaoFinal(codigoBipado) {
+            let index = bancoDeDadosRotas.indexOf(codigoBipado);
+            if (index !== -1) return index;
+            for (let i = 0; i < bancoDeDadosRotas.length; i++) {
+                if (bancoDeDadosRotas[i].includes(codigoBipado) || codigoBipado.includes(bancoDeDadosRotas[i])) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        function inicializarScanner() {
+            const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 15, qrbox: 260 });
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            if (isProcessing) return;
+            isProcessing = true;
+            
+            const codigoBipado = decodedText.trim().toUpperCase();
+            const divResultado = document.getElementById('resultado');
+            const posicao = determinarPosicaoFinal(codigoBipado);
+
+            if (posicao !== -1) {
+                const offset = parseInt(document.getElementById('ajusteOffset').value, 10);
+                const numeroParada = (posicao + 1) + offset;
+                
+                divResultado.className = "sucesso";
+                divResultado.innerHTML = `📌 PARADA: ${numeroParada}<br><span style="font-size:14px;">Código: ${codigoBipado}</span>`;
+                falarTexto(`Parada ${numeroParada}`);
+            } else {
+                divResultado.className = "erro";
+                divResultado.innerHTML = `❌ NÃO ENCONTRADO<br><span style="font-size:14px;">Código: ${codigoBipado}</span>`;
+                falarTexto("Não encontrado");
+            }
+
+            setTimeout(() => {
+                divResultado.className = "aguardando";
+                divResultado.innerHTML = "Aguardando leitura do próximo código...";
+                isProcessing = false;
+            }, 3000);
+        }
+
+        function onScanFailure(error) {}
+
+        function falarTexto(texto) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(texto);
+                utterance.lang = 'pt-BR';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function reiniciarApp() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>
