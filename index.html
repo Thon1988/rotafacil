@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Roteirizador - Numera Fácil Pro</title>
-    <!-- Biblioteca para ler arquivos Excel -->
-    <script src="https://cloudflare.com"></script>
-    <!-- Biblioteca para ler código de barras pela câmera -->
-    <script src="https://cloudflare.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -89,7 +87,6 @@
 
     <h1>📦 Numera Fácil Web Pro</h1>
     
-    <!-- PASSO 1: CARREGAR EXCEL OU PLANILHA -->
     <div class="card" id="secaoUpload">
         <h2>Passo 1: Carregar Planilha da Rota</h2>
         <p style="font-size: 12px; color: #666; text-align: center;">Selecione o arquivo Excel exportado do sistema de rotas (Circuit/Shopee).</p>
@@ -101,7 +98,6 @@
         <button onclick="processarPlanilha()">Carregar Rota e Abrir Scanner</button>
     </div>
 
-    <!-- PASSO 2: ESCANEAR -->
     <div id="secaoScanner" class="card" style="display: none;">
         <h2>Passo 2: Bipar Pacote</h2>
         <div class="info-rota" id="statusRota"></div>
@@ -129,40 +125,46 @@
             leitor.onload = function(e) {
                 const dados = e.target.result;
 
-                if (extensao === 'xlsx' || extensao === 'xls') {
-                    // Processa arquivos Excel (.xlsx / .xls)
-                    const workbook = XLSX.read(dados, { type: 'binary' });
-                    const primeiraAba = workbook.SheetNames[0];
-                    const planilha = workbook.Sheets[primeiraAba];
-                    
-                    // Converte a planilha em matriz de linhas/colunas
-                    const linhas = XLSX.utils.sheet_to_json(planilha, { header: 1 });
-                    
-                    // Extrai os códigos (achando a coluna que possui os códigos de rastreio)
-                    bancoDeDadosRotas = extrairCodigosDeMatriz(linhas);
-                } else {
-                    // Processa arquivos de texto (.csv / .txt)
-                    const linhasTexto = dados.split('\n');
-                    bancoDeDadosRotas = linhasTexto
-                        .map(linha => linha.trim().toUpperCase())
-                        .filter(linha => linha.length > 0);
-                }
+                try {
+                    if (extensao === 'xlsx' || extensao === 'xls') {
+                        // Processa arquivos Excel (.xlsx / .xls)
+                        const dadosArray = new Uint8Array(dados);
+                        const workbook = XLSX.read(dadosArray, { type: 'array' });
+                        const primeiraAba = workbook.SheetNames[0];
+                        const planilha = workbook.Sheets[primeiraAba];
+                        
+                        // Converte a planilha em matriz de linhas/colunas
+                        const linhas = XLSX.utils.sheet_to_json(planilha, { header: 1 });
+                        
+                        // Extrai os códigos (achando a coluna que possui os códigos de rastreio)
+                        bancoDeDadosRotas = extrairCodigosDeMatriz(linhas);
+                    } else {
+                        // Processa arquivos de texto (.csv / .txt)
+                        const linhasTexto = dados.split('\n');
+                        bancoDeDadosRotas = linhasTexto
+                            .map(linha => linha.trim().toUpperCase())
+                            .filter(linha => linha.length > 0);
+                    }
 
-                if (bancoDeDadosRotas.length === 0) {
-                    alert('Nenhum código de rastreio ou endereço válido foi identificado na planilha. Verifique o arquivo.');
-                    return;
-                }
+                    if (bancoDeDadosRotas.length === 0) {
+                        alert('Nenhum código de rastreio ou endereço válido foi identificado na planilha. Verifique o arquivo.');
+                        return;
+                    }
 
-                // Atualiza a tela e inicia a câmera
-                document.getElementById('secaoUpload').style.display = 'none';
-                document.getElementById('secaoScanner').style.display = 'block';
-                document.getElementById('statusRota').innerText = `Rota carregada com sucesso! ${bancoDeDadosRotas.length} pacotes encontrados.`;
-                
-                inicializarScanner();
+                    // Atualiza a tela e inicia a câmera
+                    document.getElementById('secaoUpload').style.display = 'none';
+                    document.getElementById('secaoScanner').style.display = 'block';
+                    document.getElementById('statusRota').innerText = `Rota carregada com sucesso! ${bancoDeDadosRotas.length} pacotes encontrados.`;
+                    
+                    inicializarScanner();
+                } catch (erro) {
+                    console.error(erro);
+                    alert('Erro ao processar o arquivo. Certifique-se de que é um Excel ou CSV válido.');
+                }
             };
 
             if (extensao === 'xlsx' || extensao === 'xls') {
-                leitor.readAsBinaryString(arquivo);
+                leitor.readAsArrayBuffer(arquivo);
             } else {
                 leitor.readAsText(arquivo, 'UTF-8');
             }
@@ -173,13 +175,15 @@
             let codigos = [];
             for (let i = 0; i < matriz.length; i++) {
                 for (let j = 0; j < matriz[i].length; j++) {
-                    let valor = String(matriz[i][j]).trim().toUpperCase();
-                    // Filtra para pegar apenas células que pareçam códigos de rastreio ou IDs longos
-                    // Evita cabeçalhos comuns como "CÓDIGO", "NOME", etc.
-                    if (valor && valor.length > 4 && valor !== "CÓDIGO" && valor !== "RASTREIO" && valor !== "TRACKING") {
-                        // Garante que não vai repetir códigos na sequência de indexação
-                        if (!codigos.includes(valor)) {
-                            codigos.push(valor);
+                    if (matriz[i][j] !== undefined && matriz[i][j] !== null) {
+                        let valor = String(matriz[i][j]).trim().toUpperCase();
+                        // Filtra para pegar apenas células que pareçam códigos de rastreio ou IDs longos
+                        // Evita cabeçalhos comuns como "CÓDIGO", "NOME", etc.
+                        if (valor && valor.length > 4 && valor !== "CÓDIGO" && valor !== "RASTREIO" && valor !== "TRACKING") {
+                            // Garante que não vai repetir códigos na sequência de indexação
+                            if (!codigos.includes(valor)) {
+                                codigos.push(valor);
+                            }
                         }
                     }
                 }
