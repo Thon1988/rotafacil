@@ -64,6 +64,7 @@
             padding: 20px;
             margin-top: 15px;
             border-radius: 8px;
+            transition: background-color 0.3s ease;
         }
         .sucesso {
             background-color: #d4edda;
@@ -74,6 +75,11 @@
             background-color: #f8d7da;
             color: #721c24;
             border: 2px solid #f5c6cb;
+        }
+        .aguardando {
+            background-color: #e9ecef;
+            color: #495057;
+            border: 2px solid #ced4da;
         }
         .info-rota {
             text-align: center;
@@ -102,12 +108,13 @@
         <h2>Passo 2: Bipar Pacote</h2>
         <div class="info-rota" id="statusRota"></div>
         <div id="reader"></div>
-        <div id="resultado">Aguardando leitura do código...</div>
+        <div id="resultado" class="aguardando">Aguardando leitura do código...</div>
         <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 6px;">Trocar Planilha</button>
     </div>
 
     <script>
         let bancoDeDadosRotas = [];
+        let isProcessing = false; // Controle para evitar repetições contínuas do mesmo código
 
         function processarPlanilha() {
             const input = document.getElementById('arquivoPlanilha');
@@ -118,8 +125,6 @@
 
             const arquivo = input.files[0];
             const leitor = new FileReader();
-
-            // Verifica a extensão do arquivo
             const extensao = arquivo.name.split('.').pop().toLowerCase();
 
             leitor.onload = function(e) {
@@ -127,23 +132,17 @@
 
                 try {
                     if (extensao === 'xlsx' || extensao === 'xls') {
-                        // Processa arquivos Excel (.xlsx / .xls)
                         const dadosArray = new Uint8Array(dados);
                         const workbook = XLSX.read(dadosArray, { type: 'array' });
                         const primeiraAba = workbook.SheetNames[0];
                         const planilha = workbook.Sheets[primeiraAba];
-                        
-                        // Converte a planilha em matriz de linhas/colunas
                         const linhas = XLSX.utils.sheet_to_json(planilha, { header: 1 });
-                        
-                        // Extrai os códigos (achando a coluna que possui os códigos de rastreio)
                         bancoDeDadosRotas = extrairCodigosDeMatriz(linhas);
                     } else {
-                        // Processa arquivos de texto (.csv / .txt)
                         const linhasTexto = dados.split('\n');
                         bancoDeDadosRotas = linhasTexto
                             .map(linha => linha.trim().toUpperCase())
-                            .filter(linha => linha.length > 0);
+                            .filter(linha => tabular => linha.length > 0);
                     }
 
                     if (bancoDeDadosRotas.length === 0) {
@@ -151,7 +150,6 @@
                         return;
                     }
 
-                    // Atualiza a tela e inicia a câmera
                     document.getElementById('secaoUpload').style.display = 'none';
                     document.getElementById('secaoScanner').style.display = 'block';
                     document.getElementById('statusRota').innerText = `Rota carregada com sucesso! ${bancoDeDadosRotas.length} pacotes encontrados.`;
@@ -170,17 +168,13 @@
             }
         }
 
-        // Função inteligente que procura os códigos de rastreio dentro das células do Excel
         function extrairCodigosDeMatriz(matriz) {
             let codigos = [];
             for (let i = 0; i < matriz.length; i++) {
                 for (let j = 0; j < matriz[i].length; j++) {
                     if (matriz[i][j] !== undefined && matriz[i][j] !== null) {
                         let valor = String(matriz[i][j]).trim().toUpperCase();
-                        // Filtra para pegar apenas células que pareçam códigos de rastreio ou IDs longos
-                        // Evita cabeçalhos comuns como "CÓDIGO", "NOME", etc.
                         if (valor && valor.length > 4 && valor !== "CÓDIGO" && valor !== "RASTREIO" && valor !== "TRACKING") {
-                            // Garante que não vai repetir códigos na sequência de indexação
                             if (!codigos.includes(valor)) {
                                 codigos.push(valor);
                             }
@@ -199,10 +193,13 @@
         }
 
         function onScanSuccess(decodedText, decodedResult) {
+            // Se já estiver processando um código recente, ignora as próximas leituras instantâneas
+            if (isProcessing) return;
+            
+            isProcessing = true;
             const codigoBipado = decodedText.trim().toUpperCase();
             const divResultado = document.getElementById('resultado');
             
-            // Busca a exata linha do código na lista carregada da planilha
             const posicao = bancoDeDadosRotas.indexOf(codigoBipado);
 
             if (posicao !== -1) {
@@ -215,6 +212,13 @@
                 divResultado.innerHTML = `❌ NÃO ENCONTRADO<br><span style="font-size:14px;">Código: ${codigoBipado}</span>`;
                 falarTexto("Não encontrado");
             }
+
+            // Aguarda 3 segundos antes de resetar o scanner para o próximo pacote
+            setTimeout(() => {
+                divResultado.className = "aguardando";
+                divResultado.innerHTML = "Aguardando leitura do próximo código...";
+                isProcessing = false;
+            }, 3000);
         }
 
         function onScanFailure(error) {
@@ -223,6 +227,9 @@
 
         function falarTexto(texto) {
             if ('speechSynthesis' in window) {
+                // Cancela falas anteriores que possam estar na fila
+                window.speechSynthesis.cancel();
+                
                 const utterance = new SpeechSynthesisUtterance(texto);
                 utterance.lang = 'pt-BR';
                 window.speechSynthesis.speak(utterance);
