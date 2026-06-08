@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rota Fácil - Numera Fácil Pro</title>
-    <!-- Biblioteca para ler arquivos Excel (SheetJS) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Biblioteca para ler código de barras pela câmera (Html5Qrcode) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-    <!-- Biblioteca para ler e extrair textos de arquivos PDF (PDF.js) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
         body {
@@ -40,6 +37,17 @@
             border-radius: 5px;
             border: 1px dashed #ff4500;
             box-sizing: border-box;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            resize: vertical;
+            font-family: monospace;
+            margin-top: 5px;
         }
         button {
             width: 100%;
@@ -92,7 +100,7 @@
             margin-bottom: 10px;
         }
         .lista-conferencia {
-            max-height: 220px;
+            max-height: 180px;
             overflow-y: auto;
             border: 1px solid #ccc;
             padding: 10px;
@@ -118,9 +126,6 @@
             padding: 12px;
             border-radius: 5px;
             margin: 15px 0;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
         }
         .painel-calibracao label {
             font-size: 14px;
@@ -128,10 +133,12 @@
             color: #004085;
         }
         .painel-calibracao select {
+            width: 100%;
             padding: 8px;
             font-size: 14px;
             border-radius: 4px;
             border: 1px solid #b8daff;
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -139,29 +146,36 @@
 
     <h1>📦 Rota Fácil</h1>
      
-    <!-- PASSO 1: SELEÇÃO DO ARQUIVO -->
     <div class="card" id="secaoUpload">
-        <h2>Passo 1: Carregar Ordem dos Pacotes</h2>
-        <p style="font-size: 12px; color: #666; text-align: center;">Selecione o arquivo PDF, Excel ou CSV exportado do seu manifesto.</p>
+        <h2>Passo 1: Carregar Base de Pacotes</h2>
+        <p style="font-size: 12px; color: #666; text-align: center;">Selecione o arquivo PDF, Excel ou CSV para extrair os códigos de rastreio válidos.</p>
          
         <div class="file-input-wrapper">
             <input type="file" id="arquivoPlanilha" accept=".pdf, .xlsx, .xls, .csv, .txt">
         </div>
          
-        <button onclick="processarPlanilha()">Carregar e Ler Códigos</button>
+        <button onclick="processarPlanilha()">Carregar e Analisar Arquivo</button>
     </div>
 
-    <!-- PASSO 2: CONFERÊNCIA E AJUSTE DE OFFSET (+1 / -1) -->
     <div class="card" id="secaoConferencia" style="display: none;">
-        <h2>Passo 2: Alinhar Sequência Numérica</h2>
+        <h2>Passo 2: Alinhar com a Ordem de Rua</h2>
         
+        <p style="font-size: 12px; color: #555; margin-bottom: 10px;">
+            Se a numeração gerada pelo PDF não bate com a ordem das ruas do Circuit, cole abaixo a lista de códigos ordenada ou use o corretor numérico.
+        </p>
+
         <div class="painel-calibracao">
-            <label for="ajusteOffset">🎯 Corrigir Numeração (Offset):</label>
+            <label for="ajusteOffset">🔢 Ajuste Fino Numérico (Offset):</label>
             <select id="ajusteOffset" onchange="recalculaVisualizacaoConferencia()">
-                <option value="0">Sem ajuste (Parada normal)</option>
-                <option value="-1" selected>Diminuir 1 número (Se bipa 4 e deveria ser 3)</option>
-                <option value="1">Aumentar 1 número</option>
+                <option value="0">Sem deslocamento (Parada normal)</option>
+                <option value="-1">Subtrair 1 (Bipa 4 vira 3)</option>
+                <option value="-2">Subtrair 2 (Bipa 4 vira 2)</option>
+                <option value="1">Somar 1 (Bipa 4 vira 5)</option>
             </select>
+            
+            <label style="display:block; margin-top:10px;">📋 Forçar Sequência Customizada (Opcional):</label>
+            <textarea id="textoOrdemManual" placeholder="Cole aqui os códigos na ordem correta, separados por espaço, vírgula ou um por linha..."></textarea>
+            <button onclick="aplicarOrdenacaoManual()" style="background-color: #007bff; font-size:12px; padding:6px; margin-top:5px;">Aplicar Esta Ordem</button>
         </div>
         
         <div class="lista-conferencia" id="containerListaConferencia"></div>
@@ -170,7 +184,6 @@
         <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 6px; margin-top: 5px;">Voltar</button>
     </div>
 
-    <!-- PASSO 3: MODO SCANNER ATIVO -->
     <div id="secaoScanner" class="card" style="display: none;">
         <h2>Passo 3: Bipar Pacote</h2>
         <div class="info-rota" id="statusRota"></div>
@@ -288,6 +301,33 @@
             recalculaVisualizacaoConferencia();
         }
 
+        function aplicarOrdenacaoManual() {
+            const texto = document.getElementById('textoOrdemManual').value;
+            if (!texto.trim()) {
+                alert('Cole alguma sequência de dados válida no campo de texto.');
+                return;
+            }
+
+            const potenciaisCodigos = texto.split(/[\s,;|\n]+/);
+            let novaOrdem = [];
+
+            potenciaisCodigos.forEach(item => {
+                let limpo = item.trim().toUpperCase();
+                if (validarCodigoRastreio(limpo) && !novaOrdem.includes(limpo)) {
+                    novaOrdem.push(limpo);
+                }
+            });
+
+            if (novaOrdem.length === 0) {
+                alert('Nenhum código correspondente à nossa validação foi achado na caixa de texto.');
+                return;
+            }
+
+            bancoDeDadosRotas = novaOrdem;
+            recalculaVisualizacaoConferencia();
+            alert(`Sequência atualizada! ${novaOrdem.length} pacotes foram reordenados.`);
+        }
+
         function recalculaVisualizacaoConferencia() {
             const container = document.getElementById('containerListaConferencia');
             container.innerHTML = '';
@@ -338,6 +378,20 @@
             return codigos;
         }
 
+        function determinarPosicaoFinal(codigoBipado) {
+            // Busca index primário
+            let index = bancoDeDadosRotas.indexOf(codigoBipado);
+            if (index !== -1) return index;
+
+            // Busca por similaridade parcial (caso o scanner corte dígitos finais)
+            for (let i = 0; i < bancoDeDadosRotas.length; i++) {
+                if (bancoDeDadosRotas[i].includes(codigoBipado) || codigoBipado.includes(bancoDeDadosRotas[i])) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
         function inicializarScanner() {
             const html5QrcodeScanner = new Html5QrcodeScanner(
                 "reader", { fps: 15, qrbox: 260 }
@@ -352,7 +406,7 @@
             const codigoBipado = decodedText.trim().toUpperCase();
             const divResultado = document.getElementById('resultado');
             
-            const posicao = bancoDeDadosRotas.indexOf(codigoBipado);
+            const posicao = determinarPosicaoFinal(codigoBipado);
 
             if (posicao !== -1) {
                 const offset = parseInt(document.getElementById('ajusteOffset').value, 10);
