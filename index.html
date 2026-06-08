@@ -122,14 +122,16 @@
             font-weight: bold;
             color: #ff4500;
         }
-        /* Layout do Mapa */
+        /* Layout e Correção de Renderização do Mapa */
         #mapa-container {
             width: 100%;
-            height: 300px;
+            height: 320px;
             margin-top: 10px;
+            margin-bottom: 15px;
             border-radius: 8px;
-            border: 1px solid #ccc;
+            border: 2px solid #ff4500;
             display: none;
+            position: relative;
         }
         .painel-calibracao {
             background: #e2f0fd;
@@ -159,19 +161,19 @@
         <h2>Passo 2: Roteirização e Mapa</h2>
         
         <div id="mapa-container"></div>
-        <button onclick="gerarMapaEEncontrarRotas()" style="background-color: #007bff; margin-bottom: 15px;">🗺️ Roteirizar e Plotar no Mapa</button>
+        <button id="btnGerarMapa" onclick="gerarMapaEEncontrarRotas()" style="background-color: #007bff; margin-bottom: 15px;">🗺️ Roteirizar e Visualizar Mapa</button>
 
         <div class="painel-calibracao">
-            <label for="ajusteOffset">🔢 Ajuste Fino Numérico (Offset):</label>
+            <label for="ajusteOffset">🔢 Ajuste Manual de Paradas (Se necessário):</label>
             <select id="ajusteOffset" onchange="recalculaVisualizacaoConferencia()" style="width:100%; padding:8px; margin-top:5px; border-radius:4px;">
-                <option value="0">Sem deslocamento (Parada normal)</option>
-                <option value="-1">Subtrair 1 (Bipa 4 vira 3)</option>
-                <option value="1">Somar 1 (Bipa 4 vira 5)</option>
+                <option value="0" selected>Sem deslocamento (Padrão corrigido)</option>
+                <option value="-1">Subtrair 1 Número</option>
+                <option value="1">Somar 1 Número</option>
             </select>
             
-            <label style="display:block; margin-top:10px;">📋 Forçar Sequência Customizada:</label>
-            <textarea id="textoOrdemManual" placeholder="Cole códigos na sequência correta..."></textarea>
-            <button onclick="aplicarOrdenacaoManual()" style="background-color: #6c757d; font-size:12px; padding:6px; margin-top:5px;">Aplicar Ordem Colada</button>
+            <label style="display:block; margin-top:10px;">📋 Ajustar Ordem Manualmente:</label>
+            <textarea id="textoOrdemManual" placeholder="Cole os códigos na ordem que deseja se necessário..."></textarea>
+            <button onclick="aplicarOrdenacaoManual()" style="background-color: #6c757d; font-size:12px; padding:6px; margin-top:5px;">Atualizar Lista Colada</button>
         </div>
         
         <div class="lista-conferencia" id="containerListaConferencia"></div>
@@ -310,7 +312,7 @@
 
         function irParaConferencia() {
             if (bancoDeDadosRotas.length === 0) {
-                alert('Atenção: Nenhum código de rastreio válido foi identificado.');
+                alert('Atenção: Nenhum código de rastreio com padrão inicial válido foi identificado.');
                 return;
             }
 
@@ -318,12 +320,10 @@
             document.getElementById('secaoConferencia').style.display = 'block';
 
             recalculaVisualizacaoConferencia();
-            inicializarMapaBase();
         }
 
         function inicializarMapaBase() {
             if (map !== null) return;
-            // Centraliza o mapa por padrão no Brasil
             map = L.map('mapa-container').setView([-15.7801, -47.9292], 4);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
@@ -332,19 +332,24 @@
         }
 
         async function gerarMapaEEncontrarRotas() {
-            document.getElementById('mapa-container').style.display = 'block';
-            if(map) map.invalidateSize();
+            const containerMapa = document.getElementById('mapa-container');
+            containerMapa.style.display = 'block';
+            
+            // Inicializa e força a atualização do tamanho do contêiner para o mapa carregar visível
+            inicializarMapaBase();
+            setTimeout(() => { map.invalidateSize(); }, 200);
 
             if(listaEnderecosExtraidos.length === 0) {
-                alert("Nenhuma coluna de endereço explícita foi detectada na planilha. Plotando visualização aproximada de logística baseada em rotas locais.");
+                alert("Nenhuma coluna estruturada de endereço foi detectada. Plotando marcador base na sua região operacional padrão.");
+                // Centraliza em ponto genérico ativo caso não ache strings de rua na planilha
+                map.setView([-23.5505, -46.6333], 10); 
                 return;
             }
 
             markerGroup.clearLayers();
             let coordenadasRota = [];
 
-            // Consome a API Nominatim para converter texto de endereço em coordenadas de mapa
-            for (let i = 0; i < Math.min(listaEnderecosExtraidos.length, 15); i++) { 
+            for (let i = 0; i < Math.min(listaEnderecosExtraidos.length, 25); i++) { 
                 try {
                     let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(listaEnderecosExtraidos[i])}&limit=1`;
                     let resposta = await fetch(url);
@@ -360,7 +365,7 @@
                             .bindPopup(`<b>Parada #${i+1}</b><br>${listaEnderecosExtraidos[i]}`);
                     }
                 } catch(e) {
-                    console.log("Erro na busca de coordenadas do ponto: " + i);
+                    console.log("Erro na busca do ponto: " + i);
                 }
             }
 
@@ -409,17 +414,16 @@
         function iniciarScannerFinal() {
             document.getElementById('secaoConferencia').style.display = 'none';
             document.getElementById('secaoScanner').style.display = 'block';
-            document.getElementById('statusRota').innerText = `Rota ativa! ${bancoDeDadosRotas.length} pacotes mapeados.`;
+            document.getElementById('statusRota').innerText = `Rota ativa! ${bancoDeDadosRotas.length} pacotes carregados em memória.`;
             
             inicializarScanner();
         }
 
+        // VALIDAÇÃO ESTRITA: Exige que o rastreio comece explicitamente com LETRAS (ex: BR, NL, AA) eliminando lixo numérico de relatórios
         function validarCodigoRastreio(texto) {
             if (!texto) return false;
-            const padraoShopee = /^[A-Z]{2}\d{9,15}[A-Z]?$/;
-            const padraoNumericoLongo = /^\d{9,25}$/;
-            const padraoGenericoRastreio = /^[A-Z0-9]{10,20}$/;
-            return padraoShopee.test(texto) || padraoNumericoLongo.test(texto) || (padraoGenericoRastreio.test(texto) && !/^[A-Z\s]+$/.test(texto));
+            const padraoLetrasIniciais = /^[A-Z]{2}\d{9,15}[A-Z]?$/; 
+            return padraoLetrasIniciais.test(texto);
         }
 
         function extrairCodigosDeMatriz(matriz) {
