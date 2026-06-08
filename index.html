@@ -249,4 +249,167 @@ Av. Paulista, 1000"></textarea>
         </div>
         <div class="circuit-actions">
             <button class="btn-action btn-falhou" onclick="registrarEntrega(false)">❌ Não Entregue</button>
-            <button class="btn-action btn-entregue" onclick="registrarEntrega(true)">✅
+            <button class="btn-action btn-entregue" onclick="registrarEntrega(true)">✅ Entregue</button>
+        </div>
+    </div>
+
+    <script>
+        let bancoDeDadosRotas = [];
+        let historicoStatus = {};
+        let indiceAtualOperacao = -1;
+        let isProcessing = false;
+        let mapa = null;
+        let marcadoresMapa = [];
+
+        function mudarAba(tipo) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (tipo === 'excel') {
+                document.querySelector('.tabs button:nth-child(1)').classList.add('active');
+                document.getElementById('abaExcel').style.display = 'block';
+                document.getElementById('abaTexto').style.display = 'none';
+            } else {
+                document.querySelector('.tabs button:nth-child(2)').classList.add('active');
+                document.getElementById('abaExcel').style.display = 'none';
+                document.getElementById('abaTexto').style.display = 'block';
+            }
+        }
+
+        function processarPlanilha() {
+            const input = document.getElementById('arquivoPlanilha');
+            if (input.files.length === 0) {
+                alert('Por favor, selecione um arquivo de planilha primeiro.');
+                return;
+            }
+
+            const arquivo = input.files[0];
+            const leitor = new FileReader();
+            const extensao = arquivo.name.split('.').pop().toLowerCase();
+
+            leitor.onload = function(e) {
+                const dados = e.target.result;
+                try {
+                    if (extensao === 'xlsx' || extensao === 'xls') {
+                        const dadosArray = new Uint8Array(dados);
+                        const workbook = XLSX.read(dadosArray, { type: 'array' });
+                        const primeiraAba = workbook.SheetNames[0];
+                        const planilha = workbook.Sheets[primeiraAba];
+                        const linhas = XLSX.utils.sheet_to_json(planilha, { header: 1 });
+                        bancoDeDadosRotas = extrairCodigosDeMatriz(linhas);
+                    } else {
+                        const linhasTexto = dados.split('\n');
+                        bancoDeDadosRotas = linhasTexto
+                            .map(linha => linha.trim().toUpperCase())
+                            .filter(linha => validarCodigoRastreio(linha));
+                    }
+                    inicializarPainelOperacional();
+                } catch (erro) {
+                    console.error(erro);
+                    alert('Erro ao processar o arquivo. Verifique a formatação.');
+                }
+            };
+
+            if (extensao === 'xlsx' || extensao === 'xls') {
+                leitor.readAsArrayBuffer(arquivo);
+            } else {
+                leitor.readAsText(arquivo, 'UTF-8');
+            }
+        }
+
+        function processarTextoColado() {
+            const conteudo = document.getElementById('textoRota').value;
+            if (!conteudo.trim()) {
+                alert('Cole a sequência de rotas antes de prosseguir.');
+                return;
+            }
+
+            bancoDeDadosRotas = conteudo.split('\n')
+                .map(linha => linha.trim().toUpperCase())
+                .filter(linha => linha.length > 0);
+
+            inicializarPainelOperacional();
+        }
+
+        function validarCodigoRastreio(texto) {
+            if (!texto) return false;
+            const padraoShopee = /^[A-Z]{2}\d{9,15}[A-Z]?$/;
+            const padraoNumericoLongo = /^\d{9,25}$/;
+            const padraoGenericoRastreio = /^[A-Z0-9]{8,20}$/;
+            return padraoShopee.test(texto) || padraoNumericoLongo.test(texto) || (padraoGenericoRastreio.test(texto) && !/^[A-Z\s]+$/.test(texto));
+        }
+
+        function extrairCodigosDeMatriz(matriz) {
+            let codigos = [];
+            for (let i = 0; i < matriz.length; i++) {
+                for (let j = 0; j < matriz[i].length; j++) {
+                    if (matriz[i][j] !== undefined && matriz[i][j] !== null) {
+                        let valor = String(matriz[i][j]).trim().toUpperCase();
+                        if (validarCodigoRastreio(valor) || (valor.length > 8 && !/^[A-Z\s]+$/.test(valor))) {
+                            if (!codigos.includes(valor)) {
+                                codigos.push(valor);
+                            }
+                        }
+                    }
+                }
+            }
+            return codigos;
+        }
+
+        function inicializarPainelOperacional() {
+            if (bancoDeDadosRotas.length === 0) {
+                alert('Nenhum dado válido pôde ser extraído da rota.');
+                return;
+            }
+            document.getElementById('secaoUpload').style.display = 'none';
+            document.getElementById('secaoScanner').style.display = 'block';
+            atualizarStatusContador();
+            
+            inicializarScanner();
+            renderizarMapaCircuit();
+        }
+
+        function atualizarStatusContador() {
+            const total = bancoDeDadosRotas.length;
+            const respondidos = Object.keys(historicoStatus).length;
+            document.getElementById('statusRota').innerText = `Progresso da Rota: ${respondidos}/${total} concluídos`;
+        }
+
+        function inicializarScanner() {
+            const html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader", { fps: 15, qrbox: 260 }
+            );
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            if (isProcessing) return;
+            isProcessing = true;
+            
+            const codigoBipado = decodedText.trim().toUpperCase();
+            const posicao = bancoDeDadosRotas.indexOf(codigoBipado);
+
+            if (posicao !== -1) {
+                abrirPopupEntrega(posicao);
+            } else {
+                const divResultado = document.getElementById('resultado');
+                divResultado.className = "erro";
+                divResultado.innerHTML = `❌ NÃO ENCONTRADO<br><span style="font-size:14px;">Código: ${codigoBipado}</span>`;
+                falarTexto("Não encontrado");
+                
+                setTimeout(() => {
+                    divResultado.className = "aguardando";
+                    divResultado.innerHTML = "Aguardando leitura do próximo código...";
+                    isProcessing = false;
+                }, 3000);
+            }
+        }
+
+        function onScanFailure(error) {}
+
+        function abrirPopupEntrega(indice) {
+            indiceAtualOperacao = indice;
+            const codigo = bancoDeDadosRotas[indice];
+            const numeroParada = indice + 1;
+
+            document.getElementById('popupParadaNumero').innerText = `📌 PARADA: ${numeroParada}`;
+            document.getElementById('popupCodigoTexto').innerText = codigo;
+            document.getElementById('popupCircuit').style.display = 'block';
