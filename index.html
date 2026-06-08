@@ -4,10 +4,10 @@ HTML
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roteirizador Integrado - Numera Fácil Pro</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <title>AppEgg - Roteirizador Inteligente</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,12 +15,10 @@ HTML
             padding: 15px;
             background-color: #f4f4f9;
             color: #333;
-            padding-bottom: 240px; /* Espaço seguro para o Painel Dinâmico inferior */
         }
         h1, h2 {
             text-align: center;
             color: #ff4500;
-            margin-bottom: 5px;
         }
         .card {
             background: white;
@@ -29,20 +27,16 @@ HTML
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 15px;
         }
-        .form-group {
-            margin-bottom: 12px;
+        .file-input-wrapper {
+            position: relative;
+            margin: 10px 0;
         }
-        label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-        input[type="text"], input[type="password"] {
+        input[type="file"] {
             width: 100%;
             padding: 10px;
-            border: 1px solid #ccc;
+            background: #e9ecef;
             border-radius: 5px;
+            border: 1px dashed #ff4500;
             box-sizing: border-box;
         }
         button {
@@ -55,17 +49,10 @@ HTML
             font-weight: bold;
             border-radius: 5px;
             cursor: pointer;
-            margin-top: 5px;
+            margin-top: 10px;
         }
         button:hover {
             background-color: #e03e00;
-        }
-        .btn-maps {
-            background-color: #28a745;
-            margin-bottom: 8px;
-        }
-        .btn-maps:hover {
-            background-color: #218838;
         }
         #reader {
             width: 100%;
@@ -74,227 +61,191 @@ HTML
         }
         #resultado {
             text-align: center;
-            font-size: 18px;
+            font-size: 24px;
             font-weight: bold;
-            padding: 12px;
+            padding: 20px;
             margin-top: 15px;
             border-radius: 8px;
+            transition: background-color 0.3s ease;
         }
-        .aguardando {
-            background-color: #e9ecef;
-            color: #495057;
-            border: 2px solid #ced4da;
+        .sucesso {
+            background-color: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
         }
         .erro {
             background-color: #f8d7da;
             color: #721c24;
             border: 2px solid #f5c6cb;
         }
+        .aguardando {
+            background-color: #e9ecef;
+            color: #495057;
+            border: 2px solid #ced4da;
+        }
         .info-rota {
             text-align: center;
             font-size: 14px;
             color: #555;
             margin-bottom: 10px;
-            font-weight: bold;
-        }
-        #map {
-            height: 280px;
-            width: 100%;
-            border-radius: 8px;
-            margin-top: 15px;
-            border: 1px solid #ccc;
-        }
-        
-        /* POPUP OPERACIONAL ESTILO CIRCUIT */
-        .circuit-popup {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
-            border-top-left-radius: 20px;
-            border-top-right-radius: 20px;
-            padding: 20px;
-            z-index: 9999;
-            box-sizing: border-box;
-            display: none;
-            animation: slideUp 0.25s ease-out;
-        }
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-        .circuit-popup-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-        .circuit-popup-title {
-            font-size: 20px;
-            font-weight: bold;
-            color: #111;
-        }
-        .circuit-popup-endereco {
-            font-size: 13px;
-            color: #666;
-            margin-top: 4px;
-            line-height: 1.4;
-        }
-        .circuit-popup-codigo {
-            font-size: 13px;
-            color: #ff4500;
-            background: #fff0eb;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-weight: bold;
-        }
-        .circuit-actions {
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
-        }
-        .btn-action {
-            flex: 1;
-            margin: 0;
-            padding: 16px;
-            font-size: 16px;
-            border-radius: 8px;
-        }
-        .btn-entregue {
-            background-color: #2e7d32;
-        }
-        .btn-entregue:hover {
-            background-color: #1b5e20;
-        }
-        .btn-falhou {
-            background-color: #c62828;
-        }
-        .btn-falhou:hover {
-            background-color: #b71c1c;
         }
     </style>
 </head>
 <body>
 
-    <h1>📦 Numera Fácil Web Pro</h1>
-    <h2>Conexão API Circuit v1</h2>
-    
-    <div class="card" id="secaoConfig">
-        <div class="form-group">
-            <label for="circuitApiKey">Chave de API do Circuit:</label>
-            <input type="password" id="circuitApiKey" placeholder="Insira seu token do Circuit Developer Dashboard">
+    <h1>📦 AppEgg - Numera Fácil Pro</h1>
+     
+    <div class="card" id="secaoUpload">
+        <h2>Passo 1: Carregar Ordem dos Pacotes</h2>
+        <p style="font-size: 12px; color: #666; text-align: center;">Selecione o arquivo PDF, Excel ou CSV exportado do sistema de rotas (Circuit/Shopee).</p>
+         
+        <div class="file-input-wrapper">
+            <input type="file" id="arquivoPlanilha" accept=".pdf, .xlsx, .xls, .csv, .txt">
         </div>
-        <div class="form-group">
-            <label for="circuitRouteId">ID da Rota Ativa (Opcional):</label>
-            <input type="text" id="circuitRouteId" placeholder="Deixe em branco para buscar a rota mais recente">
-        </div>
-        <button onclick="conectarEBuscarRotaCircuit()">Sincronizar com o Circuit</button>
+         
+        <button onclick="processarPlanilha()">Carregar Rota e Abrir Scanner</button>
     </div>
 
     <div id="secaoScanner" class="card" style="display: none;">
-        <div class="info-rota" id="statusRota">Sincronizando paradas...</div>
-        
-        <button class="btn-maps" onclick="abrirNoGoogleMaps()">🗺️ Navegar Rota no Google Maps</button>
-        
+        <h2>Passo 2: Bipar Pacote</h2>
+        <div class="info-rota" id="statusRota"></div>
         <div id="reader"></div>
-        <div id="resultado" class="aguardando">Aguardando leitura ou bipe de pacotes...</div>
-        
-        <div id="map"></div>
-        
-        <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 6px; margin-top: 15px;">Desconectar / Trocar Rota</button>
-    </div>
-
-    <div id="popupCircuit" class="circuit-popup">
-        <div class="circuit-popup-header">
-            <div>
-                <div id="popupParadaNumero" class="circuit-popup-title">📌 PARADA: --</div>
-                <div id="popupEnderecoTexto" class="circuit-popup-endereco">Buscando endereço...</div>
-            </div>
-            <div id="popupCodigoTexto" class="circuit-popup-codigo">------</div>
-        </div>
-        <div class="circuit-actions">
-            <button class="btn-action btn-falhou" onclick="enviarStatusParaCircuit('failed')">❌ Não Entregue</button>
-            <button class="btn-action btn-entregue" onclick="enviarStatusParaCircuit('delivered')">✅ Entregue</button>
-        </div>
+        <div id="resultado" class="aguardando">Aguardando leitura do código...</div>
+        <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 6px; margin-top: 15px;">Trocar Planilha / PDF</button>
     </div>
 
     <script>
-        let apiKeyCircuit = "";
-        let idRotaAtiva = "";
-        let paradasDaRota = [];
-        let indiceAtualOperacao = -1;
+        // Configura a URL do worker do PDF.js exigida pela biblioteca
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        let bancoDeDadosRotas = [];
         let isProcessing = false;
-        let mapa = null;
-        let marcadoresMapa = [];
 
-        async function conectarEBuscarRotaCircuit() {
-            apiKeyCircuit = document.getElementById('circuitApiKey').value.trim();
-            idRotaAtiva = document.getElementById('circuitRouteId').value.trim();
-
-            if (!apiKeyCircuit) {
-                alert("Por favor, forneça sua chave de API do Circuit para realizar a integração.");
+        function processarPlanilha() {
+            const input = document.getElementById('arquivoPlanilha');
+            if (input.files.length === 0) {
+                alert('Por favor, selecione um arquivo primeiro.');
                 return;
             }
 
-            try {
-                // Se o ID da rota não for inserido, buscamos a última rota ativa criada no painel do Circuit
-                if (!idRotaAtiva) {
-                    const respostaPlan = await fetch("https://api.getcircuit.com/v1/routes?limit=1", {
-                        headers: { "Authorization": `Bearer ${apiKeyCircuit}` }
-                    });
-                    const rotasObtidas = await respostaPlan.json();
-                    if (!rotasObtidas.data || rotasObtidas.data.length === 0) {
-                        throw new Error("Nenhuma rota encontrada na sua conta do Circuit.");
+            const arquivo = input.files[0];
+            const leitor = new FileReader();
+            const extensao = arquivo.name.split('.').pop().toLowerCase();
+
+            if (extensao === 'pdf') {
+                leitor.onload = function(e) {
+                    const dados digitais = new Uint8Array(e.target.result);
+                    processarPDF(dados digitais);
+                };
+                leitor.readAsArrayBuffer(arquivo);
+            } else {
+                leitor.onload = function(e) {
+                    const dados = e.target.result;
+
+                    try {
+                        if (extensao === 'xlsx' || extensao === 'xls') {
+                            const dadosArray = new Uint8Array(dados);
+                            const workbook = XLSX.read(dadosArray, { type: 'array' });
+                            const primeiraAba = workbook.SheetNames[0];
+                            const planilha = workbook.Sheets[primeiraAba];
+                            const linhas = XLSX.utils.sheet_to_json(planilha, { header: 1 });
+                            bancoDeDadosRotas = extrairCodigosDeMatriz(linhas);
+                            finalizarCarregamento();
+                        } else {
+                            const linhasTexto = dados.split('\n');
+                            bancoDeDadosRotas = linhasTexto
+                                .map(linha => linha.trim().toUpperCase())
+                                .filter(linha => validarCodigoRastreio(linha));
+                            finalizarCarregamento();
+                        }
+                    } catch (erro) {
+                        console.error(erro);
+                        alert('Erro ao processar o arquivo. Certifique-se de que é um documento válido.');
                     }
-                    idRotaAtiva = rotasObtidas.data[0].id;
+                };
+
+                if (extensao === 'xlsx' || extensao === 'xls') {
+                    leitor.readAsArrayBuffer(arquivo);
+                } else {
+                    leitor.readAsText(arquivo, 'UTF-8');
                 }
-
-                // Busca as paradas detalhadas ordenadas do plano de rota escolhido
-                const respostaStops = await fetch(`https://api.getcircuit.com/v1/routes/${idRotaAtiva}/stops`, {
-                    headers: { "Authorization": `Bearer ${apiKeyCircuit}` }
-                });
-                const paradasDados = await respostaStops.json();
-
-                if (!paradasDados.data || paradasDados.data.length === 0) {
-                    throw new Error("A rota selecionada não possui paradas cadastradas.");
-                }
-
-                // Normaliza o array de paradas estruturado pela API do Circuit
-                paradasDaRota = paradasDados.data.map(parada => ({
-                    id: parada.id,
-                    address: parada.address,
-                    lat: parada.latitude,
-                    lng: parada.longitude,
-                    packageId: parada.packageId || parada.referenceId || "",
-                    status: parada.status // 'pending', 'delivered', 'failed'
-                }));
-
-                inicializarPainelOperacional();
-
-            } catch (erro) {
-                console.error(erro);
-                alert(`Erro na integração: ${erro.message}`);
             }
         }
 
-        function inicializarPainelOperacional() {
-            document.getElementById('secaoConfig').style.display = 'none';
-            document.getElementById('secaoScanner').style.display = 'block';
-            atualizarStatusContador();
-            
-            inicializarScanner();
-            renderizarMapaRealCircuit();
+        // Função assíncrona dedicada a minerar o arquivo PDF em busca dos códigos
+        async function processarPDF(dadosArrayBuffer) {
+            try {
+                const pdf = await pdfjsLib.getDocument({ data: dadosArrayBuffer }).promise;
+                let codigosEncontrados = [];
+
+                for (let numPagina = 1; numPagina <= pdf.numPages; numPagina++) {
+                    const pagina = await pdf.getPage(numPagina);
+                    const conteudoTexto = await pagina.getTextContent();
+                    
+                    // Une os blocos textuais da página separando por quebras de linha artificiais
+                    const textoPagina = conteudoTexto.items.map(item => item.str).join(' ');
+                    
+                    // Divide o texto por espaços ou quebras para avaliar palavras isoladas
+                    const palavras = textoPagina.split(/[\s,;|\n]+/);
+
+                    palavras.forEach(palavra => {
+                        let codigoLimpo = palavra.trim().toUpperCase();
+                        if (validarCodigoRastreio(codigoLimpo)) {
+                            if (!codigosEncontrados.includes(codigoLimpo)) {
+                                codigosEncontrados.push(codigoLimpo);
+                            }
+                        }
+                    });
+                }
+
+                bancoDeDadosRotas = codigosEncontrados;
+                finalizarCarregamento();
+
+            } catch (erro) {
+                console.error(erro);
+                alert('Falha ao processar a leitura interna do PDF. Certifique-se de que não é um PDF protegido ou digitalizado como imagem pura.');
+            }
         }
 
-        function atualizarStatusContador() {
-            const total = paradasDaRota.length;
-            const concluidos = paradasDaRota.filter(p => p.status !== 'pending').length;
-            document.getElementById('statusRota').innerText = `Circuit Sync: ${concluidos}/${total} Paradas Concluídas`;
+        function finalizarCarregamento() {
+            if (bancoDeDadosRotas.length === 0) {
+                alert('Nenhum código de rastreio válido (padrão Shopee/Circuit) foi identificado no arquivo. Verifique o conteúdo.');
+                return;
+            }
+
+            document.getElementById('secaoUpload').style.display = 'none';
+            document.getElementById('secaoScanner').style.display = 'block';
+            document.getElementById('statusRota').innerText = `Rota carregada com sucesso! ${bancoDeDadosRotas.length} pacotes encontrados.`;
+            
+            inicializarScanner();
+        }
+
+        function validarCodigoRastreio(texto) {
+            if (!texto) return false;
+            
+            const padraoShopee = /^[A-Z]{2}\d{9,15}[A-Z]?$/;
+            const padraoNumericoLongo = /^\d{9,25}$/;
+            const padraoGenericoRastreio = /^[A-Z0-9]{10,20}$/;
+
+            return padraoShopee.test(texto) || padraoNumericoLongo.test(texto) || (padraoGenericoRastreio.test(texto) && !/^[A-Z\s]+$/.test(texto));
+        }
+
+        function extrairCodigosDeMatriz(matriz) {
+            let codigos = [];
+            for (let i = 0; i < matriz.length; i++) {
+                for (let j = 0; j < matriz[i].length; j++) {
+                    if (matriz[i][j] !== undefined && matriz[i][j] !== null) {
+                        let valor = String(matriz[i][j]).trim().toUpperCase();
+                        
+                        if (validarCodigoRastreio(valor)) {
+                            if (!codigos.includes(valor)) {
+                                codigos.push(valor);
+                            }
+                        }
+                    }
+                }
+            }
+            return codigos;
         }
 
         function inicializarScanner() {
@@ -306,157 +257,33 @@ HTML
 
         function onScanSuccess(decodedText, decodedResult) {
             if (isProcessing) return;
+            
             isProcessing = true;
-            
             const codigoBipado = decodedText.trim().toUpperCase();
+            const divResultado = document.getElementById('resultado');
             
-            // Procura o pacote pelo código de rastreio/ID de pacote cadastrado dentro do Circuit
-            const posicao = paradasDaRota.findIndex(p => p.packageId.toUpperCase() === codigoBipado || p.address.toUpperCase().includes(codigoBipado));
+            const posicao = bancoDeDadosRotas.indexOf(codigoBipado);
 
             if (posicao !== -1) {
-                abrirPopupEntrega(posicao);
+                const numeroParada = posicao + 1;
+                divResultado.className = "sucesso";
+                divResultado.innerHTML = `📌 PARADA: ${numeroParada}<br><span style="font-size:14px;">Código: ${codigoBipado}</span>`;
+                falarTexto(`Parada ${numeroParada}`);
             } else {
-                const divResultado = document.getElementById('resultado');
                 divResultado.className = "erro";
-                divResultado.innerHTML = `❌ NÃO LOCALIZADO NO CIRCUIT<br><span style="font-size:13px;">Código: ${codigoBipado}</span>`;
+                divResultado.innerHTML = `❌ NÃO ENCONTRADO<br><span style="font-size:14px;">Código: ${codigoBipado}</span>`;
                 falarTexto("Não encontrado");
-                
-                setTimeout(() => {
-                    divResultado.className = "aguardando";
-                    divResultado.innerHTML = "Aguardando leitura ou bipe de pacotes...";
-                    isProcessing = false;
-                }, 3000);
             }
+
+            setTimeout(() => {
+                divResultado.className = "aguardando";
+                divResultado.innerHTML = "Aguardando leitura do próximo código...";
+                isProcessing = false;
+            }, 3000);
         }
 
-        function onScanFailure(error) {}
-
-        function abrirPopupEntrega(indice) {
-            indiceAtualOperacao = indice;
-            const parada = paradasDaRota[indice];
-            const numeroParada = indice + 1;
-
-            document.getElementById('popupParadaNumero').innerText = `📌 PARADA: ${numeroParada}`;
-            document.getElementById('popupEnderecoTexto').innerText = parada.address;
-            document.getElementById('popupCodigoTexto').innerText = parada.packageId || "Sem ID";
-            document.getElementById('popupCircuit').style.display = 'block';
-            
-            falarTexto(`Parada ${numeroParada}`);
-
-            if (marcadoresMapa[indice]) {
-                marcadoresMapa[indice].openPopup();
-                mapa.setView(marcadoresMapa[indice].getLatLng(), 15);
-            }
-        }
-
-        async function enviarStatusParaCircuit(novoStatus) {
-            if (indiceAtualOperacao === -1) return;
-            const parada = paradasDaRota[indiceAtualOperacao];
-
-            try {
-                // Envia a atualização em tempo real para o servidor do Circuit
-                const resposta = await fetch(`https://api.getcircuit.com/v1/routes/${idRotaAtiva}/stops/${parada.id}`, {
-                    method: "PATCH",
-                    headers: {
-                        "Authorization": `Bearer ${apiKeyCircuit}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ status: novoStatus })
-                });
-
-                if (!resposta.ok) throw new Error("Falha ao salvar status no servidor.");
-
-                // Atualiza localmente o array
-                paradasDaRota[indiceAtualOperacao].status = novoStatus;
-                
-                // Altera dinamicamente a opacidade do marcador no mapa para indicar conclusão
-                if (marcadoresMapa[indiceAtualOperacao]) {
-                    marcadoresMapa[indiceAtualOperacao].setOpacity(0.4);
-                    marcadoresMapa[indiceAtualOperacao].closePopup();
-                }
-
-                document.getElementById('popupCircuit').style.display = 'none';
-                atualizarStatusContador();
-
-                // LÓGICA AUTOMÁTICA CIRCUIT: Varre a lista buscando a próxima pendente
-                let proximoIndice = indiceAtualOperacao + 1;
-                while (proximoIndice < paradasDaRota.length && paradasDaRota[proximoIndice].status !== 'pending') {
-                    proximoIndice++;
-                }
-
-                if (proximoIndice < paradasDaRota.length) {
-                    setTimeout(() => {
-                        isProcessing = false;
-                        abrirPopupEntrega(proximoIndice);
-                    }, 400);
-                } else {
-                    alert('🎉 Excelente! Todas as paradas integradas do Circuit foram finalizadas!');
-                    document.getElementById('resultado').innerHTML = "🏁 Rota do Circuit Finalizada!";
-                    isProcessing = false;
-                }
-
-            } catch (erro) {
-                console.error(erro);
-                alert(`Erro ao sincronizar com Circuit: ${erro.message}`);
-            }
-        }
-
-        function abrirNoGoogleMaps() {
-            if (paradasDaRota.length === 0) return;
-            const paradasFormatadas = paradasDaRota.map(p => encodeURIComponent(p.address));
-            const origem = paradasFormatadas[0];
-            const destino = paradasFormatadas[paradasFormatadas.length - 1];
-            const intermediarios = paradasFormatadas.slice(1, -1).join('|');
-            
-            let urlMaps = "https://www.google.com/maps/dir/?api=1&origin=" + origem + "&destination=" + destino;
-            if (intermediarios) {
-                urlMaps += "&waypoints=" + intermediarios;
-            }
-            window.open(urlMaps, '_blank');
-        }
-
-        function renderizarMapaRealCircuit() {
-            if (mapa !== null) return;
-            
-            // Define o ponto central inicial na primeira parada real da rota trazida do Circuit
-            const primeiroPonto = paradasDaRota[0];
-            const latInicial = primeiroPonto && primeiroPonto.lat ? primeiroPonto.lat : -23.5505;
-            const lngInicial = primeiroPonto && primeiroPonto.lng ? primeiroPonto.lng : -46.6333;
-
-            mapa = L.map('map').setView([latInicial, lngInicial], 13);
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
-            }).addTo(mapa);
-
-            let coordenadasLinha = [];
-
-            paradasDaRota.forEach((parada, index) => {
-                if (parada.lat && parada.lng) {
-                    const localizacao = [parada.lat, parada.lng];
-                    coordenadasLinha.push(localizacao);
-
-                    const marker = L.marker(localizacao)
-                        .addTo(mapa)
-                        .bindPopup(`<b>Parada ${index + 1}</b><br>${parada.address}<br>ID: ${parada.packageId}`);
-                    
-                    // Se a parada já foi finalizada na API antes do app abrir, esmaece o pin
-                    if (parada.status !== 'pending') {
-                        marker.setOpacity(0.4);
-                    }
-
-                    marker.on('click', () => {
-                        abrirPopupEntrega(index);
-                    });
-
-                    marcadoresMapa.push(marker);
-                }
-            });
-
-            if (coordenadasLinha.length > 0) {
-                const linhaCaminho = L.polyline(coordenadasLinha, {color: '#ff4500', weight: 5, opacity: 0.75}).addTo(mapa);
-                mapa.fitBounds(linhaCaminho.getBounds());
-            }
+        function onScanFailure(error) {
+            // Ignora falhas de foco contínuas da câmera
         }
 
         function falarTexto(texto) {
