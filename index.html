@@ -1,10 +1,9 @@
-HTML
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg - Roteirizador Inteligente</title>
+    <title>Rota Fácil - Numera Fácil Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
@@ -93,7 +92,7 @@ HTML
 </head>
 <body>
 
-    <h1>📦 AppEgg - Numera Fácil Pro</h1>
+    <h1>📦 Rota Fácil</h1>
      
     <div class="card" id="secaoUpload">
         <h2>Passo 1: Carregar Ordem dos Pacotes</h2>
@@ -115,16 +114,18 @@ HTML
     </div>
 
     <script>
-        // Configura a URL do worker do PDF.js exigida pela biblioteca
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        // Configuração alternativa para evitar travas locais (file:///) do Worker do PDF.js
+        if (typeof window !== 'undefined' && 'pdfjsLib' in window) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        }
 
         let bancoDeDadosRotas = [];
         let isProcessing = false;
 
         function processarPlanilha() {
             const input = document.getElementById('arquivoPlanilha');
-            if (input.files.length === 0) {
-                alert('Por favor, selecione um arquivo primeiro.');
+            if (!input || input.files.length === 0) {
+                alert('Por favor, selecione um arquivo válido primeiro.');
                 return;
             }
 
@@ -133,12 +134,22 @@ HTML
             const extensao = arquivo.name.split('.').pop().toLowerCase();
 
             if (extensao === 'pdf') {
+                leitor.onerror = function() {
+                    alert('Erro na leitura física do arquivo PDF.');
+                };
                 leitor.onload = function(e) {
-                    const dados digitais = new Uint8Array(e.target.result);
-                    processarPDF(dados digitais);
+                    try {
+                        const dadosDigitais = new Uint8Array(e.target.result);
+                        processarPDF(dadosDigitais);
+                    } catch (err) {
+                        alert('Erro ao iniciar processamento do PDF: ' + err.message);
+                    }
                 };
                 leitor.readAsArrayBuffer(arquivo);
             } else {
+                leitor.onerror = function() {
+                    alert('Erro na leitura física do arquivo de planilha.');
+                };
                 leitor.onload = function(e) {
                     const dados = e.target.result;
 
@@ -160,7 +171,7 @@ HTML
                         }
                     } catch (erro) {
                         console.error(erro);
-                        alert('Erro ao processar o arquivo. Certifique-se de que é um documento válido.');
+                        alert('Erro ao processar a planilha: ' + erro.message);
                     }
                 };
 
@@ -172,20 +183,23 @@ HTML
             }
         }
 
-        // Função assíncrona dedicada a minerar o arquivo PDF em busca dos códigos
         async function processarPDF(dadosArrayBuffer) {
             try {
-                const pdf = await pdfjsLib.getDocument({ data: dadosArrayBuffer }).promise;
+                // Força o carregamento do documento sem depender estritamente do isolamento do worker local
+                const carregandoPdf = pdfjsLib.getDocument({
+                    data: dadosArrayBuffer,
+                    disableWorker: true, // Melhora compatibilidade abrindo direto localmente
+                    verbosity: 0
+                });
+                
+                const pdf = await carregandoPdf.promise;
                 let codigosEncontrados = [];
 
                 for (let numPagina = 1; numPagina <= pdf.numPages; numPagina++) {
                     const pagina = await pdf.getPage(numPagina);
                     const conteudoTexto = await pagina.getTextContent();
                     
-                    // Une os blocos textuais da página separando por quebras de linha artificiais
                     const textoPagina = conteudoTexto.items.map(item => item.str).join(' ');
-                    
-                    // Divide o texto por espaços ou quebras para avaliar palavras isoladas
                     const palavras = textoPagina.split(/[\s,;|\n]+/);
 
                     palavras.forEach(palavra => {
@@ -203,13 +217,13 @@ HTML
 
             } catch (erro) {
                 console.error(erro);
-                alert('Falha ao processar a leitura interna do PDF. Certifique-se de que não é um PDF protegido ou digitalizado como imagem pura.');
+                alert('Falha interna do leitor de PDF: ' + erro.message + '\n\nCertifique-se de que o arquivo não está corrompido.');
             }
         }
 
         function finalizarCarregamento() {
             if (bancoDeDadosRotas.length === 0) {
-                alert('Nenhum código de rastreio válido (padrão Shopee/Circuit) foi identificado no arquivo. Verifique o conteúdo.');
+                alert('Atenção: O arquivo foi lido, mas nenhum código de rastreio válido (padrão Shopee/Circuit/Numérico) foi encontrado dentro dele.');
                 return;
             }
 
@@ -283,7 +297,7 @@ HTML
         }
 
         function onScanFailure(error) {
-            // Ignora falhas de foco contínuas da câmera
+            // Ignora falhas de foco da câmera
         }
 
         function falarTexto(texto) {
