@@ -202,8 +202,8 @@
         </div>
 
         <div id="abaArquivo" style="display: none;">
-            <p style="font-size: 12px; color: #666; text-align: center;">Insira a planilha Excel (.xlsx, .xls) ou TXT. O sistema buscará as linhas com códigos <strong>BR</strong>.</p>
-            <input type="file" id="arquivoPlanilha" accept=".xlsx, .xls, .csv, .txt">
+            <p style="font-size: 12px; color: #666; text-align: center;">Insira a planilha Excel (.xlsx, .xls), arquivo TXT ou <strong>PDF</strong> da sua rota.</p>
+            <input type="file" id="arquivoPlanilha" accept=".pdf, .xlsx, .xls, .csv, .txt">
             <button class="btn-principal" onclick="processarArquivoFisico()">Vincular Arquivo e Abrir Scanner</button>
         </div>
 
@@ -229,7 +229,6 @@
     </div>
 
     <script>
-        // Array de objetos: { codigo: "BR...", endereco: "Rua X..." }
         let bancoDeDadosRotas = [];
         let isProcessing = false;
 
@@ -249,13 +248,12 @@
                 document.querySelector('.tabs button:nth-child(3)').classList.add('active');
                 document.getElementById('abaMapa').style.display = 'block';
                 if(document.getElementById('iframeMapa').src === 'about:blank') {
-                    // Inicializa o mapa com localização vazia amigável
                     document.getElementById('iframeMapa').src = "https://maps.google.com/maps?q=Brasil&t=&z=4&ie=UTF8&iwloc=&output=embed";
                 }
             }
         }
 
-        // Função para quebrar o texto por linhas e vincular o BR ao endereço correspondente da linha
+        // Processa blocos de texto puro estruturando as linhas que possuem BR e Endereço
         function estruturarLinhasDeRota(textoCompleto) {
             const linhas = textoCompleto.split(/\r?\n/);
             const padraoBR = /BR[A-Z0-9]{9,20}/i;
@@ -267,16 +265,12 @@
                 const match = linha.match(padraoBR);
                 if (match) {
                     const codigoEncontrado = match[0].toUpperCase().trim();
-                    
-                    // Limpa a linha para remover o código e isolar o endereço restante
                     let enderecoExtraido = linha.replace(match[0], '').replace(/[,;|\t]+/g, ' ').trim();
                     
-                    // Se o endereço ficou vazio ou curto demais, coloca um identificador padrão
                     if (enderecoExtraido.length < 5) {
-                        enderecoExtraido = "Endereço não legível na linha";
+                        enderecoExtraido = "Endereço não identificado na linha";
                     }
 
-                    // Evita duplicados de códigos idênticos na mesma subida
                     if (!entregasFiltradas.some(e => e.codigo === codigoEncontrado)) {
                         entregasFiltradas.push({
                             codigo: codigoEncontrado,
@@ -311,35 +305,50 @@
             const leitor = new FileReader();
             const extensao = arquivo.name.split('.').pop().toLowerCase();
 
-            leitor.onload = function(e) {
-                const dados = e.target.result;
-                try {
-                    let textoAgrupado = '';
-                    if (extensao === 'xlsx' || extensao === 'xls') {
-                        const dadosArray = new Uint8Array(dados);
-                        const workbook = XLSX.read(dadosArray, { type: 'array' });
-                        const primeiraAba = workbook.SheetNames[0];
-                        const planilha = workbook.Sheets[primeiraAba];
-                        const linhas = XLSX.utils.sheet_to_json(planilha, { header: 1 });
-                        
-                        linhas.forEach(linha => {
-                            textoAgrupado += linha.join(' ') + '\n';
-                        });
-                    } else {
-                        textoAgrupado = dados;
+            if (extensao === 'pdf') {
+                leitor.onload = function(e) {
+                    try {
+                        const conteudoBruto = e.target.result;
+                        // Extrai a malha textual contida no PDF decodificado de forma direta e síncrona
+                        bancoDeDadosRotas = estruturarLinhasDeRota(conteudoBruto);
+                        finalizarCarregamento();
+                    } catch (erro) {
+                        alert('Erro ao interpretar a estrutura interna do PDF: ' + erro.message);
                     }
-                    
-                    bancoDeDadosRotas = estruturarLinhasDeRota(textoAgrupado);
-                    finalizarCarregamento();
-                } catch (erro) {
-                    alert('Erro ao processar as colunas do arquivo: ' + erro.message);
-                }
-            };
-
-            if (extensao === 'xlsx' || extensao === 'xls') {
-                leitor.readAsArrayBuffer(arquivo);
+                };
+                leitor.readAsText(arquivo, 'ISO-8859-1'); // Garante a extração de strings limpas do PDF sem travar
             } else {
-                leitor.readAsText(arquivo, 'UTF-8');
+                // Tratamento de Planilhas Excel e Arquivos TXT/CSV
+                leitor.onload = function(e) {
+                    const dados = e.target.result;
+                    try {
+                        let textoAgrupado = '';
+                        if (extensao === 'xlsx' || extensao === 'xls') {
+                            const dadosArray = new Uint8Array(dados);
+                            const workbook = XLSX.read(dadosArray, { type: 'array' });
+                            const primeiraAba = workbook.SheetNames[0];
+                            const planilha = workbook.Sheets[primeiraAba];
+                            const linhas = XLSX.utils.sheet_to_json(planilha, { header: 1 });
+                            
+                            linhas.forEach(linha => {
+                                textoAgrupado += linha.join(' ') + '\n';
+                            });
+                        } else {
+                            textoAgrupado = dados;
+                        }
+                        
+                        bancoDeDadosRotas = estruturarLinhasDeRota(textoAgrupado);
+                        finalizarCarregamento();
+                    } catch (erro) {
+                        alert('Erro ao carregar colunas do arquivo: ' + erro.message);
+                    }
+                };
+
+                if (extensao === 'xlsx' || extensao === 'xls') {
+                    leitor.readAsArrayBuffer(arquivo);
+                } else {
+                    leitor.readAsText(arquivo, 'UTF-8');
+                }
             }
         }
 
@@ -351,8 +360,8 @@
 
         function buscarEnderecoNoMapa() {
             const endereco = document.getElementById('campoEndereco').value;
-            if (!endereco.trim() || endereco.includes("Endereço não legível")) {
-                alert('Endereço inválido ou não selecionado.');
+            if (!endereco.trim() || endereco.includes("Endereço não identificado")) {
+                alert('Endereço ausente ou inválido nesta linha.');
                 return;
             }
             const urlMapa = `https://maps.google.com/maps?q=${encodeURIComponent(endereco)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
@@ -360,27 +369,24 @@
         }
 
         function abrirMapsExterno(endereco) {
-            if (!endereco || endereco.includes("Endereço não legível")) return;
+            if (!endereco || endereco.includes("Endereço não identificado")) return;
             window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`, '_blank');
         }
 
         function finalizarCarregamento() {
             if (bancoDeDadosRotas.length === 0) {
-                alert('Atenção: Nenhum código iniciado com "BR" associado a endereço foi localizado. Verifique a formatação.');
+                alert('Atenção: Nenhum código iniciado com "BR" pôde ser extraído do arquivo ou texto fornecido.');
                 return;
             }
 
-            // Renderiza e constrói a lista interativa de paradas na tela
             const container = document.getElementById('containerListaEntregas');
             container.innerHTML = '';
 
             bancoDeDadosRotas.forEach((entrega, index) => {
                 const numeroParada = index + 1;
-                
                 const item = document.createElement('div');
                 item.className = 'item-entrega';
-                // Ao clicar no corpo do item, joga o endereço direto na aba de mapas interna
-                item.setAttribute('onclick', `visualizarNoMapaDoApp("${entrega.endereco.replace(/"/g, '&quot;')}")`);
+                item.setAttribute('onclick', `visualizarNoMapaDoApp("${entrega.endereco.replace(/"/g, '"')}")`);
 
                 item.innerHTML = `
                     <div class="topo">
@@ -389,7 +395,7 @@
                     </div>
                     <div class="endereco">${entrega.endereco}</div>
                     <div class="links-externos">
-                        <span class="btn-link" onclick="event.stopPropagation(); abrirMapsExterno('${entrega.endereco.replace(/"/g, '&quot;')}')">➔ Abrir no Aplicativo do Maps</span>
+                        <span class="btn-link" onclick="event.stopPropagation(); abrirMapsExterno('${entrega.endereco.replace(/"/g, '"')}')">➔ Abrir no Aplicativo do Maps</span>
                     </div>
                 `;
                 container.appendChild(item);
@@ -426,7 +432,6 @@
                 divResultado.innerHTML = `📌 PARADA: ${numeroParada}<br><span style="font-size:13px;">${dadosEntrega.codigo}</span><br><span style="font-size:11px; font-weight:normal; display:block; margin-top:4px;">${dadosEntrega.endereco}</span>`;
                 falarTexto(`Parada ${numeroParada}`);
                 
-                // Abre automaticamente o mapa da parada correspondente para agilizar a entrega física
                 visualizarNoMapaDoApp(dadosEntrega.endereco);
             } else {
                 divResultado.className = "erro";
