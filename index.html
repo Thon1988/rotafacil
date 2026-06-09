@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rota Fácil - Numera Fácil Pro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -24,37 +28,79 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 15px;
         }
+        .file-input-wrapper {
+            position: relative;
+            margin: 10px 0;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            border: 1px dashed #ff4500;
+            box-sizing: border-box;
+        }
         textarea {
             width: 100%;
-            height: 150px;
-            padding: 12px;
-            border-radius: 6px;
-            border: 2px dashed #ff4500;
+            height: 80px;
+            padding: 10px;
             box-sizing: border-box;
-            font-family: Arial, sans-serif;
+            border: 1px solid #ccc;
+            border-radius: 5px;
             resize: vertical;
-            margin-top: 10px;
-            background-color: #fafafa;
-        }
-        textarea:focus {
-            background-color: #fff;
-            outline: none;
-            border-style: solid;
+            font-family: monospace;
+            margin-top: 5px;
         }
         button {
             width: 100%;
             background-color: #ff4500;
             color: white;
             border: none;
-            padding: 14px;
+            padding: 12px;
             font-size: 16px;
             font-weight: bold;
             border-radius: 5px;
             cursor: pointer;
-            margin-top: 12px;
+            margin-top: 10px;
         }
         button:hover {
             background-color: #e03e00;
+        }
+        /* Sistema de Abas Persistentes */
+        .abas-container {
+            display: flex;
+            border-bottom: 2px solid #ccc;
+            margin-bottom: 15px;
+            gap: 5px;
+        }
+        .aba-botao {
+            flex: 1;
+            padding: 12px 10px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 5px 5px 0 0;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            color: #555;
+            transition: all 0.2s ease;
+            margin: 0;
+        }
+        .aba-botao.ativa {
+            background: #ff4500;
+            color: white;
+        }
+        .conteudo-aba {
+            display: none;
+            visibility: hidden;
+            height: 0;
+            overflow: hidden;
+        }
+        .conteudo-aba.ativa {
+            display: block;
+            visibility: visible;
+            height: auto;
+            overflow: visible;
         }
         #reader {
             width: 100%;
@@ -91,6 +137,43 @@
             color: #555;
             margin-bottom: 10px;
         }
+        .lista-conferencia {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            background: #fafafa;
+            margin-bottom: 10px;
+        }
+        .item-conferencia {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        .item-conferencia span {
+            font-weight: bold;
+            color: #ff4500;
+        }
+        /* Layout Estável do Mapa */
+        #mapa-container {
+            width: 100%;
+            height: 380px;
+            border-radius: 8px;
+            border: 2px solid #ff4500;
+            position: relative;
+            background-color: #e5e3df;
+        }
+        .painel-calibracao {
+            background: #e2f0fd;
+            border-left: 4px solid #007bff;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -98,112 +181,372 @@
     <h1>📦 Rota Fácil</h1>
      
     <div class="card" id="secaoUpload">
-        <h2>Passo 1: Colar Texto da Rota (PDF ou Planilha)</h2>
-        <p style="font-size: 13px; color: #555; text-align: center; line-height: 1.4;">
-            Abra seu arquivo (PDF, Excel, TXT ou Circuit), selecione tudo, <strong>COPIE</strong> e <strong>COLE</strong> no campo abaixo. O sistema vai extrair os códigos automaticamente!
-        </p>
+        <h2>Passo 1: Carregar Base da Rota</h2>
+        <p style="font-size: 12px; color: #666; text-align: center;">Selecione a planilha Excel ou relatório em PDF.</p>
          
-        <textarea id="campoTextoBruto" placeholder="Cole aqui todo o conteúdo copiado do seu arquivo..."></textarea>
+        <div class="file-input-wrapper">
+            <input type="file" id="arquivoPlanilha" accept=".pdf, .xlsx, .xls, .csv, .txt">
+        </div>
          
-        <button onclick="processarTextoCopidado()">Processar Conteúdo e Abrir Scanner</button>
+        <button onclick="processarPlanilha()">Carregar Rota</button>
+    </div>
+
+    <div class="card" id="secaoConferencia" style="display: none;">
+        <h2>Passo 2: Gerenciamento de Rota</h2>
+        
+        <div class="abas-container">
+            <button class="aba-botao ativa" onclick="alternarAba('abaLista', this)">📋 Lista de Paradas</button>
+            <button class="aba-botao" onclick="alternarAba('abaMapa', this)">🗺️ Mapa da Rota</button>
+            <button class="aba-botao" onclick="alternarAba('abaTabela', this)">📊 Endereços</button>
+        </div>
+
+        <div id="abaLista" class="conteudo-aba ativa">
+            <div class="painel-calibracao">
+                <label for="ajusteOffset">🔢 Ajuste Manual de Paradas (Se necessário):</label>
+                <select id="ajusteOffset" onchange="recalculaVisualizacaoConferencia()" style="width:100%; padding:8px; margin-top:5px; border-radius:4px;">
+                    <option value="0" selected>Sem deslocamento (Padrão corrigido)</option>
+                    <option value="-1">Subtrair 1 Número</option>
+                    <option value="1">Somar 1 Número</option>
+                </select>
+                
+                <label style="display:block; margin-top:10px;">📋 Ajustar Ordem Manualmente:</label>
+                <textarea id="textoOrdemManual" placeholder="Cole os códigos na ordem que deseja se necessário..."></textarea>
+                <button onclick="aplicarOrdenacaoManual()" style="background-color: #6c757d; font-size:12px; padding:6px; margin-top:5px;">Atualizar Lista Colada</button>
+            </div>
+            <div class="lista-conferencia" id="containerListaConferencia"></div>
+        </div>
+
+        <div id="abaMapa" class="conteudo-aba">
+            <div id="mapa-container"></div>
+        </div>
+
+        <div id="abaTabela" class="conteudo-aba">
+            <p style="font-size: 12px; color: #555;">Lista de todos os locais de entrega detectados no arquivo carregado:</p>
+            <div class="lista-conferencia" id="containerListaEnderecos"></div>
+        </div>
+
+        <button onclick="iniciarScannerFinal()" style="background-color: #28a745; margin-top: 15px;">Confirmar Rota e Abrir Scanner</button>
+        <button onclick="reiniciarApp()" style="background-color: #dc3545; font-size: 12px; padding: 6px; margin-top: 5px;">Reiniciar Processo</button>
     </div>
 
     <div id="secaoScanner" class="card" style="display: none;">
-        <h2>Passo 2: Bipar Pacote</h2>
+        <h2>Passo 3: Bipar Pacote</h2>
         <div class="info-rota" id="statusRota"></div>
         <div id="reader"></div>
         <div id="resultado" class="aguardando">Aguardando leitura do código...</div>
-        <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 6px; margin-top: 15px;">Inserir Nova Lista</button>
+        <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 6px; margin-top: 15px;">Trocar Planilha / PDF</button>
     </div>
 
     <script>
-        let bancoDeDadosRotas = [];
-        let isProcessing = false;
+        if (typeof window !== 'undefined' && 'pdfjsLib' in window) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        }
 
-        function processarTextoCopidado() {
-            const inputTexto = document.getElementById('campoTextoBruto').value;
+        let bancoDeDadosRotas = [];
+        let listaEnderecosExtraidos = [];
+        let isProcessing = false;
+        let map = null;
+        let markerGroup = null;
+
+        function alternarAba(idAba, botao) {
+            // Remove a classe ativa usando display, mas preservando o estado interno do DOM
+            document.querySelectorAll('.conteudo-aba').forEach(aba => aba.classList.remove('ativa'));
+            document.querySelectorAll('.aba-botao').forEach(btn => btn.classList.remove('ativa'));
             
-            if (!inputTexto.trim()) {
-                alert('Por favor, cole o conteúdo copiado do seu arquivo no campo de texto.');
+            document.getElementById(idAba).classList.add('ativa');
+            botao.classList.add('ativa');
+
+            // Recalcula o tamanho do mapa imediatamente ao alternar abas para não quebrar a exibição
+            if (map !== null) {
+                map.invalidateSize();
+            }
+        }
+
+        function processarPlanilha() {
+            const input = document.getElementById('arquivoPlanilha');
+            if (!input || input.files.length === 0) {
+                alert('Por favor, selecione um arquivo válido primeiro.');
                 return;
             }
 
-            try {
-                // Expressões Regulares refinadas para mineração direta de texto
-                const padraoShopee = /[A-Z]{2}\d{9,15}[A-Z]?/g;
-                const padraoNumericoLongo = /\b\d{9,25}\b/g;
-                const padraoGenerico = /[A-Z0-9]{10,20}/g;
+            const arquivo = input.files[0];
+            const leitor = new FileReader();
+            const extensao = arquivo.name.split('.').pop().toLowerCase();
 
+            if (extensao === 'pdf') {
+                leitor.onload = function(e) {
+                    try {
+                        const dadosDigitais = new Uint8Array(e.target.result);
+                        processarPDF(dadosDigitais);
+                    } catch (err) {
+                        alert('Erro ao iniciar processamento do PDF: ' + err.message);
+                    }
+                };
+                leitor.readAsArrayBuffer(arquivo);
+            } else {
+                leitor.onload = function(e) {
+                    const dados = e.target.result;
+                    try {
+                        if (extensao === 'xlsx' || extensao === 'xls') {
+                            const dadosArray = new Uint8Array(dados);
+                            const workbook = XLSX.read(dadosArray, { type: 'array' });
+                            const primeiraAba = workbook.SheetNames[0];
+                            const planilha = workbook.Sheets[primeiraAba];
+                            const linhas = XLSX.utils.sheet_to_json(planilha, { header: 1 });
+                            
+                            bancoDeDadosRotas = extrairCodigosDeMatriz(linhas);
+                            tentarMapearEnderecosExcel(linhas);
+                            irParaConferencia();
+                        } else {
+                            const linhasTexto = dados.split('\n');
+                            bancoDeDadosRotas = linhasTexto
+                                .map(linha => linha.trim().toUpperCase())
+                                .filter(linha => validarCodigoRastreio(linha));
+                            irParaConferencia();
+                        }
+                    } catch (erro) {
+                        alert('Erro ao processar a planilha: ' + erro.message);
+                    }
+                };
+
+                if (extensao === 'xlsx' || extensao === 'xls') {
+                    leitor.readAsArrayBuffer(arquivo);
+                } else {
+                    leitor.readAsText(arquivo, 'UTF-8');
+                }
+            }
+        }
+
+        async function processarPDF(dadosArrayBuffer) {
+            try {
+                const carregandoPdf = pdfjsLib.getDocument({
+                    data: dadosArrayBuffer,
+                    disableWorker: true,
+                    verbosity: 0
+                });
+                
+                const pdf = await carregandoPdf.promise;
                 let codigosEncontrados = [];
 
-                // 1. Captura padrões Shopee/Correios
-                const matchesShopee = inputTexto.match(padraoShopee);
-                if (matchesShopee) {
-                    matchesShopee.forEach(c => {
-                        if (!codigosEncontrados.includes(c)) codigosEncontrados.push(c);
-                    });
-                }
+                for (let numPagina = 1; numPagina <= pdf.numPages; numPagina++) {
+                    const pagina = await pdf.getPage(numPagina);
+                    const conteudoTexto = await pagina.getTextContent();
+                    
+                    const textoPagina = conteudoTexto.items.map(item => item.str).join(' ');
+                    const palavras = textoPagina.split(/[\s,;|\n]+/);
 
-                // 2. Captura numéricos longos
-                const matchesNumericos = inputTexto.match(padraoNumericoLongo);
-                if (matchesNumericos) {
-                    matchesNumericos.forEach(c => {
-                        if (!codigosEncontrados.includes(c)) codigosEncontrados.push(c);
-                    });
-                }
-
-                // 3. Fallback genérico para IDs alfanuméricos
-                const matchesGenericos = inputTexto.match(padraoGenerico);
-                if (matchesGenericos) {
-                    matchesGenericos.forEach(c => {
-                        if (!/^[A-Z\s]+$/.test(c) && !codigosEncontrados.includes(c)) {
-                            codigosEncontrados.push(c);
+                    palavras.forEach(palavra => {
+                        let codigoLimpo = palavra.trim().toUpperCase();
+                        if (validarCodigoRastreio(codigoLimpo)) {
+                            if (!codigosEncontrados.includes(codigoLimpo)) {
+                                codigosEncontrados.push(codigoLimpo);
+                            }
                         }
                     });
                 }
 
-                // Normaliza tudo para maiúsculo
-                bancoDeDadosRotas = codigosEncontrados.map(c => c.toUpperCase().trim());
-
-                if (bancoDeDadosRotas.length === 0) {
-                    alert('Nenhum código de rastreio válido foi identificado no texto colado. Certifique-se de que copiou a parte que contém os códigos.');
-                    return;
-                }
-
-                // Transiciona a tela
-                document.getElementById('secaoUpload').style.display = 'none';
-                document.getElementById('secaoScanner').style.display = 'block';
-                document.getElementById('statusRota').innerText = `Rota carregada com sucesso! ${bancoDeDadosRotas.length} pacotes encontrados.`;
-                
-                inicializarScanner();
+                bancoDeDadosRotas = codigosEncontrados;
+                irParaConferencia();
 
             } catch (erro) {
-                alert('Erro ao processar o texto: ' + erro.message);
+                alert('Falha interna do leitor de PDF: ' + erro.message);
             }
         }
 
+        function tentarMapearEnderecosExcel(linhas) {
+            listaEnderecosExtraidos = [];
+            if(linhas.length < 2) return;
+            
+            let cabecalho = linhas[0].map(c => String(c).toLowerCase());
+            let idxEndereco = cabecalho.findIndex(c => c.includes('endereço') || c.includes('rua') || c.includes('logradouro') || c.includes('address'));
+            let idxCidade = cabecalho.findIndex(c => c.includes('cidade') || c.includes('municipio') || c.includes('city'));
+
+            if(idxEndereco !== -1) {
+                for(let i = 1; i < linhas.length; i++) {
+                    if(linhas[i][idxEndereco]) {
+                        let compl = idxCidade !== -1 && linhas[i][idxCidade] ? ', ' + linhas[i][idxCidade] : '';
+                        listaEnderecosExtraidos.push(String(linhas[i][idxEndereco]) + compl);
+                    }
+                }
+            }
+        }
+
+        function irParaConferencia() {
+            if (bancoDeDadosRotas.length === 0) {
+                alert('Atenção: Nenhum código de rastreio com padrão inicial válido foi identificado.');
+                return;
+            }
+
+            document.getElementById('secaoUpload').style.display = 'none';
+            document.getElementById('secaoConferencia').style.display = 'block';
+
+            recalculaVisualizacaoConferencia();
+            renderizarListaEnderecosBrutos();
+            gerarMapaEEncontrarRotas();
+        }
+
+        function inicializarMapaBase() {
+            if (map !== null) return;
+            map = L.map('mapa-container').setView([-15.7801, -47.9292], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            markerGroup = L.layerGroup().addTo(map);
+        }
+
+        async function gerarMapaEEncontrarRotas() {
+            inicializarMapaBase();
+            
+            // Força o contêiner do mapa a se ajustar às dimensões reais antes do fetch geométrico
+            setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+
+            if(listaEnderecosExtraidos.length === 0) {
+                map.setView([-23.5505, -46.6333], 10); 
+                return;
+            }
+
+            markerGroup.clearLayers();
+            let coordenadasRota = [];
+
+            for (let i = 0; i < Math.min(listaEnderecosExtraidos.length, 25); i++) { 
+                try {
+                    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(listaEnderecosExtraidos[i])}&limit=1`;
+                    let resposta = await fetch(url);
+                    let dados = await resposta.json();
+                    
+                    if(dados && dados.length > 0) {
+                        let lat = parseFloat(dados[0].lat);
+                        let lon = parseFloat(dados[0].lon);
+                        coordenadasRota.push([lat, lon]);
+
+                        L.marker([lat, lon])
+                            .addTo(markerGroup)
+                            .bindPopup(`<b>Parada #${i+1}</b><br>${listaEnderecosExtraidos[i]}`);
+                    }
+                } catch(e) {
+                    console.log("Erro na busca do ponto: " + i);
+                }
+            }
+
+            if(coordenadasRota.length > 1) {
+                let linhaRota = L.polyline(coordenadasRota, {color: '#ff4500', weight: 4}).addTo(markerGroup);
+                map.fitBounds(linhaRota.getBounds());
+            } else if(coordenadasRota.length === 1) {
+                map.setView(coordenadasRota[0], 14);
+            }
+        }
+
+        function renderizarListaEnderecosBrutos() {
+            const container = document.getElementById('containerListaEnderecos');
+            container.innerHTML = '';
+            
+            if(listaEnderecosExtraidos.length === 0) {
+                container.innerHTML = '<div style="padding:10px; color:#888; text-align:center;">Nenhum endereço de texto bruto mapeado na planilha.</div>';
+                return;
+            }
+
+            listaEnderecosExtraidos.forEach((end, idx) => {
+                const item = document.createElement('div');
+                item.className = 'item-conferencia';
+                item.innerHTML = `<div><span>Ponto #${idx+1}</span> - ${end}</div>`;
+                container.appendChild(item);
+            });
+        }
+
+        function aplicarOrdenacaoManual() {
+            const texto = document.getElementById('textoOrdemManual').value;
+            if (!texto.trim()) return;
+
+            const potenciaisCodigos = texto.split(/[\s,;|\n]+/);
+            let novaOrdem = [];
+
+            potenciaisCodigos.forEach(item => {
+                let limpo = item.trim().toUpperCase();
+                if (validarCodigoRastreio(limpo) && !novaOrdem.includes(limpo)) {
+                    novaOrdem.push(limpo);
+                }
+            });
+
+            if (novaOrdem.length > 0) {
+                bancoDeDadosRotas = novaOrdem;
+                recalculaVisualizacaoConferencia();
+            }
+        }
+
+        function recalculaVisualizacaoConferencia() {
+            const container = document.getElementById('containerListaConferencia');
+            container.innerHTML = '';
+            const offset = parseInt(document.getElementById('ajusteOffset').value, 10);
+
+            bancoDeDadosRotas.forEach((codigo, index) => {
+                const item = document.createElement('div');
+                item.className = 'item-conferencia';
+                const numeroExibido = (index + 1) + offset;
+                item.innerHTML = `<div><span>#${numeroExibido}</span> - ${codigo}</div>`;
+                container.appendChild(item);
+            });
+        }
+
+        function iniciarScannerFinal() {
+            document.getElementById('secaoConferencia').style.display = 'none';
+            document.getElementById('secaoScanner').style.display = 'block';
+            document.getElementById('statusRota').innerText = `Rota ativa! ${bancoDeDadosRotas.length} pacotes carregados em memória.`;
+            
+            inicializarScanner();
+        }
+
+        function validarCodigoRastreio(texto) {
+            if (!texto) return false;
+            const padraoLetrasIniciais = /^[A-Z]{2}\d{9,15}[A-Z]?$/; 
+            return padraoLetrasIniciais.test(texto);
+        }
+
+        function extrairCodigosDeMatriz(matriz) {
+            let codigos = [];
+            for (let i = 0; i < matriz.length; i++) {
+                for (let j = 0; j < matriz[i].length; j++) {
+                    if (matriz[i][j] !== undefined && matriz[i][j] !== null) {
+                        let valor = String(matriz[i][j]).trim().toUpperCase();
+                        if (validarCodigoRastreio(valor) && !codigos.includes(valor)) {
+                            codigos.push(valor);
+                        }
+                    }
+                }
+            }
+            return codigos;
+        }
+
+        function determinarPosicaoFinal(codigoBipado) {
+            let index = bancoDeDadosRotas.indexOf(codigoBipado);
+            if (index !== -1) return index;
+            for (let i = 0; i < bancoDeDadosRotas.length; i++) {
+                if (bancoDeDadosRotas[i].includes(codigoBipado) || codigoBipado.includes(bancoDeDadosRotas[i])) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
         function inicializarScanner() {
-            const html5QrcodeScanner = new Html5QrcodeScanner(
-                "reader", { fps: 15, qrbox: 260 }
-            );
+            const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 15, qrbox: 260 });
             html5QrcodeScanner.render(onScanSuccess, onScanFailure);
         }
 
         function onScanSuccess(decodedText, decodedResult) {
             if (isProcessing) return;
-            
             isProcessing = true;
+            
             const codigoBipado = decodedText.trim().toUpperCase();
             const divResultado = document.getElementById('resultado');
-            
-            // Procura por correspondência exata ou parcial inteligente
-            const posicao = bancoDeDadosRotas.findIndex(item => item.includes(codigoBipado) || codigoBipado.includes(item));
+            const posicao = determinarPosicaoFinal(codigoBipado);
 
             if (posicao !== -1) {
-                const numeroParada = posicao + 1;
+                const offset = parseInt(document.getElementById('ajusteOffset').value, 10);
+                const numeroParada = (posicao + 1) + offset;
+                
                 divResultado.className = "sucesso";
-                divResultado.innerHTML = `📌 PARADA: ${numeroParada}<br><span style="font-size:14px;">Código: ${bancoDeDadosRotas[posicao]}</span>`;
-                falarTexto(`Parada ${numeroParada}`);
+                divResultado.innerHTML = `📌 PARADA: ${numeroParada}<br><span style="font-size:14px;">Código: ${codigoBipado}</span>`;
+                falarTexto Levantamento(`Parada ${numeroParada}`);
             } else {
                 divResultado.className = "erro";
                 divResultado.innerHTML = `❌ NÃO ENCONTRADO<br><span style="font-size:14px;">Código: ${codigoBipado}</span>`;
@@ -217,9 +560,7 @@
             }, 3000);
         }
 
-        function onScanFailure(error) {
-            // Ignora falhas de foco contínuas da câmera
-        }
+        function onScanFailure(error) {}
 
         function falarTexto(texto) {
             if ('speechSynthesis' in window) {
