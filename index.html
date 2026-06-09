@@ -25,31 +25,66 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 15px;
         }
-        .file-input-wrapper {
-            position: relative;
+        .tabs {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            gap: 5px;
+        }
+        .tab-btn {
+            background: #e9ecef;
+            color: #333;
+            padding: 10px 5px;
+            border-radius: 5px;
+            font-size: 12px;
+            flex: 1;
+            margin: 0;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+            text-align: center;
+        }
+        .tab-btn.active {
+            background: #ff4500;
+            color: white;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            resize: vertical;
+            margin-top: 10px;
+            background-color: #fafafa;
+        }
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            background: #e9ecef;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
             margin: 10px 0;
         }
         input[type="file"] {
-            width: 100%;
-            padding: 10px;
-            background: #e9ecef;
-            border-radius: 5px;
             border: 1px dashed #ff4500;
-            box-sizing: border-box;
         }
-        button {
+        button.btn-principal {
             width: 100%;
             background-color: #ff4500;
             color: white;
             border: none;
-            padding: 12px;
+            padding: 14px;
             font-size: 16px;
             font-weight: bold;
             border-radius: 5px;
             cursor: pointer;
-            margin-top: 10px;
+            margin-top: 12px;
         }
-        button:hover {
+        button.btn-principal:hover {
             background-color: #e03e00;
         }
         #reader {
@@ -87,6 +122,64 @@
             color: #555;
             margin-bottom: 10px;
         }
+        .mapa-container {
+            width: 100%;
+            height: 350px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+        }
+        .lista-entregas {
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .item-entrega {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .item-entrega:hover {
+            background: #ffebe6;
+        }
+        .item-entrega .topo {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 14px;
+            color: #ff4500;
+        }
+        .item-entrega .endereco {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .links-externos {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .btn-link {
+            font-size: 11px;
+            color: #0066cc;
+            text-decoration: underline;
+            background: none;
+            border: none;
+            padding: 0;
+            width: auto;
+            margin: 0;
+            cursor: pointer;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
@@ -94,14 +187,32 @@
     <h1>📦 Rota Fácil</h1>
      
     <div class="card" id="secaoUpload">
-        <h2>Passo 1: Carregar Ordem dos Pacotes</h2>
-        <p style="font-size: 12px; color: #666; text-align: center;">Selecione o arquivo PDF, Excel ou CSV exportado do sistema de rotas (Circuit/Shopee).</p>
-         
-        <div class="file-input-wrapper">
-            <input type="file" id="arquivoPlanilha" accept=".pdf, .xlsx, .xls, .csv, .txt">
+        <h2>Passo 1: Escolha o Modo de Entrada</h2>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="mudarAba('texto')">📋 Colar Texto</button>
+            <button class="tab-btn" onclick="mudarAba('arquivo')">📁 Ler Arquivo</button>
+            <button class="tab-btn" onclick="mudarAba('mapa')">🗺️ Mapa / Endereço</button>
         </div>
-         
-        <button onclick="processarPlanilha()">Carregar Rota e Abrir Scanner</button>
+
+        <div id="abaTexto">
+            <p style="font-size: 12px; color: #666; text-align: center;">Cole o conteúdo do seu PDF ou planilha. O sistema associará o código <strong>BR</strong> ao endereço da mesma linha.</p>
+            <textarea id="campoTextoBruto" placeholder="Cole aqui o texto copiado do arquivo da sua rota contendo os códigos BR e endereços..."></textarea>
+            <button class="btn-principal" onclick="processarTextoCopiado()">Vincular Rota e Abrir Scanner</button>
+        </div>
+
+        <div id="abaArquivo" style="display: none;">
+            <p style="font-size: 12px; color: #666; text-align: center;">Insira a planilha Excel (.xlsx, .xls) ou TXT. O sistema buscará as linhas com códigos <strong>BR</strong>.</p>
+            <input type="file" id="arquivoPlanilha" accept=".xlsx, .xls, .csv, .txt">
+            <button class="btn-principal" onclick="processarArquivoFisico()">Vincular Arquivo e Abrir Scanner</button>
+        </div>
+
+        <div id="abaMapa" style="display: none;">
+            <p style="font-size: 12px; color: #666; text-align: center;">Digite o endereço ou clique em uma parada da lista abaixo para carregar o mapa.</p>
+            <input type="text" id="campoEndereco" placeholder="Ex: Av. Paulista, 1000 - São Paulo">
+            <button class="btn-principal" onclick="buscarEnderecoNoMapa()">Buscar Endereço</button>
+            <iframe class="mapa-container" id="iframeMapa" src="about:blank" allowfullscreen></iframe>
+        </div>
     </div>
 
     <div id="secaoScanner" class="card" style="display: none;">
@@ -109,14 +220,87 @@
         <div class="info-rota" id="statusRota"></div>
         <div id="reader"></div>
         <div id="resultado" class="aguardando">Aguardando leitura do código...</div>
-        <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 6px; margin-top: 15px;">Trocar Planilha / PDF</button>
+        
+        <h3>Lista de Paradas Ordenadas</h3>
+        <p style="font-size: 11px; color: #777; margin: 0 0 10px 0;">Clique em uma parada para ver no mapa do app ou abrir no GPS externo.</p>
+        <div class="lista-entregas" id="containerListaEntregas"></div>
+
+        <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 10px; margin-top: 15px; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">Voltar para o Início / Trocar Rota</button>
     </div>
 
     <script>
+        // Array de objetos: { codigo: "BR...", endereco: "Rua X..." }
         let bancoDeDadosRotas = [];
         let isProcessing = false;
 
-        function processarPlanilha() {
+        function mudarAba(tipo) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('abaTexto').style.display = 'none';
+            document.getElementById('abaArquivo').style.display = 'none';
+            document.getElementById('abaMapa').style.display = 'none';
+
+            if (tipo === 'texto') {
+                document.querySelector('.tabs button:nth-child(1)').classList.add('active');
+                document.getElementById('abaTexto').style.display = 'block';
+            } else if (tipo === 'arquivo') {
+                document.querySelector('.tabs button:nth-child(2)').classList.add('active');
+                document.getElementById('abaArquivo').style.display = 'block';
+            } else if (tipo === 'mapa') {
+                document.querySelector('.tabs button:nth-child(3)').classList.add('active');
+                document.getElementById('abaMapa').style.display = 'block';
+                if(document.getElementById('iframeMapa').src === 'about:blank') {
+                    // Inicializa o mapa com localização vazia amigável
+                    document.getElementById('iframeMapa').src = "https://maps.google.com/maps?q=Brasil&t=&z=4&ie=UTF8&iwloc=&output=embed";
+                }
+            }
+        }
+
+        // Função para quebrar o texto por linhas e vincular o BR ao endereço correspondente da linha
+        function estruturarLinhasDeRota(textoCompleto) {
+            const linhas = textoCompleto.split(/\r?\n/);
+            const padraoBR = /BR[A-Z0-9]{9,20}/i;
+            let entregasFiltradas = [];
+
+            linhas.forEach(linha => {
+                if (!linha.trim()) return;
+
+                const match = linha.match(padraoBR);
+                if (match) {
+                    const codigoEncontrado = match[0].toUpperCase().trim();
+                    
+                    // Limpa a linha para remover o código e isolar o endereço restante
+                    let enderecoExtraido = linha.replace(match[0], '').replace(/[,;|\t]+/g, ' ').trim();
+                    
+                    // Se o endereço ficou vazio ou curto demais, coloca um identificador padrão
+                    if (enderecoExtraido.length < 5) {
+                        enderecoExtraido = "Endereço não legível na linha";
+                    }
+
+                    // Evita duplicados de códigos idênticos na mesma subida
+                    if (!entregasFiltradas.some(e => e.codigo === codigoEncontrado)) {
+                        entregasFiltradas.push({
+                            codigo: codigoEncontrado,
+                            endereco: enderecoExtraido
+                        });
+                    }
+                }
+            });
+
+            return entregasFiltradas;
+        }
+
+        function processarTextoCopiado() {
+            const inputTexto = document.getElementById('campoTextoBruto').value;
+            if (!inputTexto.trim()) {
+                alert('Por favor, cole o texto da sua rota primeiro.');
+                return;
+            }
+
+            bancoDeDadosRotas = estruturarLinhasDeRota(inputTexto);
+            finalizarCarregamento();
+        }
+
+        function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if (!input || input.files.length === 0) {
                 alert('Por favor, selecione um arquivo válido primeiro.');
@@ -127,126 +311,95 @@
             const leitor = new FileReader();
             const extensao = arquivo.name.split('.').pop().toLowerCase();
 
-            // Método autônomo e nativo para PDFs (Sem dependência de bibliotecas bloqueadas pelo navegador)
-            if (extensao === 'pdf') {
-                leitor.onload = function(e) {
-                    try {
-                        const conteudoBruto = e.target.result;
+            leitor.onload = function(e) {
+                const dados = e.target.result;
+                try {
+                    let textoAgrupado = '';
+                    if (extensao === 'xlsx' || extensao === 'xls') {
+                        const dadosArray = new Uint8Array(dados);
+                        const workbook = XLSX.read(dadosArray, { type: 'array' });
+                        const primeiraAba = workbook.SheetNames[0];
+                        const planilha = workbook.Sheets[primeiraAba];
+                        const linhas = XLSX.utils.sheet_to_json(planilha, { header: 1 });
                         
-                        // Expressões Regulares para capturar códigos de rastreio direto no binário textual do PDF
-                        const padraoShopee = /[A-Z]{2}\d{9,15}[A-Z]?/g;
-                        const padraoNumericoLongo = /\b\d{9,25}\b/g;
-                        const padraoGenerico = /[A-Z0-9]{10,20}/g;
-
-                        let codigosEncontrados = [];
-
-                        // 1. Procura por padrões clássicos da Shopee/Correios (BR...)
-                        const matchesShopee = conteudoBruto.match(padraoShopee);
-                        if (matchesShopee) {
-                            matchesShopee.forEach(c => {
-                                if (!codigosEncontrados.includes(c)) codigosEncontrados.push(c);
-                            });
-                        }
-
-                        // 2. Procura por códigos puramente numéricos longos
-                        const matchesNumericos = conteudoBruto.match(padraoNumericoLongo);
-                        if (matchesNumericos) {
-                            matchesNumericos.forEach(c => {
-                                if (!codigosEncontrados.includes(c)) codigosEncontrados.push(c);
-                            });
-                        }
-
-                        // 3. Varredura secundária caso os de cima falhem
-                        if (codigosEncontrados.length === 0) {
-                            const matchesGenericos = conteudoBruto.match(padraoGenerico);
-                            if (matchesGenericos) {
-                                matchesGenericos.forEach(c => {
-                                    // Evita pegar blocos de texto puro que tenham apenas letras
-                                    if (!/^[A-Z\s]+$/.test(c) && !codigosEncontrados.includes(c)) {
-                                        codigosEncontrados.push(c);
-                                    }
-                                });
-                            }
-                        }
-
-                        bancoDeDadosRotas = codigosEncontrados.map(c => c.toUpperCase());
-                        finalizarCarregamento();
-
-                    } catch (err) {
-                        alert('Erro ao processar estrutura de texto do PDF: ' + err.message);
+                        linhas.forEach(linha => {
+                            textoAgrupado += linha.join(' ') + '\n';
+                        });
+                    } else {
+                        textoAgrupado = dados;
                     }
-                };
-                leitor.readAsText(arquivo, 'ISO-8859-1'); // Força leitura binária textual estável
-            } else {
-                // Processamento de Planilhas Excel e TXT
-                leitor.onload = function(e) {
-                    const dados = e.target.result;
-                    try {
-                        if (extensao === 'xlsx' || extensao === 'xls') {
-                            const dadosArray = new Uint8Array(dados);
-                            const workbook = XLSX.read(dadosArray, { type: 'array' });
-                            const primeiraAba = workbook.SheetNames[0];
-                            const planilha = workbook.Sheets[primeiraAba];
-                            const linhas = XLSX.utils.sheet_to_json(planilha, { header: 1 });
-                            bancoDeDadosRotas = extrairCodigosDeMatriz(linhas);
-                            finalizarCarregamento();
-                        } else {
-                            const linhasTexto = dados.split('\n');
-                            bancoDeDadosRotas = linhasTexto
-                                .map(linha => linha.trim().toUpperCase())
-                                .filter(linha => validarCodigoRastreio(linha));
-                            finalizarCarregamento();
-                        }
-                    } catch (erro) {
-                        alert('Erro ao processar a planilha: ' + erro.message);
-                    }
-                };
-
-                if (extensao === 'xlsx' || extensao === 'xls') {
-                    leitor.readAsArrayBuffer(arquivo);
-                } else {
-                    leitor.readAsText(arquivo, 'UTF-8');
+                    
+                    bancoDeDadosRotas = estruturarLinhasDeRota(textoAgrupado);
+                    finalizarCarregamento();
+                } catch (erro) {
+                    alert('Erro ao processar as colunas do arquivo: ' + erro.message);
                 }
+            };
+
+            if (extensao === 'xlsx' || extensao === 'xls') {
+                leitor.readAsArrayBuffer(arquivo);
+            } else {
+                leitor.readAsText(arquivo, 'UTF-8');
             }
+        }
+
+        function visualizarNoMapaDoApp(endereco) {
+            document.getElementById('campoEndereco').value = endereco;
+            mudarAba('mapa');
+            buscarEnderecoNoMapa();
+        }
+
+        function buscarEnderecoNoMapa() {
+            const endereco = document.getElementById('campoEndereco').value;
+            if (!endereco.trim() || endereco.includes("Endereço não legível")) {
+                alert('Endereço inválido ou não selecionado.');
+                return;
+            }
+            const urlMapa = `https://maps.google.com/maps?q=${encodeURIComponent(endereco)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+            document.getElementById('iframeMapa').src = urlMapa;
+        }
+
+        function abrirMapsExterno(endereco) {
+            if (!endereco || endereco.includes("Endereço não legível")) return;
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`, '_blank');
         }
 
         function finalizarCarregamento() {
             if (bancoDeDadosRotas.length === 0) {
-                alert('Atenção: O arquivo foi lido com sucesso, mas nenhum código de rastreio válido (padrão Shopee, Circuit ou numérico) foi extraído dele. Verifique se o arquivo possui texto selecionável.');
+                alert('Atenção: Nenhum código iniciado com "BR" associado a endereço foi localizado. Verifique a formatação.');
                 return;
             }
 
+            // Renderiza e constrói a lista interativa de paradas na tela
+            const container = document.getElementById('containerListaEntregas');
+            container.innerHTML = '';
+
+            bancoDeDadosRotas.forEach((entrega, index) => {
+                const numeroParada = index + 1;
+                
+                const item = document.createElement('div');
+                item.className = 'item-entrega';
+                // Ao clicar no corpo do item, joga o endereço direto na aba de mapas interna
+                item.setAttribute('onclick', `visualizarNoMapaDoApp("${entrega.endereco.replace(/"/g, '&quot;')}")`);
+
+                item.innerHTML = `
+                    <div class="topo">
+                        <span>📌 Parada #${numeroParada}</span>
+                        <span>${entrega.codigo}</span>
+                    </div>
+                    <div class="endereco">${entrega.endereco}</div>
+                    <div class="links-externos">
+                        <span class="btn-link" onclick="event.stopPropagation(); abrirMapsExterno('${entrega.endereco.replace(/"/g, '&quot;')}')">➔ Abrir no Aplicativo do Maps</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
             document.getElementById('secaoUpload').style.display = 'none';
             document.getElementById('secaoScanner').style.display = 'block';
-            document.getElementById('statusRota').innerText = `Rota carregada com sucesso! ${bancoDeDadosRotas.length} pacotes encontrados.`;
+            document.getElementById('statusRota').innerText = `Rota carregada com sucesso! ${bancoDeDadosRotas.length} paradas prontas.`;
             
             inicializarScanner();
-        }
-
-        function validarCodigoRastreio(texto) {
-            if (!texto) return false;
-            const padraoShopee = /^[A-Z]{2}\d{9,15}[A-Z]?$/;
-            const padraoNumericoLongo = /^\d{9,25}$/;
-            const padraoGenericoRastreio = /^[A-Z0-9]{10,20}$/;
-
-            return padraoShopee.test(texto) || padraoNumericoLongo.test(texto) || (padraoGenericoRastreio.test(texto) && !/^[A-Z\s]+$/.test(texto));
-        }
-
-        function extrairCodigosDeMatriz(matriz) {
-            let codigos = [];
-            for (let i = 0; i < matriz.length; i++) {
-                for (let j = 0; j < matriz[i].length; j++) {
-                    if (matriz[i][j] !== undefined && matriz[i][j] !== null) {
-                        let valor = String(matriz[i][j]).trim().toUpperCase();
-                        if (validarCodigoRastreio(valor)) {
-                            if (!codigos.includes(valor)) {
-                                codigos.push(valor);
-                            }
-                        }
-                    }
-                }
-            }
-            return codigos;
         }
 
         function inicializarScanner() {
@@ -263,14 +416,18 @@
             const codigoBipado = decodedText.trim().toUpperCase();
             const divResultado = document.getElementById('resultado');
             
-            // Busca parcial para encontrar o código bipado mesmo se houver caracteres extras
-            const posicao = bancoDeDadosRotas.findIndex(item => item.includes(codigoBipado) || codigoBipado.includes(item));
+            const posicao = bancoDeDadosRotas.findIndex(item => item.codigo.includes(codigoBipado) || codigoBipado.includes(item.codigo));
 
             if (posicao !== -1) {
                 const numeroParada = posicao + 1;
+                const dadosEntrega = bancoDeDadosRotas[posicao];
+                
                 divResultado.className = "sucesso";
-                divResultado.innerHTML = `📌 PARADA: ${numeroParada}<br><span style="font-size:14px;">Código: ${bancoDeDadosRotas[posicao]}</span>`;
+                divResultado.innerHTML = `📌 PARADA: ${numeroParada}<br><span style="font-size:13px;">${dadosEntrega.codigo}</span><br><span style="font-size:11px; font-weight:normal; display:block; margin-top:4px;">${dadosEntrega.endereco}</span>`;
                 falarTexto(`Parada ${numeroParada}`);
+                
+                // Abre automaticamente o mapa da parada correspondente para agilizar a entrega física
+                visualizarNoMapaDoApp(dadosEntrega.endereco);
             } else {
                 divResultado.className = "erro";
                 divResultado.innerHTML = `❌ NÃO ENCONTRADO<br><span style="font-size:14px;">Código: ${codigoBipado}</span>`;
@@ -281,12 +438,10 @@
                 divResultado.className = "aguardando";
                 divResultado.innerHTML = "Aguardando leitura do próximo código...";
                 isProcessing = false;
-            }, 3000);
+            }, 4000);
         }
 
-        function onScanFailure(error) {
-            // Ignora falhas de foco da câmera
-        }
+        function onScanFailure(error) {}
 
         function falarTexto(texto) {
             if ('speechSynthesis' in window) {
