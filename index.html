@@ -6,6 +6,7 @@
     <title>Rota Fácil - Numera Fácil Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -36,7 +37,7 @@
             color: #333;
             padding: 10px 5px;
             border-radius: 5px;
-            font-size: 12px;
+            font-size: 13px;
             flex: 1;
             margin: 0;
             cursor: pointer;
@@ -47,18 +48,6 @@
         .tab-btn.active {
             background: #ff4500;
             color: white;
-        }
-        textarea {
-            width: 100%;
-            height: 150px;
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-            resize: vertical;
-            margin-top: 10px;
-            background-color: #fafafa;
         }
         input[type="text"], input[type="file"] {
             width: 100%;
@@ -187,28 +176,21 @@
     <h1>📦 Rota Fácil</h1>
      
     <div class="card" id="secaoUpload">
-        <h2>Passo 1: Escolha o Modo de Entrada</h2>
+        <h2>Passo 1: Selecione a sua Rota</h2>
         
         <div class="tabs">
-            <button class="tab-btn active" onclick="mudarAba('texto')">📋 Colar Texto</button>
-            <button class="tab-btn" onclick="mudarAba('arquivo')">📁 Ler Arquivo</button>
+            <button class="tab-btn active" onclick="mudarAba('arquivo')">📁 Ler Arquivo (PDF / Excel)</button>
             <button class="tab-btn" onclick="mudarAba('mapa')">🗺️ Mapa / Endereço</button>
         </div>
 
-        <div id="abaTexto">
-            <p style="font-size: 12px; color: #666; text-align: center;">Cole o conteúdo do seu PDF ou planilha. O sistema associará o código <strong>BR</strong> ao endereço da mesma linha.</p>
-            <textarea id="campoTextoBruto" placeholder="Cole aqui o texto copiado do arquivo da sua rota contendo os códigos BR e endereços..."></textarea>
-            <button class="btn-principal" onclick="processarTextoCopiado()">Vincular Rota e Abrir Scanner</button>
-        </div>
-
-        <div id="abaArquivo" style="display: none;">
-            <p style="font-size: 12px; color: #666; text-align: center;">Insira a planilha Excel (.xlsx, .xls), arquivo TXT ou <strong>PDF</strong> da sua rota.</p>
+        <div id="abaArquivo">
+            <p style="font-size: 12px; color: #666; text-align: center;">Selecione o arquivo <strong>PDF</strong>, planilha Excel (.xlsx, .xls) ou TXT da sua rota.</p>
             <input type="file" id="arquivoPlanilha" accept=".pdf, .xlsx, .xls, .csv, .txt">
-            <button class="btn-principal" onclick="processarArquivoFisico()">Vincular Arquivo e Abrir Scanner</button>
+            <button class="btn-principal" onclick="processarArquivoFisico()">Carregar Rota e Filtrar BR</button>
         </div>
 
         <div id="abaMapa" style="display: none;">
-            <p style="font-size: 12px; color: #666; text-align: center;">Digite o endereço ou clique em uma parada da lista abaixo para carregar o mapa.</p>
+            <p style="font-size: 12px; color: #666; text-align: center;">Digite o endereço ou clique em uma parada carregada para abrir a localização.</p>
             <input type="text" id="campoEndereco" placeholder="Ex: Av. Paulista, 1000 - São Paulo">
             <button class="btn-principal" onclick="buscarEnderecoNoMapa()">Buscar Endereço</button>
             <iframe class="mapa-container" id="iframeMapa" src="about:blank" allowfullscreen></iframe>
@@ -222,30 +204,29 @@
         <div id="resultado" class="aguardando">Aguardando leitura do código...</div>
         
         <h3>Lista de Paradas Ordenadas</h3>
-        <p style="font-size: 11px; color: #777; margin: 0 0 10px 0;">Clique em uma parada para ver no mapa do app ou abrir no GPS externo.</p>
+        <p style="font-size: 11px; color: #777; margin: 0 0 10px 0;">Clique em uma parada para ver no mapa interno ou abrir no aplicativo do celular.</p>
         <div class="lista-entregas" id="containerListaEntregas"></div>
 
-        <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 10px; margin-top: 15px; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">Voltar para o Início / Trocar Rota</button>
+        <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 10px; margin-top: 15px; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">Voltar e Trocar Arquivo</button>
     </div>
 
     <script>
+        // Configura a biblioteca PDF.js para funcionar offline/local de forma segura
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
         let bancoDeDadosRotas = [];
         let isProcessing = false;
 
         function mudarAba(tipo) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('abaTexto').style.display = 'none';
             document.getElementById('abaArquivo').style.display = 'none';
             document.getElementById('abaMapa').style.display = 'none';
 
-            if (tipo === 'texto') {
+            if (tipo === 'arquivo') {
                 document.querySelector('.tabs button:nth-child(1)').classList.add('active');
-                document.getElementById('abaTexto').style.display = 'block';
-            } else if (tipo === 'arquivo') {
-                document.querySelector('.tabs button:nth-child(2)').classList.add('active');
                 document.getElementById('abaArquivo').style.display = 'block';
             } else if (tipo === 'mapa') {
-                document.querySelector('.tabs button:nth-child(3)').classList.add('active');
+                document.querySelector('.tabs button:nth-child(2)').classList.add('active');
                 document.getElementById('abaMapa').style.display = 'block';
                 if(document.getElementById('iframeMapa').src === 'about:blank') {
                     document.getElementById('iframeMapa').src = "https://maps.google.com/maps?q=Brasil&t=&z=4&ie=UTF8&iwloc=&output=embed";
@@ -253,7 +234,7 @@
             }
         }
 
-        // Processa blocos de texto puro estruturando as linhas que possuem BR e Endereço
+        // Garimpa o texto linha por linha para achar o padrão BR e isolar o endereço
         function estruturarLinhasDeRota(textoCompleto) {
             const linhas = textoCompleto.split(/\r?\n/);
             const padraoBR = /BR[A-Z0-9]{9,20}/i;
@@ -283,17 +264,6 @@
             return entregasFiltradas;
         }
 
-        function processarTextoCopiado() {
-            const inputTexto = document.getElementById('campoTextoBruto').value;
-            if (!inputTexto.trim()) {
-                alert('Por favor, cole o texto da sua rota primeiro.');
-                return;
-            }
-
-            bancoDeDadosRotas = estruturarLinhasDeRota(inputTexto);
-            finalizarCarregamento();
-        }
-
         function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if (!input || input.files.length === 0) {
@@ -306,17 +276,44 @@
             const extensao = arquivo.name.split('.').pop().toLowerCase();
 
             if (extensao === 'pdf') {
-                leitor.onload = function(e) {
+                leitor.onload = async function(e) {
                     try {
-                        const conteudoBruto = e.target.result;
-                        // Extrai a malha textual contida no PDF decodificado de forma direta e síncrona
-                        bancoDeDadosRotas = estruturarLinhasDeRota(conteudoBruto);
+                        const dadosArrayBuffer = new Uint8Array(e.target.result);
+                        
+                        // Carrega o documento PDF ignorando restrições de worker local
+                        const carregandoPdf = pdfjsLib.getDocument({
+                            data: dadosArrayBuffer,
+                            disableWorker: true,
+                            verbosity: 0
+                        });
+                        
+                        const pdf = await carregandoPdf.promise;
+                        let textoCompletoPdf = '';
+
+                        for (let numPagina = 1; numPagina <= pdf.numPages; numPagina++) {
+                            const pagina = await pdf.getPage(numPagina);
+                            const conteudoTexto = await pagina.getTextContent();
+                            
+                            // Agrupa os itens de texto simulando quebras de linha
+                            let ultimaY = -1;
+                            conteudoTexto.items.forEach(item => {
+                                if (ultimaY !== item.transform[5] && ultimaY !== -1) {
+                                    textoCompletoPdf += '\n';
+                                }
+                                textoCompletoPdf += item.str + ' ';
+                                ultimaY = item.transform[5];
+                            });
+                            textoCompletoPdf += '\n';
+                        }
+
+                        bancoDeDadosRotas = estruturarLinhasDeRota(textoCompletoPdf);
                         finalizarCarregamento();
+
                     } catch (erro) {
-                        alert('Erro ao interpretar a estrutura interna do PDF: ' + erro.message);
+                        alert('Falha ao processar o arquivo PDF: ' + erro.message);
                     }
                 };
-                leitor.readAsText(arquivo, 'ISO-8859-1'); // Garante a extração de strings limpas do PDF sem travar
+                leitor.readAsArrayBuffer(arquivo);
             } else {
                 // Tratamento de Planilhas Excel e Arquivos TXT/CSV
                 leitor.onload = function(e) {
@@ -340,7 +337,7 @@
                         bancoDeDadosRotas = estruturarLinhasDeRota(textoAgrupado);
                         finalizarCarregamento();
                     } catch (erro) {
-                        alert('Erro ao carregar colunas do arquivo: ' + erro.message);
+                        alert('Erro ao processar as colunas da planilha: ' + erro.message);
                     }
                 };
 
@@ -370,12 +367,12 @@
 
         function abrirMapsExterno(endereco) {
             if (!endereco || endereco.includes("Endereço não identificado")) return;
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`, '_blank');
+            window.open(`https://maps.google.com/?q=${encodeURIComponent(endereco)}`, '_blank');
         }
 
         function finalizarCarregamento() {
             if (bancoDeDadosRotas.length === 0) {
-                alert('Atenção: Nenhum código iniciado com "BR" pôde ser extraído do arquivo ou texto fornecido.');
+                alert('Atenção: Nenhum código iniciado com "BR" pôde ser extraído do arquivo selecionado. Verifique o documento.');
                 return;
             }
 
@@ -403,7 +400,7 @@
 
             document.getElementById('secaoUpload').style.display = 'none';
             document.getElementById('secaoScanner').style.display = 'block';
-            document.getElementById('statusRota').innerText = `Rota carregada com sucesso! ${bancoDeDadosRotas.length} paradas prontas.`;
+            document.getElementById('statusRota').innerText = `Rota carregada! ${bancoDeDadosRotas.length} paradas com prefixo BR configuradas.`;
             
             inicializarScanner();
         }
