@@ -229,24 +229,39 @@
                 document.querySelector('.tabs button:nth-child(2)').classList.add('active');
                 document.getElementById('abaMapa').style.display = 'block';
                 if(document.getElementById('iframeMapa').src === 'about:blank') {
-                    document.getElementById('iframeMapa').src = "https://maps.google.com/maps?q=Brasil&t=&z=4&ie=UTF8&iwloc=&output=embed";
+                    document.getElementById('iframeMapa').src = "about:blank";
                 }
             }
         }
 
-        // Garimpa o texto linha por linha para achar o padrão BR e isolar o endereço
+        // Garimpa o texto linha por linha para achar o padrão BR e isolar APENAS o endereço limpo
         function estruturarLinhasDeRota(textoCompleto) {
             const linhas = textoCompleto.split(/\r?\n/);
             const padraoBR = /BR[A-Z0-9]{9,20}/i;
+            const padraoAT = /\bAT\d+\b/i; // Captura padrões como AT1, AT02, AT1234, etc.
             let entregasFiltradas = [];
 
             linhas.forEach(linha => {
                 if (!linha.trim()) return;
 
-                const match = linha.match(padraoBR);
-                if (match) {
-                    const codigoEncontrado = match[0].toUpperCase().trim();
-                    let enderecoExtraido = linha.replace(match[0], '').replace(/[,;|\t]+/g, ' ').trim();
+                const matchBR = linha.match(padraoBR);
+                if (matchBR) {
+                    const codigoEncontrado = matchBR[0].toUpperCase().trim();
+                    
+                    // 1. Remove o código BR da linha
+                    let enderecoExtraido = linha.replace(matchBR[0], '');
+                    
+                    // 2. Remove o código AT caso ele exista na linha
+                    const matchAT = enderecoExtraido.match(padraoAT);
+                    if (matchAT) {
+                        enderecoExtraido = enderecoExtraido.replace(matchAT[0], '');
+                    }
+
+                    // 3. Limpa separadores comuns, tabs e espaços duplos deixados para trás
+                    enderecoExtraido = enderecoExtraido
+                        .replace(/[,;|\t\-]+/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
                     
                     if (enderecoExtraido.length < 5) {
                         enderecoExtraido = "Endereço não identificado na linha";
@@ -280,7 +295,6 @@
                     try {
                         const dadosArrayBuffer = new Uint8Array(e.target.result);
                         
-                        // Carrega o documento PDF ignorando restrições de worker local
                         const carregandoPdf = pdfjsLib.getDocument({
                             data: dadosArrayBuffer,
                             disableWorker: true,
@@ -294,7 +308,6 @@
                             const pagina = await pdf.getPage(numPagina);
                             const conteudoTexto = await pagina.getTextContent();
                             
-                            // Agrupa os itens de texto simulando quebras de linha
                             let ultimaY = -1;
                             conteudoTexto.items.forEach(item => {
                                 if (ultimaY !== item.transform[5] && ultimaY !== -1) {
@@ -315,7 +328,6 @@
                 };
                 leitor.readAsArrayBuffer(arquivo);
             } else {
-                // Tratamento de Planilhas Excel e Arquivos TXT/CSV
                 leitor.onload = function(e) {
                     const dados = e.target.result;
                     try {
@@ -367,7 +379,7 @@
 
         function abrirMapsExterno(endereco) {
             if (!endereco || endereco.includes("Endereço não identificado")) return;
-            window.open(`https://maps.google.com/?q=${encodeURIComponent(endereco)}`, '_blank');
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`, '_blank');
         }
 
         function finalizarCarregamento() {
@@ -383,7 +395,7 @@
                 const numeroParada = index + 1;
                 const item = document.createElement('div');
                 item.className = 'item-entrega';
-                item.setAttribute('onclick', `visualizarNoMapaDoApp("${entrega.endereco.replace(/"/g, '"')}")`);
+                item.setAttribute('onclick', `visualizarNoMapaDoApp("${entrega.endereco.replace(/"/g, '\\"')}")`);
 
                 item.innerHTML = `
                     <div class="topo">
@@ -392,7 +404,7 @@
                     </div>
                     <div class="endereco">${entrega.endereco}</div>
                     <div class="links-externos">
-                        <span class="btn-link" onclick="event.stopPropagation(); abrirMapsExterno('${entrega.endereco.replace(/"/g, '"')}')">➔ Abrir no Aplicativo do Maps</span>
+                        <span class="btn-link" onclick="event.stopPropagation(); abrirMapsExterno('${entrega.endereco.replace(/"/g, '\\"')}')">➔ Abrir no Aplicativo do Maps</span>
                     </div>
                 `;
                 container.appendChild(item);
@@ -400,7 +412,7 @@
 
             document.getElementById('secaoUpload').style.display = 'none';
             document.getElementById('secaoScanner').style.display = 'block';
-            document.getElementById('statusRota').innerText = `Rota carregada! ${bancoDeDadosRotas.length} paradas com prefixo BR configuradas.`;
+            document.getElementById('statusRota').innerText = `Rota carregada! ${bancoDeDadosRotas.length} paradas com endereço limpo configuradas.`;
             
             inicializarScanner();
         }
