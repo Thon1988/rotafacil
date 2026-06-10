@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rota Fácil - Numera Fácil Pro</title>
+    <!-- Biblioteca para ler arquivos Excel (SheetJS) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Biblioteca para ler código de barras pela câmera (Html5Qrcode) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <!-- Biblioteca para extração nativa de PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
         body {
@@ -312,12 +315,14 @@
             <button class="tab-btn" onclick="mudarAba('mapa')">🗺️ Mapa / Endereço</button>
         </div>
 
+        <!-- Aba 1: Arquivo Físico (PDF ou Planilhas) -->
         <div id="abaArquivo">
             <p style="font-size: 12px; color: #666; text-align: center;">Selecione o arquivo <strong>PDF</strong>, planilha Excel (.xlsx, .xls) ou TXT da sua rota.</p>
             <input type="file" id="arquivoPlanilha" accept=".pdf, .xlsx, .xls, .csv, .txt">
             <button class="btn-principal" onclick="processarArquivoFisico()">Carregar Rota e Filtrar BR</button>
         </div>
 
+        <!-- Aba 2: Mapa e Endereço -->
         <div id="abaMapa" style="display: none;">
             <p style="font-size: 12px; color: #666; text-align: center;">Digite o endereço ou clique em uma parada carregada para abrir a localização.</p>
             <input type="text" id="campoEndereco" placeholder="Ex: Av. Paulista, 1000 - São Paulo">
@@ -339,7 +344,9 @@
         <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 10px; margin-top: 15px; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">Voltar e Trocar Arquivo</button>
     </div>
 
+    <!-- --- ELEMENTO DO CARD FLUTUANTE (WIDGET DE ENTREGA) --- -->
     <div id="widgetEntrega" class="widget-entrega minimizado" style="display: none;" onclick="alternarWidget(event)">
+        <!-- Visão Minimizado -->
         <div class="conteudo-minimizado">
             <div>
                 <div class="txt-min" id="widgetMinRua">Nenhuma Parada</div>
@@ -348,6 +355,7 @@
             <svg style="width:16px; height:16px; fill:#ff4500;" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
         </div>
 
+        <!-- Visão Expandida -->
         <div class="conteudo-expandido">
             <div class="widget-header">
                 <span id="widgetIdTexto">01</span>
@@ -385,6 +393,17 @@
         let isProcessing = false;
         let indexEntregaAtiva = 0;
 
+        // Monitora quando o usuário sai do Rota Fácil para outra página/app e minimiza o card automaticamente
+        document.addEventListener("visibilitychange", function() {
+            if (document.hidden) {
+                const widget = document.getElementById('widgetEntrega');
+                if (widget && widget.style.display !== 'none') {
+                    widget.classList.remove('expandido');
+                    widget.classList.add('minimizado');
+                }
+            }
+        });
+
         function mudarAba(tipo) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('abaArquivo').style.display = 'none';
@@ -408,7 +427,7 @@
             linhas.forEach(linha => {
                 if (!linha.trim()) return;
 
-                const matchBR = mergeMatch = linha.match(padraoBR);
+                const matchBR = linha.match(padraoBR);
                 if (matchBR) {
                     const codigoEncontrado = matchBR[0].toUpperCase().trim();
                     let matchAT = linha.match(padraoAT);
@@ -554,21 +573,22 @@
         }
 
         function forçarMinimizarWidget(event) {
-            event.stopPropagation(); // Evita reabrir o card ao clicar no botão de recolher
+            event.stopPropagation();
             const widget = document.getElementById('widgetEntrega');
             widget.classList.remove('expandido');
             widget.classList.add('minimizado');
         }
 
-        // AGORA DIRECIONA O FOCO E EXIBE O MAPA INTERNO DENTRO DO PRÓPRIO APP ROTA FÁCIL
+        // TRAZ O FOCO DE VOLTA PARA O ROTA FÁCIL E ABRE A INSTÂNCIA INTERNA
         function acaoVoltarParaRotaFacil(event) {
             event.stopPropagation();
-            window.focus(); // Traz a aba do app para frente caso o motorista esteja em outra tela
+            
+            // Força a janela do Rota Fácil a voltar para o primeiro plano no aparelho
+            window.focus();
             
             const entrega = bancoDeDadosRotas[indexEntregaAtiva];
             selecionarParadaDeEntrega(indexEntregaAtiva, entrega.endereco);
             
-            // Minimiza o widget automaticamente para despoluir a visão do mapa interno
             const widget = document.getElementById('widgetEntrega');
             widget.classList.remove('expandido');
             widget.classList.add('minimizado');
@@ -588,9 +608,9 @@
             widget.classList.add('minimizado');
         }
 
-        function selecionarParadaDeEntrega(index, endereco) {
+        function selecionarParadaDeEntrega(index, address) {
             carregarDadosNoWidget(index);
-            document.getElementById('campoEndereco').value = endereco;
+            document.getElementById('campoEndereco').value = address;
             mudarAba('mapa');
             buscarEnderecoNoMapa();
         }
