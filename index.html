@@ -506,19 +506,17 @@
         // AÇÃO DO BOTÃO MUTÁVEL DA BARRA FIXA
         function dispararAcaoMapaMutavel() {
             if (bancoDeDadosRotas && bancoDeDadosRotas.length > 0) {
-                // Modo: Rota Otimizada ativo. Direciona para o mapa compilando todos os pontos do circuito
                 document.getElementById('secaoUpload').style.display = 'none';
                 document.getElementById('secaoScanner').style.display = 'block';
                 mudarAbaPainel('mapaview');
                 carregarMapaRotaCompleta();
             } else {
-                // Modo: Mapa Padrão. Abre uma visualização padrão limpa de geolocalização de São Paulo
                 alert("Nenhuma rota carregada. Abrindo mapa base de posicionamento geral.");
                 document.getElementById('secaoUpload').style.display = 'none';
                 document.getElementById('secaoScanner').style.display = 'block';
                 mudarAbaPainel('mapaview');
                 document.getElementById('campoEnderecoScanner').value = "São Paulo, SP";
-                document.getElementById('iframeMapaScanner').src = `https://maps.google.com/maps?q=$São Paulo, SP&t=&z=12&ie=UTF8&iwloc=&output=embed`;
+                document.getElementById('iframeMapaScanner').src = `https://maps.google.com/maps?q=Sao%20Paulo,%20SP&t=&z=12&ie=UTF8&iwloc=&output=embed`;
             }
         }
 
@@ -600,21 +598,40 @@
             document.getElementById('secaoOtimizarCircuit').style.display = 'block';
         }
 
+        // NOVO PARSER ATUALIZADO COM SISTEMA DE FALLBACK AUTOMÁTICO
         function estruturarLinhasDeRota(textoCompleto) {
             const linhas = textoCompleto.split(/\r?\n/);
-            const padraoBR = /BR[A-Z0-9]{9,20}/i;
+            // Expressão regular ampla: aceita códigos começando com BR ou sequências comerciais longas
+            const padraoComercial = /(BR[A-Z0-9]{7,25})|([A-Z0-9]{9,25})/i;
             let filtrados = [];
+            let contadorGenerico = 1;
 
             linhas.forEach(l => {
-                const match = l.match(padraoBR);
+                const linhaLimpa = l.trim();
+                if (!linhaLimpa) return; // ignora linhas vazias
+
+                const match = linhaLimpa.match(padraoComercial);
+                let codigo = "";
+                let endereco = "";
+
                 if (match) {
-                    let end = l.replace(match[0], '').replace(/[;\t\-]+/g, ' ').trim();
+                    codigo = (match[1] || match[2]).toUpperCase();
+                    endereco = linhaLimpa.replace(codigo, '').replace(/[;\t\-\|]+/g, ' ').trim();
+                } else {
+                    // FALLBACK: Se a linha tem conteúdo mas não possui código no padrão comercial,
+                    // assume a linha inteira como o endereço e gera uma tag sequencial automática.
+                    codigo = `APP-${String(contadorGenerico++).padStart(3, '0')}`;
+                    endereco = linhaLimpa.replace(/[;\t\|]+/g, ' ').trim();
+                }
+
+                // Validação básica de tamanho para evitar resíduos ou metadados de arquivos
+                if (endereco.length > 5) {
                     filtrados.push({
-                        codigo: match[0].toUpperCase(),
-                        endereco: end,
-                        ruaCurta: end.split(',')[0] || end.substring(0,25),
-                        bairroCurto: "Região de Entrega",
-                        linhaBrutaOriginal: l.trim(),
+                        codigo: codigo,
+                        endereco: endereco,
+                        ruaCurta: endereco.split(',')[0] || endereco.substring(0, 25),
+                        bairroCurto: endereco.split(',')[1] || "Região de Entrega",
+                        linhaBrutaOriginal: linhaLimpa,
                         status: 'pendente'
                     });
                 }
@@ -633,7 +650,7 @@
                 if(bancoDeDadosRotas.length > 0) {
                     document.getElementById('secaoOtimizarCircuit').style.display = 'block';
                 } else {
-                    alert("Nenhum código do padrão comercial mapeado no arquivo.");
+                    alert("O arquivo selecionado está vazio ou não possui paradas legíveis.");
                 }
             };
             leitor.readAsText(arquivo, 'UTF-8');
@@ -646,7 +663,6 @@
             box.style.display = 'block';
             box.innerText = "Calculando e higienizando coordenadas espaciais via GPS...";
             
-            // Simulação de geolocalização via Nominatim para amarração do circuito matemático TSP
             for(let i=0; i<bancoDeDadosRotas.length; i++) {
                 bancoDeDadosRotas[i].lat = -23.55 + (Math.random() - 0.5) * 0.1;
                 bancoDeDadosRotas[i].lon = -46.63 + (Math.random() - 0.5) * 0.1;
@@ -702,7 +718,7 @@
 
         function acaoNavegarDiretoWidget(e) {
             e.stopPropagation();
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bancoDeDadosRotas[indexEntregaAtiva].endereco)}`, '_blank');
+            window.open(`https://maps.google.com/maps?daddr=${encodeURIComponent(bancoDeDadosRotas[indexEntregaAtiva].endereco)}`, '_blank');
         }
 
         function acaoEntregue(e) {
@@ -744,14 +760,13 @@
         function carregarMapaRotaCompleta() {
             let pendentes = bancoDeDadosRotas.filter(p => p.status === 'pendente');
             if(pendentes.length === 0) return;
-            // Gera agrupamento estrutural para visualização em massa
             let linksWaypoints = pendentes.slice(0,12).map(p => encodeURIComponent(p.endereco)).join('|');
             document.getElementById('campoEnderecoScanner').value = "⚡ Rota Otimizada em Lote Ativa";
-            document.getElementById('iframeMapaScanner').src = `http://googleusercontent.com/https://www.google.com/maps/search/?api=1&query=v?f=d&origin=${encodeURIComponent(pendentes[0].endereco)}&destination=${linksWaypoints}&output=embed`;
+            document.getElementById('iframeMapaScanner').src = `https://maps.google.com/maps?saddr=${encodeURIComponent(pendentes[0].endereco)}&daddr=${linksWaypoints}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
         }
 
         function dispararNavegacaoGpsExterna() {
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(document.getElementById('campoEnderecoScanner').value)}`, '_blank');
+            window.open(`https://maps.google.com/maps?daddr=${encodeURIComponent(document.getElementById('campoEnderecoScanner').value)}`, '_blank');
         }
 
         function renderizarListaEntregasUI() {
@@ -773,7 +788,6 @@
         function reotimizarRotaTSTPDinamica() {
             let concluidos = bancoDeDadosRotas.filter(p => p.status !== 'pendente');
             let pendentes = bancoDeDadosRotas.filter(p => p.status === 'pendente');
-            // Re-ordena o vetor mantendo a integridade dos dados históricos
             bancoDeDadosRotas = [...concluidos, ...pendentes];
             passarProximo();
         }
