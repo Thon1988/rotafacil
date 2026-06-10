@@ -2,80 +2,87 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Rota Fácil</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rota Fácil - AppEgg Pro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f4f9; margin: 0; padding: 15px; padding-bottom: 80px; }
-        h1 { text-align: center; color: #ff4500; }
-        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        .item-entrega { padding: 15px; border-bottom: 1px solid #eee; background: #fff; border-radius: 4px; margin-bottom: 5px; }
-        .topo { display: flex; justify-content: space-between; font-weight: bold; color: #ff4500; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f4f9; padding-bottom: 80px; }
+        h1, h2 { text-align: center; color: #ff4500; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .item-entrega { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; background: #fff; margin-bottom: 5px; border-radius: 4px; border-left: 5px solid #bdc3c7; }
+        .item-entrega.status-entregue { border-left-color: #2ecc71; background: #e8f5e9; }
+        .topo { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; color: #ff4500; }
         .endereco { font-size: 15px; color: #333; margin-top: 5px; font-weight: 500; }
-        .barra-controle-fixa { position: fixed; bottom: 0; left: 0; right: 0; height: 65px; background: #ffffff; border-top: 1px solid #ddd; display: flex; justify-content: space-around; align-items: center; z-index: 10000; padding: 0 10px; }
-        .btn-global { flex: 1; margin: 0 5px; padding: 12px; border-radius: 8px; border: none; color: white; font-weight: bold; cursor: pointer; }
-        #modalScanner { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 20000; flex-direction: column; align-items: center; justify-content: center; }
+        .barra-controle-fixa { position: fixed; bottom: 0; left: 0; right: 0; height: 65px; background: #ffffff; border-top: 1px solid #e5e5ea; display: flex; z-index: 10000; padding: 5px; }
+        .btn-global { flex: 1; margin: 0 5px; border-radius: 8px; border: none; color: white; font-weight: bold; cursor: pointer; }
+        .modal-scanner { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 20000; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
     <h1>📦 Rota Fácil</h1>
 
-    <div class="card">
-        <h2>Importar Rota (PDF ou Texto)</h2>
-        <input type="file" id="inputArquivo" accept=".pdf, .txt" style="width: 100%;">
-        <button onclick="lerArquivo()" style="width: 100%; padding: 12px; background: #ff4500; color: white; border: none; margin-top: 10px; border-radius: 5px;">Carregar Rota do Circuito</button>
+    <div class="card" id="secaoUpload">
+        <h2>Passo 1: Importar Rota</h2>
+        <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv" style="width: 100%; border: 1px dashed #ff4500;">
+        <button class="btn-principal" onclick="processarArquivoFisico()" style="width: 100%; padding: 14px; background: #ff4500; color: white; border: none; border-radius: 5px; margin-top: 10px;">Processar Arquivo / PDF</button>
     </div>
 
-    <div id="secaoScanner" class="card">
-        <h2>Processar Rota Ativa</h2>
+    <div id="secaoScanner" class="card" style="display: none;">
+        <h2>Passo 2: Lista de Entregas</h2>
         <div id="containerListaEntregas"></div>
     </div>
 
     <div class="barra-controle-fixa">
-        <button class="btn-global" style="background: #34c759;" onclick="abrirScanner()">📷 Scanner</button>
+        <button class="btn-global" style="background: #34c759;" onclick="abrirScannerGlobal()">📷 Scanner</button>
         <button class="btn-global" style="background: #8e8e93;" onclick="alert('Mapa')">🗺️ Mapa</button>
     </div>
 
-    <div id="modalScanner">
-        <button onclick="fecharScanner()" style="padding: 10px; margin-bottom: 20px; background: red; color: white; border: none; border-radius: 5px;">Fechar</button>
-        <div id="reader" style="width: 100%; max-width: 400px;"></div>
+    <div id="modalScannerGlobal" class="modal-scanner">
+        <button class="btn-fechar" onclick="fecharScannerGlobal()" style="padding: 10px; margin-bottom: 20px; background: #e74c3c; color: white; border: none;">Fechar Scanner</button>
+        <div id="reader" style="width: 100%; max-width: 400px; background: #000;"></div>
     </div>
 
     <script>
         let bancoDeDadosRotas = [];
+        let html5QrcodeScannerGlobal = null;
 
-        // Lógica para ler PDF e extrair texto
-        async function lerArquivo() {
-            const file = document.getElementById('inputArquivo').files[0];
-            if (!file) return alert("Selecione um arquivo!");
+        async function processarArquivoFisico() {
+            const fileInput = document.getElementById('arquivoPlanilha');
+            if(fileInput.files.length === 0) return alert("Selecione um arquivo");
+            const arquivo = fileInput.files[0];
 
-            if (file.type === "application/pdf") {
-                const reader = new FileReader();
-                reader.onload = async function() {
-                    const typedarray = new Uint8Array(this.result);
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                    let fullText = "";
+            if (arquivo.type === "application/pdf") {
+                const leitor = new FileReader();
+                leitor.onload = async function() {
+                    const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+                    let texto = "";
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-                        fullText += textContent.items.map(s => s.str).join(" ");
+                        const content = await page.getTextContent();
+                        texto += content.items.map(item => item.str).join(" ") + "\n";
                     }
-                    processarTextoExtraido(fullText);
+                    estruturarDados(texto);
                 };
-                reader.readAsArrayBuffer(file);
+                leitor.readAsArrayBuffer(arquivo);
+            } else {
+                const leitor = new FileReader();
+                leitor.onload = (e) => estruturarDados(e.target.result);
+                leitor.readAsText(arquivo);
             }
         }
 
-        function processarTextoExtraido(texto) {
-            // Lógica simples: Quebra por linhas ou padrões de endereço/código
-            // Aqui você pode ajustar o regex conforme o formato do PDF do seu Circuit
-            const linhas = texto.split(/(?=[A-Z]{2}\d{7})/); 
-            bancoDeDadosRotas = linhas.map((l, i) => ({
-                codigo: l.substring(0, 15),
-                endereco: l.substring(15).trim()
-            })).filter(item => item.endereco.length > 5);
-            
+        function estruturarDados(texto) {
+            const linhas = texto.split(/\r?\n/);
+            bancoDeDadosRotas = linhas.filter(l => l.trim().length > 5).map((l, i) => ({
+                codigo: `BR-${String(i+1).padStart(4,'0')}`,
+                endereco: l.trim(),
+                status: 'pendente'
+            }));
+            document.getElementById('secaoUpload').style.display = 'none';
+            document.getElementById('secaoScanner').style.display = 'block';
             renderizarListaEntregasUI();
         }
 
@@ -84,7 +91,7 @@
             container.innerHTML = '';
             bancoDeDadosRotas.forEach((e, idx) => {
                 const item = document.createElement('div');
-                item.className = 'item-entrega';
+                item.className = `item-entrega ${e.status === 'entregue' ? 'status-entregue' : ''}`;
                 item.innerHTML = `
                     <div class="topo"><span>📍 Parada #${idx + 1}</span><span style="font-size: 12px;">${e.codigo}</span></div>
                     <div class="endereco">${e.endereco}</div>
@@ -93,17 +100,19 @@
             });
         }
 
-        // Scanner (Mantido conforme anterior)
-        let scanner = null;
-        function abrirScanner() {
-            document.getElementById('modalScanner').style.display = 'flex';
-            if (!scanner) scanner = new Html5Qrcode("reader");
-            scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (data) => {
+        function abrirScannerGlobal() {
+            document.getElementById('modalScannerGlobal').style.display = 'flex';
+            if (!html5QrcodeScannerGlobal) html5QrcodeScannerGlobal = new Html5Qrcode("reader");
+            html5QrcodeScannerGlobal.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (data) => {
                 alert("Código lido: " + data);
-                fecharScanner();
+                fecharScannerGlobal();
             });
         }
-        function fecharScanner() { document.getElementById('modalScanner').style.display = 'none'; if (scanner) scanner.stop(); }
+
+        function fecharScannerGlobal() {
+            document.getElementById('modalScannerGlobal').style.display = 'none';
+            if (html5QrcodeScannerGlobal) html5QrcodeScannerGlobal.stop();
+        }
     </script>
 </body>
 </html>
