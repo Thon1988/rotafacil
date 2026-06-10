@@ -79,6 +79,21 @@
         button.btn-principal:hover {
             background-color: #e03e00;
         }
+        .btn-navegar-gps {
+            width: 100%;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .btn-navegar-gps:hover {
+            background-color: #27ae60;
+        }
         #reader {
             width: 100%;
             max-width: 400px;
@@ -119,7 +134,7 @@
             height: 350px;
             border-radius: 6px;
             border: 1px solid #ccc;
-            margin-top: 10px;
+            margin-top: 15px;
         }
         .lista-entregas {
             margin-top: 15px;
@@ -273,7 +288,7 @@
         .widget-acoes {
             display: flex;
             justify-content: space-between;
-            gap: 8px;
+            gap: 4px;
         }
         .widget-btn {
             flex: 1;
@@ -281,8 +296,8 @@
             background: #242936;
             color: white;
             border-radius: 8px;
-            padding: 10px 5px;
-            font-size: 11px;
+            padding: 10px 2px;
+            font-size: 10px;
             font-weight: bold;
             cursor: pointer;
             display: flex;
@@ -322,6 +337,7 @@
             <p style="font-size: 12px; color: #666; text-align: center;">Digite o endereço ou clique em uma parada carregada para abrir a localização.</p>
             <input type="text" id="campoEndereco" placeholder="Ex: Av. Paulista, 1000 - São Paulo">
             <button class="btn-principal" onclick="buscarEnderecoNoMapa()">Buscar Endereço</button>
+            <button class="btn-navegar-gps" onclick="dispararNavegacaoGpsExterna()">🚀 Navegar (Abrir Waze/Maps)</button>
             <iframe class="mapa-container" id="iframeMapa" src="about:blank" allowfullscreen></iframe>
         </div>
     </div>
@@ -368,6 +384,10 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
                     Abrir app
                 </button>
+                <button class="widget-btn" onclick="acaoNavegarDiretoWidget(event)" style="border-color: #2ecc71;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+                    Navegar
+                </button>
                 <button class="widget-btn" onclick="acaoNaoEntregue(event)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
                     Não entre...
@@ -411,21 +431,21 @@
 
         // FUNÇÃO DE TRATAMENTO COM HIGIENIZAÇÃO DE CARACTERES QUEBRADOS
         function estruturarLinhasDeRota(textoCompleto) {
-            // CORREÇÃO CRÍTICA: Junta letras acentuadas que o leitor de PDF separa por espaços (Ex: Ang é lica -> Angélica)
+            // Junta letras acentuadas que o leitor de PDF separa por espaços (Ex: Ang é lica -> Angélica)
             textoCompleto = textoCompleto.replace(/(\w)\s+([áéíóúàèìòùâêîôûãõçÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÃÕÇ])\s+(\w)/g, '$1$2$3');
             
-            // CORREÇÃO CRÍTICA 2: Junta apóstrofos que foram espalçados (Ex: d ' avila -> d'avila)
+            // Junta apóstrofos que foram espaçados (Ex: d ' avila -> d'avila)
             textoCompleto = textoCompleto.replace(/(\w)\s*'\s*(\w)/g, "$1'$2");
 
-            const linhas = textoCompleto.split(/\r?\n/);
+            const lines = textoCompleto.split(/\r?\n/);
             const padraoBR = /BR[A-Z0-9]{9,20}/i;
             const padraoAT = /\bAT\d+[A-Z0-9]*\b/i; 
             let entregasFiltradas = [];
 
-            linhas.forEach(linha => {
+            lines.forEach(linha => {
                 if (!linha.trim()) return;
 
-                const matchBR = Mystery = linha.match(padraoBR);
+                const matchBR = linha.match(padraoBR);
                 if (matchBR) {
                     const codigoEncontrado = matchBR[0].toUpperCase().trim();
                     let matchAT = linha.match(padraoAT);
@@ -453,7 +473,7 @@
                             let cep = colunas[idxBR + 4] || "";
 
                             bairro = bairro.split(/[\/;]/)[0].trim();
-                            cidade = city = cidade.split(/[\/;]/)[0].trim();
+                            cidade = cidade.split(/[\/;]/)[0].trim();
                             cep = cep.split(/[\/;]/)[0].trim();
 
                             ruaCurta = logradouro;
@@ -614,6 +634,15 @@
             widget.classList.add('minimizado');
         }
 
+        // DISPARA A NAVEGAÇÃO DE GPS DE DENTRO DO CARD FLUTUANTE WIDGET
+        function acaoNavegarDiretoWidget(event) {
+            event.stopPropagation();
+            const entrega = bancoDeDadosRotas[indexEntregaAtiva];
+            if (entrega && entrega.endereco) {
+                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(entrega.endereco)}`, '_blank');
+            }
+        }
+
         function acaoNaoEntregue(event) {
             event.stopPropagation();
             const widget = document.getElementById('widgetEntrega');
@@ -635,7 +664,7 @@
             buscarEnderecoNoMapa();
         }
 
-        // CORREÇÃO DE EMBED DO GOOGLE MAPS
+        // ABRE O EMBED CORRETAMENTE DENTRO DO SITE
         function buscarEnderecoNoMapa() {
             const endereco = document.getElementById('campoEndereco').value;
             if (!endereco.trim() || endereco.includes("Endereço não identificado")) {
@@ -644,6 +673,16 @@
             }
             const urlMapa = `https://maps.google.com/maps?q=${encodeURIComponent(endereco)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
             document.getElementById('iframeMapa').src = urlMapa;
+        }
+
+        // DISPARA O APLICATIVO EXTERNO DE GPS (GOOGLE MAPS / WAZE NATIVO)
+        function dispararNavegacaoGpsExterna() {
+            const endereco = document.getElementById('campoEndereco').value;
+            if (!endereco.trim() || endereco.includes("Endereço não identificado")) {
+                alert('Endereço ausente ou inválido para navegação.');
+                return;
+            }
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`, '_blank');
         }
 
         function finalizarCarregamento() {
@@ -722,6 +761,7 @@
 
         function falarTexto(texto) {
             if ('speechSynthesis' in window) {
+                window.focus();
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(texto);
                 utterance.lang = 'pt-BR';
