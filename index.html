@@ -3,664 +3,328 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RotaFácil - Alta Performance Logística</title>
+    <title>Rota Fácil</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
-        :root {
-            --primary: #ff4500;
-            --primary-hover: #e03e00;
-            --success: #2ecc71;
-            --danger: #e74c3c;
-            --dark-bg: #1a1d24;
-            --card-bg: #ffffff;
-            --body-bg: #f4f4f9;
-            --text-main: #333333;
-        }
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            margin: 0;
-            padding: 15px;
-            background-color: var(--body-bg);
-            color: var(--text-main);
-            padding-bottom: 100px;
-            box-sizing: border-box;
-        }
-        h1, h2, h3 {
-            text-align: center;
-            color: var(--primary);
-            margin-top: 5px;
-        }
-        .card {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
-            margin-bottom: 15px;
-        }
-        .tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 15px;
-        }
-        .tab-btn {
-            flex: 1;
-            background: #e9ecef;
-            border: none;
-            padding: 12px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .tab-btn.active {
-            background: var(--primary);
-            color: white;
-        }
-        input[type="text"], input[type="file"], select {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
-            background: #f8f9fa;
-        }
-        .btn-principal {
-            width: 100%;
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 14px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-top: 5px;
-            transition: background 0.2s;
-        }
-        .btn-principal:hover {
-            background: var(--primary-hover);
-        }
-        .lista-entregas {
-            max-height: 320px;
-            overflow-y: auto;
-            border: 1px solid #e2e8f0;
-            padding: 5px;
-            border-radius: 6px;
-            background: #fff;
-        }
-        .item-entrega {
-            padding: 12px;
-            border-bottom: 1px solid #edf2f7;
-            background: #ffffff;
-            margin-bottom: 6px;
-            border-radius: 6px;
-            border-left: 6px solid #cbd5e0;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-        .item-entrega:active {
-            transform: scale(0.99);
-        }
-        .item-entrega.status-entregue {
-            border-left-color: var(--success);
-            background: #f0fdf4;
-        }
-        .item-entrega.status-falhou {
-            border-left-color: var(--danger);
-            background: #fff5f5;
-        }
-        .topo {
-            display: flex;
-            justify-content: space-between;
-            font-weight: bold;
-            font-size: 13px;
-        }
-        .endereco {
-            font-size: 14px;
-            margin-top: 5px;
-            color: #2d3748;
-        }
-        .meta-tags {
-            display: flex;
-            gap: 6px;
-            margin-top: 6px;
-            font-size: 11px;
-        }
-        .tag {
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: #edf2f7;
-            color: #4a5568;
-        }
-        .tag-janela {
-            background: #feebc8;
-            color: #c05621;
-            font-weight: bold;
-        }
-        .barra-controle-fixa {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 75px;
-            background: #ffffff;
-            border-top: 1px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            padding: 0 10px;
-            z-index: 10000;
-            box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
-        }
-        .btn-global {
-            flex: 1;
-            margin: 0 4px;
-            padding: 12px;
-            border-radius: 6px;
-            border: none;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-        .modal-scanner {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.95);
-            z-index: 20000;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .widget-entrega {
-            position: fixed;
-            bottom: 85px;
-            right: 15px;
-            z-index: 9999;
-            background: var(--dark-bg);
-            color: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            width: 320px;
-            padding: 16px;
-            box-sizing: border-box;
-            border: 1px solid #2d323f;
-        }
-        .widget-acoes {
-            display: flex;
-            gap: 6px;
-            margin-top: 10px;
-        }
-        .widget-btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 12px;
-            color: white;
-        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f4f9; padding-bottom: 80px; }
+        h1, h2 { text-align: center; color: #ff4500; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        
+        /* Estilo da Lista Limpa Original */
+        .item-entrega { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; background: #fff; margin-bottom: 5px; border-radius: 4px; border-left: 5px solid #bdc3c7; transition: 0.2s; }
+        .item-entrega:active { transform: scale(0.98); }
+        .item-entrega.status-entregue { border-left-color: #2ecc71; background: #e8f5e9; }
+        .item-entrega.status-falhou { border-left-color: #e74c3c; background: #fdedec; }
+        .topo { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; color: #ff4500; }
+        .endereco { font-size: 15px; color: #333; margin-top: 5px; font-weight: 500; }
+        .hora-conclusao { font-size: 11px; color: #7f8c8d; margin-top: 5px; display: block; }
+
+        /* Botões Limpos e Simples */
+        .btn-principal { width: 100%; padding: 14px; background: #ff4500; color: white; border: none; border-radius: 5px; margin-top: 10px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .btn-secundario { width: 100%; padding: 12px; background: #ecf0f1; color: #333; border: 1px solid #bdc3c7; border-radius: 5px; margin-top: 10px; font-weight: bold; font-size: 14px; cursor: pointer; }
+        
+        /* Barra Inferior Original */
+        .barra-controle-fixa { position: fixed; bottom: 0; left: 0; right: 0; height: 65px; background: #ffffff; border-top: 1px solid #e5e5ea; display: flex; z-index: 1000; padding: 5px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .btn-global { flex: 1; margin: 0 5px; border-radius: 8px; border: none; color: white; font-weight: bold; cursor: pointer; font-size: 15px; }
+        
+        /* Modais */
+        .modal-fullscreen { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; }
+        
+        /* Modal de Ação da Entrega (Design Limpo) */
+        .modal-acao { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 20px; border-top-left-radius: 15px; border-top-right-radius: 15px; z-index: 1500; box-shadow: 0 -5px 20px rgba(0,0,0,0.2); }
+        .input-manual { width: 100%; padding: 12px; margin-top: 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        
+        .acoes-linha { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-acao { flex: 1; padding: 15px; border: none; border-radius: 6px; font-weight: bold; color: white; font-size: 14px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h1>📦 RotaFácil Pro</h1>
+    <h1>📦 Rota Fácil</h1>
 
     <div class="card" id="secaoUpload">
-        <div class="tabs">
-            <button class="tab-btn active" id="btnAbaArq" onclick="alternarAbasConfig('arquivo')">📁 Arquivo / PDF</button>
-            <button class="tab-btn" id="btnAbaMan" onclick="alternarAbasConfig('manual')">✍️ Manual</button>
-        </div>
-
-        <div id="conteudoAbaArquivo">
-            <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv">
-            <button class="btn-principal" onclick="processarDocumentoRota()">Processar Rota Completa</button>
-        </div>
-
-        <div id="conteudoAbaManual" style="display: none;">
-            <input type="text" id="inputEnderecoManual" placeholder="Endereço Completo">
-            <select id="selectJanelaTempo">
-                <option value="Livre">Horário Livre</option>
-                <option value="08:00 - 12:00">Manhã (08h às 12h)</option>
-                <option value="12:00 - 18:00">Tarde (12h às 18h)</option>
-                <option value="18:00 - 22:00">Noite (18h às 22h)</option>
-            </select>
-            <button class="btn-principal" style="background:#2b6cb0;" onclick="adicionarParadaManualLista()">Inserir Parada</button>
-            <div id="listaCriacaoManual" class="lista-entregas" style="margin-top:10px; max-height:120px;"></div>
-            <button class="btn-principal" style="background:var(--success);" onclick="salvarListaManualCompleta()">Salvar e Gerar Rota</button>
-        </div>
+        <h2>Passo 1: Importar Rota</h2>
+        <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv" style="width: 100%; border: 1px dashed #ff4500; padding: 10px; box-sizing: border-box; background: #fff;">
+        <button class="btn-principal" onclick="processarArquivoFisico()">Processar Arquivo / PDF</button>
     </div>
 
     <div id="secaoScanner" class="card" style="display: none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h3 style="margin:0; font-size:16px;">Painel de Monitoramento</h3>
-            <button onclick="exportarRelatórioCSV()" style="background:#4a5568; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; cursor:pointer;">📥 Relatório CSV</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2 style="margin: 0;">Passo 2: Entregas</h2>
+            <div>
+                <button onclick="executarOtimizacaoTSP()" style="background: none; border: none; font-size: 20px; cursor: pointer;" title="Otimizar Rota">⚡</button>
+                <button onclick="exportarRelatorioCSV()" style="background: none; border: none; font-size: 20px; cursor: pointer; margin-left: 10px;" title="Exportar Relatório">📥</button>
+                <button onclick="limparTudo()" style="background: none; border: none; font-size: 20px; cursor: pointer; margin-left: 10px;" title="Limpar Rota">🗑️</button>
+            </div>
         </div>
-        <div class="lista-entregas" id="containerListaEntregas"></div>
-        
-        <div style="margin-top:12px; display:flex; gap:6px;">
-            <button class="btn-principal" style="background:#9b59b6; margin:0;" onclick="executarOtimizacaoTSP()">🚀 Otimizar Rota (Estilo Circuit)</button>
-            <button class="btn-principal" style="background:#4a5568; margin:0; width:auto;" onclick="limparSessaoTotal()">🗑️</button>
-        </div>
+        <div id="containerListaEntregas"></div>
     </div>
 
-    <div id="widgetEntrega" class="widget-entrega" style="display: none;">
-        <div style="display:flex; justify-content:space-between; font-size:11px; color:#a0aec0;">
-            <span id="widgetCodigo">BR-0000</span>
-            <span id="widgetJanela" style="color:#ecc94b; font-weight:bold;">LIVRE</span>
+    <div id="modalAcaoEntrega" class="modal-acao">
+        <div class="topo" style="color: #333; font-size: 16px;">
+            <span id="acaoTitulo">Parada Selecionada</span>
+            <span id="acaoCodigo" style="color: #ff4500;">BR-000</span>
         </div>
-        <div id="widgetEndereco" style="font-size:14px; font-weight:bold; margin:6px 0; max-height:40px; overflow-y:auto;">Nenhum endereço selecionado</div>
+        <div class="endereco" id="acaoEndereco" style="margin-bottom: 15px; font-size: 16px;"></div>
         
-        <div style="margin-top:8px; border-top:1px dashed #4a5568; padding-top:8px;">
-            <input type="text" id="inputSegurancaManual" placeholder="Código de barras ilegível? Digite aqui" style="padding:6px; font-size:12px; margin:0; background:#2d3748; color:white; border:1px solid #4a5568;">
-            <button onclick="forcarBaixaManualSeguranca()" style="width:100%; background:#4a5568; color:white; border:none; padding:6px; font-size:11px; margin-top:4px; border-radius:4px; cursor:pointer;">Validar Código Digitado</button>
+        <input type="text" id="inputManual" class="input-manual" placeholder="Código ilegível? Digite aqui para forçar baixa">
+        
+        <div class="acoes-linha">
+            <button class="btn-acao" style="background: #e74c3c;" onclick="registrarStatus('falhou')">Falhou</button>
+            <button class="btn-acao" style="background: #34c759;" onclick="registrarStatus('entregue')">Entregue</button>
         </div>
-
-        <div class="widget-acoes">
-            <button class="widget-btn" style="background:#3182ce;" onclick="navegarGPSExterno()">Navegar</button>
-            <button class="widget-btn" style="background:var(--danger);" onclick="registrarStatusEntregaFinal('falhou')">Falhou</button>
-            <button class="widget-btn" style="background:var(--success);" onclick="registrarStatusEntregaFinal('entregue')">Entregue</button>
-        </div>
-    </div>
-
-    <div id="modalScannerGlobal" class="modal-scanner">
-        <div style="width:100%; max-width:400px; display:flex; justify-content:space-between; margin-bottom:15px;">
-            <h3 style="color:white; margin:0;">Scanner RotaFácil</h3>
-            <button onclick="fecharScannerGlobal()" style="padding:8px 16px; background:var(--danger); color:white; border:none; border-radius:4px; font-weight:bold;">X Sair</button>
-        </div>
-        <div id="reader"></div>
-        <div id="scannerFeedbackMsg" style="color:white; margin-top:15px; font-weight:bold; text-align:center; background:#2d3748; padding:10px; width:100%; max-width:380px; border-radius:6px;">Aguardando leitura...</div>
+        <button class="btn-secundario" onclick="fecharModalAcao()">Cancelar</button>
     </div>
 
     <div class="barra-controle-fixa">
-        <button class="btn-global" style="background: var(--success);" onclick="abrirScannerGlobal()">📷 Bipar Pacote</button>
-        <button class="btn-global" style="background: #4a5568;" onclick="focarParadaAtivaVisual()">📍 Tela de Trabalho</button>
+        <button class="btn-global" style="background: #34c759;" onclick="abrirScannerGlobal()">📷 Scanner</button>
+        <button class="btn-global" style="background: #8e8e93;" onclick="abrirMapaGeral()">🗺️ Mapa</button>
+    </div>
+
+    <div id="modalScannerGlobal" class="modal-fullscreen">
+        <button onclick="fecharScannerGlobal()" style="padding: 10px; margin-bottom: 20px; background: #e74c3c; color: white; border: none; border-radius: 5px; font-size: 16px; width: 80%; max-width: 400px; font-weight: bold;">Fechar Scanner</button>
+        <div id="reader" style="width: 100%; max-width: 400px; background: #000; border-radius: 8px; overflow: hidden;"></div>
+        <div id="scannerFeedback" style="color: white; margin-top: 20px; font-size: 16px; font-weight: bold;">Aponte para o código...</div>
     </div>
 
     <script>
-        let rotaFacilDados = JSON.parse(localStorage.getItem('db_rotafacil_pro')) || [];
-        let filaManualTemporaria = [];
+        let bancoDeDadosRotas = JSON.parse(localStorage.getItem('rota_facil_db')) || [];
         let html5QrcodeScannerGlobal = null;
-        let indexAtivoGlobal = 0;
-        let processandoLeituraBip = false;
+        let indexAtivo = null;
+        let processandoLeitura = false;
 
-        window.addEventListener('load', () => {
-            if(rotaFacilDados.length > 0) {
-                alternarExibicaoPaineis(true);
-                recarregarProximaParadaPendente();
-            }
-        });
-
-        // EMISSÃO DE BIP SONORO NATIVO (Garante funcionamento offline sem dependência de arquivos externos)
-        function emitirBipSonoroSucesso() {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(950, audioCtx.currentTime); // Tom agudo industrial
-                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 0.12);
-            } catch (e) {
-                console.log("AudioContext não suportado ou bloqueado pelo navegador.");
-            }
-        }
-
-        function alternarAbasConfig(tipo) {
-            document.getElementById('btnAbaArq').classList.remove('active');
-            document.getElementById('btnAbaMan').classList.remove('active');
-            document.getElementById('conteudoAbaArquivo').style.display = 'none';
-            document.getElementById('conteudoAbaManual').style.display = 'none';
-
-            if(tipo === 'arquivo') {
-                document.getElementById('btnAbaArq').classList.add('active');
-                document.getElementById('conteudoAbaArquivo').style.display = 'block';
-            } else {
-                document.getElementById('btnAbaMan').classList.add('active');
-                document.getElementById('conteudoAbaManual').style.display = 'block';
-            }
-        }
-
-        function alternarExibicaoPaineis(ativo) {
-            if(ativo) {
+        // Recupera o estado visual ao recarregar a página
+        window.onload = () => {
+            if (bancoDeDadosRotas.length > 0) {
                 document.getElementById('secaoUpload').style.display = 'none';
                 document.getElementById('secaoScanner').style.display = 'block';
-            } else {
-                document.getElementById('secaoUpload').style.display = 'block';
-                document.getElementById('secaoScanner').style.display = 'none';
-                document.getElementById('widgetEntrega').style.display = 'none';
+                renderizarListaEntregasUI();
             }
+        };
+
+        // Bip Sonoro Nativo
+        function emitirBip() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(900, ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.1);
+            } catch (e) { console.log("Áudio não suportado"); }
         }
 
-        async function processarDocumentoRota() {
+        // Processamento de Arquivos Completo (PDF, TXT, CSV)
+        async function processarArquivoFisico() {
             const fileInput = document.getElementById('arquivoPlanilha');
-            if(fileInput.files.length === 0) return alert("Por favor, selecione um arquivo.");
+            if(fileInput.files.length === 0) return alert("Selecione um arquivo primeiro.");
             const arquivo = fileInput.files[0];
 
             if (arquivo.type === "application/pdf") {
                 const leitor = new FileReader();
                 leitor.onload = async function() {
                     const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                    let textoCompleto = "";
+                    let texto = "";
                     for (let i = 1; i <= pdf.numPages; i++) {
-                        const pagina = await pdf.getPage(i);
-                        const conteudo = await pagina.getTextContent();
-                        textoCompleto += conteudo.items.map(item => item.str).join(" ") + "\n";
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        texto += content.items.map(item => item.str).join(" ") + "\n";
                     }
-                    parsearLinhasTextoEConstruirDB(textoCompleto);
+                    estruturarDados(texto);
                 };
                 leitor.readAsArrayBuffer(arquivo);
             } else {
                 const leitor = new FileReader();
-                leitor.onload = (e) => parsearLinhasTextoEConstruirDB(e.target.result);
+                leitor.onload = (e) => estruturarDados(e.target.result);
                 leitor.readAsText(arquivo);
             }
         }
 
-        function parsearLinhasTextoEConstruirDB(texto) {
+        function estruturarDados(texto) {
             const linhas = texto.split(/\r?\n/);
-            rotaFacilDados = linhas.filter(l => l.trim().length > 6).map((linha, i) => {
-                // Injeta coordenadas geográficas simuladas realistas dentro de um raio operacional urbano padrão
-                const latBase = -23.55052 + (Math.random() - 0.5) * 0.15;
-                const lonBase = -46.633308 + (Math.random() - 0.5) * 0.15;
-                return {
-                    id: i,
-                    codigo: `BR-${String(i+1).padStart(4,'0')}`,
-                    endereco: linha.trim(),
-                    janelaTempo: i % 4 === 0 ? "12:00 - 18:00" : "Livre",
-                    status: 'pendente',
-                    timestamp: null,
-                    lat: latBase,
-                    lon: lonBase
-                };
-            });
-
-            if(rotaFacilDados.length > 0) {
-                salvarEstadoStorage();
-                alternarExibicaoPaineis(true);
-                renderizarListaEntregasUI();
-                recarregarProximaParadaPendente();
-            } else {
-                alert("Nenhum dado de endereço legível foi extraído.");
-            }
-        }
-
-        function adicionarParadaManualLista() {
-            const end = document.getElementById('inputEnderecoManual').value.trim();
-            const janela = document.getElementById('selectJanelaTempo').value;
-            if(!end) return alert("Digite um endereço válido.");
-
-            filaManualTemporaria.push({ endereco: end, janelaTempo: janela });
-            document.getElementById('inputEnderecoManual').value = "";
-            
-            const listaVisual = document.getElementById('listaCriacaoManual');
-            listaVisual.innerHTML = filaManualTemporaria.map((p, idx) => `
-                <div style="font-size:12px; border-bottom:1px solid #eee; padding:4px 0;">
-                    #${idx+1} - <b>[${p.janelaTempo}]</b> ${p.endereco.substring(0, 40)}...
-                </div>
-            `).join('');
-        }
-
-        function salvarListaManualCompleta() {
-            if(filaManualTemporaria.length === 0) return alert("Adicione ao menos um endereço.");
-            
-            rotaFacilDados = filaManualTemporaria.map((p, i) => ({
+            bancoDeDadosRotas = linhas.filter(l => l.trim().length > 5).map((l, i) => ({
                 id: i,
-                codigo: `MAN-${String(i+1).padStart(4,'0')}`,
-                endereco: p.endereco,
-                janelaTempo: p.janelaTempo,
+                codigo: `BR-${String(i+1).padStart(4,'0')}`,
+                endereco: l.trim(),
                 status: 'pendente',
                 timestamp: null,
-                lat: -23.55052 + (Math.random() - 0.5) * 0.15,
-                lon: -46.633308 + (Math.random() - 0.5) * 0.15
+                lat: -23.55 + (Math.random() - 0.5) * 0.1, // Simulação de geocódigo para o motor TSP
+                lon: -46.63 + (Math.random() - 0.5) * 0.1
             }));
-
-            filaManualTemporaria = [];
-            document.getElementById('listaCriacaoManual').innerHTML = "";
-            salvarEstadoStorage();
-            alternarExibicaoPaineis(true);
+            
+            salvarDados();
+            document.getElementById('secaoUpload').style.display = 'none';
+            document.getElementById('secaoScanner').style.display = 'block';
             renderizarListaEntregasUI();
-            recarregarProximaParadaPendente();
         }
 
+        // Interface Gráfica Idêntica à Solicitada
         function renderizarListaEntregasUI() {
             const container = document.getElementById('containerListaEntregas');
             container.innerHTML = '';
-            rotaFacilDados.forEach((e, idx) => {
+            bancoDeDadosRotas.forEach((e, idx) => {
                 const item = document.createElement('div');
                 item.className = `item-entrega status-${e.status}`;
-                item.onclick = () => carregarDadosNoWidgetExecucao(idx);
+                item.onclick = () => abrirModalAcao(idx);
+                
+                let iconStatus = e.status === 'entregue' ? '✅' : (e.status === 'falhou' ? '❌' : '📍');
+                
                 item.innerHTML = `
-                    <div class="topo">
-                        <span>📍 Parada #${idx + 1} - ${e.status.toUpperCase()}</span>
-                        <span style="color:#555;">${e.codigo}</span>
-                    </div>
+                    <div class="topo"><span>${iconStatus} Parada #${idx + 1}</span><span style="font-size: 12px; color: #7f8c8d;">${e.codigo}</span></div>
                     <div class="endereco">${e.endereco}</div>
-                    <div class="meta-tags">
-                        <span class="tag tag-janela">🕒 ${e.janelaTempo}</span>
-                        ${e.timestamp ? `<span class="tag" style="background:#e2e8f0;">⏱️ Concluído às: ${e.timestamp}</span>` : ''}
-                    </div>
+                    ${e.timestamp ? `<span class="hora-conclusao">Finalizado às: ${e.timestamp}</span>` : ''}
                 `;
                 container.appendChild(item);
             });
         }
 
-        // MOTOR DE OTIMIZAÇÃO PROFISSIONAL: IMPLEMENTAÇÃO DO ALGORITMO TSP NEAREST NEIGHBOR (Vizinho Mais Próximo)
-        // Substitui a ordenação randômica por inteligência espacial de aproximação vetorial
-        function executarOtimizacaoTSP() {
-            if (rotaFacilDados.length <= 2) return alert("Quantidade de paradas insuficiente para otimização espacial.");
-            
-            let rascunhoOrigem = [...rotaFacilDados];
-            let rotaOtimizadaFinal = [];
-            
-            // Assume a primeira parada como o ponto de partida logístico corrente
-            let pontoAtual = rascunhoOrigem.splice(0, 1)[0];
-            rotaOtimizadaFinal.push(pontoAtual);
-
-            while (rascunhoOrigem.length > 0) {
-                let indiceMaisProximo = 0;
-                let menorDistanciaCalculada = Infinity;
-
-                for (let i = 0; i < rascunhoOrigem.length; i++) {
-                    // Cálculo de distância euclidiana para vetorização espacial planar das coordenadas GPS
-                    let d = Math.sqrt(
-                        Math.pow(pontoAtual.lat - rascunhoOrigem[i].lat, 2) + 
-                        Math.pow(pontoAtual.lon - raccunhoOrigem[i].lon, 2)
-                    );
-                    if (d < menorDistanciaCalculada) {
-                        menorDistanciaCalculada = d;
-                        indiceMaisProximo = i;
-                    }
-                }
-                pontoAtual = rascunhoOrigem.splice(indiceMaisProximo, 1)[0];
-                rotaOtimizadaFinal.push(pontoAtual);
-            }
-
-            // Reindexa a lista ordenada para consistência estrutural do DOM
-            rotaFacilDados = rotaOtimizadaFinal.map((item, idx) => {
-                item.id = idx;
-                return item;
-            });
-
-            salvarEstadoStorage();
-            renderizarListaEntregasUI();
-            recarregarProximaParadaPendente();
-            alert("Inteligência RotaFácil: Percurso sequenciado e otimizado via coordenadas espaciais!");
+        // Modal de Ação Limpo
+        function abrirModalAcao(idx) {
+            indexAtivo = idx;
+            const item = bancoDeDadosRotas[idx];
+            document.getElementById('acaoTitulo').innerText = `Parada #${idx + 1}`;
+            document.getElementById('acaoCodigo').innerText = item.codigo;
+            document.getElementById('acaoEndereco').innerText = item.endereco;
+            document.getElementById('inputManual').value = "";
+            document.getElementById('modalAcaoEntrega').style.display = 'block';
         }
 
-        function carregarDadosNoWidgetExecucao(idx) {
-            indexAtivoGlobal = idx;
-            const e = rotaFacilDados[idx];
-            if(!e) return;
-
-            document.getElementById('widgetCodigo').innerText = e.codigo;
-            document.getElementById('widgetJanela').innerText = `JANELA: ${e.janelaTempo.toUpperCase()}`;
-            document.getElementById('widgetEndereco').innerText = e.endereco;
-            document.getElementById('inputSegurancaManual').value = "";
-            document.getElementById('widgetEntrega').style.display = 'block';
+        function fecharModalAcao() {
+            document.getElementById('modalAcaoEntrega').style.display = 'none';
+            indexAtivo = null;
         }
 
-        function registrarStatusEntregaFinal(statusAlvo) {
-            if(!rotaFacilDados[indexAtivoGlobal]) return;
+        // Registo de Status e Auditoria
+        function registrarStatus(status) {
+            const valManual = document.getElementById('inputManual').value.trim();
+            if (valManual) alert("Baixa confirmada utilizando código de segurança: " + valManual);
 
             const agora = new Date();
-            const horaFormatada = String(agora.getHours()).padStart(2, '0') + ":" + String(agora.getMinutes()).padStart(2, '0') + ":" + String(agora.getSeconds()).padStart(2, '0');
+            bancoDeDadosRotas[indexAtivo].status = status;
+            bancoDeDadosRotas[indexAtivo].timestamp = agora.toLocaleTimeString();
             
-            rotaFacilDados[indexAtivoGlobal].status = statusAlvo;
-            rotaFacilDados[indexAtivoGlobal].timestamp = horaFormatada;
-
-            emitirBipSonoroSucesso();
-            salvarEstadoStorage();
+            if (status === 'entregue') emitirBip();
+            
+            salvarDados();
             renderizarListaEntregasUI();
-            recarregarProximaParadaPendente();
+            fecharModalAcao();
         }
 
-        function forcarBaixaManualSeguranca() {
-            const token = document.getElementById('inputSegurancaManual').value.trim();
-            if(!token) return alert("Digite o código identificador para validação.");
+        // Motor TSP Integrado e Oculto
+        function executarOtimizacaoTSP() {
+            if(bancoDeDadosRotas.length <= 2) return;
+            let rascunho = [...bancoDeDadosRotas];
+            let otimizado = [rascunho.shift()];
             
-            alert(`Código [${token}] auditado e aceito pelo sistema de segurança.`);
-            registrarStatusEntregaFinal('entregue');
-        }
-
-        function recarregarProximaParadaPendente() {
-            let indexProximo = rotaFacilDados.findIndex(p => p.status === 'pendente');
-            if(indexProximo !== -1) {
-                carregarDadosNoWidgetExecucao(indexProximo);
-            } else {
-                document.getElementById('widgetEntrega').style.display = 'none';
+            while(rascunho.length > 0) {
+                let atual = otimizado[otimizado.length - 1];
+                let indexProximo = 0;
+                let menorDist = Infinity;
+                
+                for(let i=0; i<rascunho.length; i++) {
+                    let d = Math.sqrt(Math.pow(atual.lat - rascunho[i].lat, 2) + Math.pow(atual.lon - rascunho[i].lon, 2));
+                    if(d < menorDist) { menorDist = d; indexProximo = i; }
+                }
+                otimizado.push(rascunho.splice(indexProximo, 1)[0]);
             }
+            
+            bancoDeDadosRotas = otimizado;
+            salvarDados();
+            renderizarListaEntregasUI();
+            alert("Rota otimizada com sucesso pela proximidade!");
         }
 
-        function navegarGPSExterno() {
-            const e = rotaFacilDados[indexAtivoGlobal];
-            if(!e) return;
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.endereco)}`, '_blank');
+        // Relatório CSV
+        function exportarRelatorioCSV() {
+            if(bancoDeDadosRotas.length === 0) return;
+            let csv = "\uFEFFID,Codigo,Endereco,Status,Horario\n";
+            bancoDeDadosRotas.forEach(p => {
+                csv += `"${p.id}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.status}","${p.timestamp || '-'}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = "Relatorio_RotaFacil.csv";
+            link.click();
         }
 
-        function focarParadaAtivaVisual() {
-            if(rotaFacilDados.length === 0) return alert("Nenhuma rota carregada.");
-            alternarExibicaoPaineis(true);
-            recarregarProximaParadaPendente();
-        }
-
-        // MOTOR DE PROCESSAMENTO E CAPTURA DO SCANNER GLOBAL INTERNO
+        // Lógica do Scanner Global
         function abrirScannerGlobal() {
             document.getElementById('modalScannerGlobal').style.display = 'flex';
-            document.getElementById('scannerFeedbackMsg').className = "aguardando";
-            document.getElementById('scannerFeedbackMsg').innerText = "Aproxime a câmera do código de barras ou QR Code do pacote...";
+            document.getElementById('scannerFeedback').innerText = "Aponte para o código...";
+            document.getElementById('scannerFeedback').style.color = "white";
             
-            if (!html5QrcodeScannerGlobal) {
-                html5QrcodeScannerGlobal = new Html5Qrcode("reader");
-            }
+            if (!html5QrcodeScannerGlobal) html5QrcodeScannerGlobal = new Html5Qrcode("reader");
             
             html5QrcodeScannerGlobal.start(
-                { facingMode: "environment" },
-                { fps: 15, qrbox: { width: 280, height: 160 } },
-                onLeituraBipSucessoRealizada
-            ).catch(err => {
-                console.error(err);
-                document.getElementById('scannerFeedbackMsg').innerText = "Falha crítica ao inicializar câmera corporativa.";
+                { facingMode: "environment" }, 
+                { fps: 15, qrbox: { width: 250, height: 150 } }, 
+                processarLeitura
+            ).catch(e => {
+                document.getElementById('scannerFeedback').innerText = "Erro ao abrir câmera.";
             });
         }
 
         function fecharScannerGlobal() {
             document.getElementById('modalScannerGlobal').style.display = 'none';
-            if (html5QrcodeScannerGlobal && html5QrcodeScannerGlobal.isScanning) {
-                html5QrcodeScannerGlobal.stop();
-            }
-            processandoLeituraBip = false;
+            if (html5QrcodeScannerGlobal) html5QrcodeScannerGlobal.stop();
+            processandoLeitura = false;
         }
 
-        function onLeituraBipSucessoRealizada(textoLido) {
-            if (processandoLeituraBip) return;
-            processandoLeituraBip = true;
-
-            const tokenLimpo = textoLido.trim().toUpperCase();
-            emitirBipSonoroSucesso();
-
-            // Busca por correspondência exata ou parcial dentro do banco de dados operacional da rota
-            const correspondenciaIndex = rotaFacilDados.findIndex(item => 
-                tokenLimpo.includes(item.codigo.toUpperCase()) || 
-                item.codigo.toUpperCase().includes(tokenLimpo) ||
-                (item.endereco.toUpperCase().includes(tokenLimpo) && tokenLimpo.length > 5)
-            );
-
-            const msgBox = document.getElementById('scannerFeedbackMsg');
-
-            if (correspondenciaIndex !== -1) {
-                msgBox.style.background = "var(--success)";
-                msgBox.innerText = `SUCESSO: Encomenda Identificada na Parada #${correspondenciaIndex + 1}!`;
+        function processarLeitura(textoLido) {
+            if (processandoLeitura) return;
+            processandoLeitura = true;
+            
+            const lido = textoLido.trim().toUpperCase();
+            const idx = bancoDeDadosRotas.findIndex(i => lido.includes(i.codigo) || i.codigo.includes(lido));
+            
+            if (idx !== -1) {
+                emitirBip();
+                document.getElementById('scannerFeedback').innerText = `✅ Sucesso! Parada #${idx + 1} Identificada`;
+                document.getElementById('scannerFeedback').style.color = "#2ecc71";
                 
-                carregarDadosNoWidgetExecucao(correspondenciaIndex);
-                setTimeout(() => {
-                    fecharScannerGlobal();
-                    alternarExibicaoPaineis(true);
-                }, 1200);
+                const agora = new Date();
+                bancoDeDadosRotas[idx].status = 'entregue';
+                bancoDeDadosRotas[idx].timestamp = agora.toLocaleTimeString();
+                
+                salvarDados();
+                renderizarListaEntregasUI();
+                
+                setTimeout(() => { fecharScannerGlobal(); }, 1200);
             } else {
-                msgBox.style.background = "var(--danger)";
-                msgBox.innerHTML = `CÓDIGO NÃO LOCALIZADO NA ROTA ATIVA<br><span style="font-size:12px;">Lido: ${tokenLimpo}</span>`;
-                setTimeout(() => {
-                    msgBox.style.background = "#2d3748";
-                    msgBox.innerText = "Aguardando próxima leitura...";
-                    processandoLeituraBip = false;
-                }, 3000);
+                emitirBip(); // Bip de erro/alerta
+                document.getElementById('scannerFeedback').innerText = `❌ Código não encontrado na rota.`;
+                document.getElementById('scannerFeedback').style.color = "#e74c3c";
+                setTimeout(() => { processandoLeitura = false; }, 2000);
             }
         }
 
-        // EXPORTAÇÃO DE AUDITORIA E RELATÓRIO OPERACIONAL (Padrão de Fechamento de Turno do Circuit)
-        function exportarRelatórioCSV() {
-            if(rotaFacilDados.length === 0) return alert("Não há registros para exportação.");
-            
-            // Força a codificação UTF-8 adicionando o BOM (Byte Order Mark) para compatibilidade nativa com o Excel Microsoft
-            let conteudoCSV = "\uFEFF";
-            conteudoCSV += "ID Sequencial,Código Identificador,Endereço de Destino,Janela de Entrega,Status Operacional,Horário da Ação,Latitude,Longitude\n";
-            
-            rotaFacilDados.forEach(p => {
-                // Escapa aspas e limpa quebras de linhas internas do endereço para não corromper as colunas do CSV
-                let endLimpo = p.endereco.replace(/"/g, '""');
-                conteudoCSV += `"${p.id + 1}","${p.codigo}","${endLimpo}","${p.janelaTempo}","${p.status.toUpperCase()}","${p.timestamp || 'Não Processado'}","${p.lat}","${p.lon}"\n`;
-            });
-
-            const blobDoArquivo = new Blob([conteudoCSV], { type: 'text/csv;charset=utf-8;' });
-            const urlTemporaria = URL.createObjectURL(blobDoArquivo);
-            const gatilhoDownload = document.createElement('a');
-            
-            const dataAtual = new Date().toISOString().slice(0,10);
-            gatilhoDownload.href = urlTemporaria;
-            gatilhoDownload.download = `Relatorio_Turno_RotaFacil_${dataAtual}.csv`;
-            document.body.appendChild(gatilhoDownload);
-            gatilhoDownload.click();
-            document.body.removeChild(gatilhoDownload);
+        // Funções Auxiliares
+        function abrirMapaGeral() {
+            if(bancoDeDadosRotas.length === 0) return alert("Carregue uma rota primeiro.");
+            let pendente = bancoDeDadosRotas.find(p => p.status === 'pendente');
+            if(pendente) {
+                window.open(`https://maps.google.com/maps?daddr=$1{encodeURIComponent(pendente.endereco)}`, '_blank');
+            } else {
+                alert("Todas as entregas foram concluídas!");
+            }
         }
 
-        function salvarEstadoStorage() {
-            localStorage.setItem('db_rotafacil_pro', JSON.stringify(rotaFacilDados));
-        }
-
-        function limparSessaoTotal() {
-            if(confirm("Confirma a exclusão de todos os dados do turno atual da RotaFácil? Isso apagará o progresso de campo.")) {
-                localStorage.removeItem('db_rotafacil_pro');
-                rotaFacilDados = [];
-                alternarExibicaoPaineis(false);
+        function limparTudo() {
+            if(confirm("Deseja apagar toda a rota e reiniciar o aplicativo?")) {
+                localStorage.removeItem('rota_facil_db');
                 location.reload();
             }
+        }
+
+        function salvarDados() {
+            localStorage.setItem('rota_facil_db', JSON.stringify(bancoDeDadosRotas));
         }
     </script>
 </body>
