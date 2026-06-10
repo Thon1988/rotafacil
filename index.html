@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rota Fácil - Numera Fácil Pro</title>
-    <!-- Biblioteca para ler arquivos Excel (SheetJS) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Biblioteca para ler código de barras pela câmera (Html5Qrcode) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-    <!-- Biblioteca para extração nativa de PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
         body {
@@ -315,14 +312,12 @@
             <button class="tab-btn" onclick="mudarAba('mapa')">🗺️ Mapa / Endereço</button>
         </div>
 
-        <!-- Aba 1: Arquivo Físico (PDF ou Planilhas) -->
         <div id="abaArquivo">
             <p style="font-size: 12px; color: #666; text-align: center;">Selecione o arquivo <strong>PDF</strong>, planilha Excel (.xlsx, .xls) ou TXT da sua rota.</p>
             <input type="file" id="arquivoPlanilha" accept=".pdf, .xlsx, .xls, .csv, .txt">
             <button class="btn-principal" onclick="processarArquivoFisico()">Carregar Rota e Filtrar BR</button>
         </div>
 
-        <!-- Aba 2: Mapa e Endereço -->
         <div id="abaMapa" style="display: none;">
             <p style="font-size: 12px; color: #666; text-align: center;">Digite o endereço ou clique em uma parada carregada para abrir a localização.</p>
             <input type="text" id="campoEndereco" placeholder="Ex: Av. Paulista, 1000 - São Paulo">
@@ -344,9 +339,7 @@
         <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 10px; margin-top: 15px; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">Voltar e Trocar Arquivo</button>
     </div>
 
-    <!-- --- ELEMENTO DO CARD FLUTUANTE (WIDGET DE ENTREGA) --- -->
     <div id="widgetEntrega" class="widget-entrega minimizado" style="display: none;" onclick="alternarWidget(event)">
-        <!-- Visão Minimizado -->
         <div class="conteudo-minimizado">
             <div>
                 <div class="txt-min" id="widgetMinRua">Nenhuma Parada</div>
@@ -355,7 +348,6 @@
             <svg style="width:16px; height:16px; fill:#ff4500;" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
         </div>
 
-        <!-- Visão Expandida -->
         <div class="conteudo-expandido">
             <div class="widget-header">
                 <span id="widgetIdTexto">01</span>
@@ -417,7 +409,6 @@
             }
         }
 
-        // FUNÇÃO DE TRATAMENTO CORRIGIDA - EXTRAÇÃO LIMPA DE ENDEREÇO
         function estruturarLinhasDeRota(textoCompleto) {
             const linhas = textoCompleto.split(/\r?\n/);
             const padraoBR = /BR[A-Z0-9]{9,20}/i;
@@ -437,19 +428,15 @@
                     let ruaCurta = "";
                     let bairroCurto = "";
 
-                    // Tratamento preciso para colunas de planilhas/textos estruturados por ";"
                     if (linha.includes(';')) {
                         const colunas = linha.split(';').map(c => c.trim());
                         let idxBR = colunas.findIndex(c => padraoBR.test(c));
                         
                         if (idxBR !== -1 && colunas[idxBR + 1]) {
                             let colRuaRaw = colunas[idxBR + 1]; 
-                            
-                            // Remove observações internas e referências com barras da rua (Ex: ", Final santa/ang...")
                             let partesRua = colRuaRaw.split(',');
                             let logradouro = partesRua[0].trim();
                             
-                            // Se a segunda parte após a vírgula for apenas o número da residência, mantém
                             if (partesRua[1] && /\d/.test(partesRua[1]) && !/final|prox|ref|atras/i.test(partesRua[1])) {
                                 logradouro += ', ' + partesRua[1].trim();
                             }
@@ -458,7 +445,6 @@
                             let cidade = colunas[idxBR + 3] || "";
                             let cep = colunas[idxBR + 4] || "";
 
-                            // Limpa barras ou observações remanescentes das colunas adicionais
                             bairro = bairro.split(/[\/;]/)[0].trim();
                             cidade = cidade.split(/[\/;]/)[0].trim();
                             cep = cep.split(/[\/;]/)[0].trim();
@@ -469,11 +455,8 @@
                         }
                     }
 
-                    // Fallback genérico caso a linha não use ponto e vírgula estruturado
                     if (!enderecoLimpoForMaps || enderecoLimpoForMaps.length < 10) {
                         let textoLimpo = linha.replace(matchBR[0], '').replace(codigoAT, '');
-                        
-                        // Corta imediatamente observações que usem barras ou termos internos de entrega
                         textoLimpo = textoLimpo.split(/(?:Final|Próximo|Ref:|Ponto de ref|obs:|\/)/i)[0];
                         textoLimpo = textoLimpo.replace(/[;|\t\-]+/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -645,6 +628,7 @@
             buscarEnderecoNoMapa();
         }
 
+        // CORREÇÃO CRÍTICA DO LINK DO EMBED DO MAPS (USANDO TEMPLATE LITERAL CORRETO)
         function buscarEnderecoNoMapa() {
             const endereco = document.getElementById('campoEndereco').value;
             if (!endereco.trim() || endereco.includes("Endereço não identificado")) {
@@ -668,7 +652,11 @@
                 const numeroParada = index + 1;
                 const item = document.createElement('div');
                 item.className = 'item-entrega';
-                item.setAttribute('onclick', `selecionarParadaDeEntrega(${index}, "${entrega.endereco.replace(/"/g, '\\"')}")`);
+                
+                // PROTEÇÃO CONTRA CARACTERES ESPECIAIS: Escutador de eventos nativo dinâmico
+                item.addEventListener('click', function() {
+                    selecionarParadaDeEntrega(index, entrega.endereco);
+                });
 
                 item.innerHTML = `
                     <div class="topo">
