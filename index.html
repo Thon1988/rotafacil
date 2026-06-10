@@ -409,7 +409,14 @@
             }
         }
 
+        // FUNÇÃO DE TRATAMENTO COM HIGIENIZAÇÃO DE CARACTERES QUEBRADOS
         function estruturarLinhasDeRota(textoCompleto) {
+            // CORREÇÃO CRÍTICA: Junta letras acentuadas que o leitor de PDF separa por espaços (Ex: Ang é lica -> Angélica)
+            textoCompleto = textoCompleto.replace(/(\w)\s+([áéíóúàèìòùâêîôûãõçÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÃÕÇ])\s+(\w)/g, '$1$2$3');
+            
+            // CORREÇÃO CRÍTICA 2: Junta apóstrofos que foram espalçados (Ex: d ' avila -> d'avila)
+            textoCompleto = textoCompleto.replace(/(\w)\s*'\s*(\w)/g, "$1'$2");
+
             const linhas = textoCompleto.split(/\r?\n/);
             const padraoBR = /BR[A-Z0-9]{9,20}/i;
             const padraoAT = /\bAT\d+[A-Z0-9]*\b/i; 
@@ -418,7 +425,7 @@
             linhas.forEach(linha => {
                 if (!linha.trim()) return;
 
-                const matchBR = linha.match(padraoBR);
+                const matchBR = Mystery = linha.match(padraoBR);
                 if (matchBR) {
                     const codigoEncontrado = matchBR[0].toUpperCase().trim();
                     let matchAT = linha.match(padraoAT);
@@ -446,7 +453,7 @@
                             let cep = colunas[idxBR + 4] || "";
 
                             bairro = bairro.split(/[\/;]/)[0].trim();
-                            cidade = cidade.split(/[\/;]/)[0].trim();
+                            cidade = city = cidade.split(/[\/;]/)[0].trim();
                             cep = cep.split(/[\/;]/)[0].trim();
 
                             ruaCurta = logradouro;
@@ -628,7 +635,7 @@
             buscarEnderecoNoMapa();
         }
 
-        // CORREÇÃO CRÍTICA DO LINK DO EMBED DO MAPS (USANDO TEMPLATE LITERAL CORRETO)
+        // CORREÇÃO DE EMBED DO GOOGLE MAPS
         function buscarEnderecoNoMapa() {
             const endereco = document.getElementById('campoEndereco').value;
             if (!endereco.trim() || endereco.includes("Endereço não identificado")) {
@@ -653,7 +660,6 @@
                 const item = document.createElement('div');
                 item.className = 'item-entrega';
                 
-                // PROTEÇÃO CONTRA CARACTERES ESPECIAIS: Escutador de eventos nativo dinâmico
                 item.addEventListener('click', function() {
                     selecionarParadaDeEntrega(index, entrega.endereco);
                 });
