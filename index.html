@@ -14,6 +14,9 @@
             padding: 15px;
             background-color: #f4f4f9;
             color: #333;
+            position: relative;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
         h1, h2 {
             text-align: center;
@@ -152,22 +155,131 @@
             color: #666;
             margin-top: 4px;
         }
-        .links-externos {
-            display: flex;
-            gap: 10px;
-            margin-top: 5px;
+
+        /* --- ESTILIZAÇÃO DO CARD FLUTUANTE DINÂMICO (MINIMIZADO / EXPANDIDO) --- */
+        .widget-entrega {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            background-color: #1a1d24;
+            color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            font-family: Arial, sans-serif;
+            border: 1px solid #2d323f;
         }
-        .btn-link {
-            font-size: 11px;
-            color: #0066cc;
-            text-decoration: underline;
-            background: none;
-            border: none;
-            padding: 0;
-            width: auto;
-            margin: 0;
+
+        /* Estado Minimizado */
+        .widget-entrega.minimizado {
+            width: 180px;
+            padding: 10px;
             cursor: pointer;
-            text-align: left;
+        }
+        .widget-entrega.minimizado .conteudo-expandido {
+            display: none;
+        }
+        .widget-entrega.minimizado .conteudo-minimizado {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .widget-entrega.minimizado .txt-min {
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 130px;
+        }
+        .widget-entrega.minimizado .sub-min {
+            font-size: 10px;
+            color: #8a92a6;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Estado Expandido (Igual aos prints informados) */
+        .widget-entrega.expandido {
+            width: 320px;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .widget-entrega.expandido .conteudo-minimizado {
+            display: none;
+        }
+        .widget-entrega.expandido .conteudo-expandido {
+            display: block;
+        }
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #8a92a6;
+            margin-bottom: 8px;
+        }
+        .widget-badge-id {
+            background: #2a3b5c;
+            color: #7ba4ff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .widget-titulo {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 0 0 4px 0;
+            color: #fff;
+        }
+        .widget-subtitulo {
+            font-size: 12px;
+            color: #8a92a6;
+            margin: 0 0 12px 0;
+        }
+        .widget-detalhe-linha {
+            background: #242936;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #c5cbd6;
+            word-break: break-all;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+        .widget-acoes {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .widget-btn {
+            flex: 1;
+            border: 1px solid #3d4556;
+            background: #242936;
+            color: white;
+            border-radius: 8px;
+            padding: 10px 5px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .widget-btn:hover {
+            background: #2e3546;
+        }
+        .widget-btn svg {
+            width: 18px;
+            height: 18px;
         }
     </style>
 </head>
@@ -210,12 +322,50 @@
         <button onclick="reiniciarApp()" style="background-color: #6c757d; font-size: 12px; padding: 10px; margin-top: 15px; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">Voltar e Trocar Arquivo</button>
     </div>
 
+    <div id="widgetEntrega" class="widget-entrega minimizado" style="display: none;" onclick="alternarWidget(event)">
+        <div class="conteudo-minimizado">
+            <div>
+                <div class="txt-min" id="widgetMinRua">Nenhuma Parada</div>
+                <div class="sub-min" id="widgetMinSub">Aguardando seleção...</div>
+            </div>
+            <svg style="width:16px; height:16px; fill:#ff4500;" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        </div>
+
+        <div class="conteudo-expandido">
+            <div class="widget-header">
+                <span id="widgetIdTexto">01</span>
+                <span class="widget-badge-id" id="widgetBadgeNum">1</span>
+            </div>
+            <div class="widget-titulo" id="widgetExpRua">Rua Santa Angélica, 05</div>
+            <div class="widget-subtitulo" id="widgetExpSub">Final santa/angélica/tv Petrob, São Paulo</div>
+            
+            <div class="widget-detalhe-linha" id="widgetExpLinhaBruta">
+                AT202606105TP6C; -; -; BR260112708490W; Rua Santa Angélica, 05, Final santa/angélica/tv Petrob; Jardim Nair travessa Petrobras; São Paulo; 08071-250;
+            </div>
+
+            <div class="widget-acoes">
+                <button class="widget-btn" onclick="acaoAbrirApp(event)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+                    Abrir app
+                </button>
+                <button class="widget-btn" onclick="acaoNaoEntregue(event)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                    Não entre...
+                </button>
+                <button class="widget-btn" onclick="acaoEntregue(event)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    Entregue
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Configura a biblioteca PDF.js para funcionar offline/local de forma segura
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         let bancoDeDadosRotas = [];
         let isProcessing = false;
+        let indexEntregaAtiva = 0;
 
         function mudarAba(tipo) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -228,17 +378,13 @@
             } else if (tipo === 'mapa') {
                 document.querySelector('.tabs button:nth-child(2)').classList.add('active');
                 document.getElementById('abaMapa').style.display = 'block';
-                if(document.getElementById('iframeMapa').src === 'about:blank') {
-                    document.getElementById('iframeMapa').src = "about:blank";
-                }
             }
         }
 
-        // Garimpa o texto linha por linha para achar o padrão BR e isolar APENAS o endereço limpo
         function estruturarLinhasDeRota(textoCompleto) {
             const linhas = textoCompleto.split(/\r?\n/);
             const padraoBR = /BR[A-Z0-9]{9,20}/i;
-            const padraoAT = /\bAT\d+\b/i; // Captura padrões como AT1, AT02, AT1234, etc.
+            const padraoAT = /\bAT\d+[A-Z0-9]*\b/i; 
             let entregasFiltradas = [];
 
             linhas.forEach(linha => {
@@ -248,16 +394,14 @@
                 if (matchBR) {
                     const codigoEncontrado = matchBR[0].toUpperCase().trim();
                     
-                    // 1. Remove o código BR da linha
+                    let matchAT = linha.match(padraoAT);
+                    let codigoAT = matchAT ? matchAT[0].toUpperCase().trim() : "AT-N/I";
+
                     let enderecoExtraido = linha.replace(matchBR[0], '');
-                    
-                    // 2. Remove o código AT caso ele exista na linha
-                    const matchAT = enderecoExtraido.match(padraoAT);
                     if (matchAT) {
                         enderecoExtraido = enderecoExtraido.replace(matchAT[0], '');
                     }
 
-                    // 3. Limpa separadores comuns, tabs e espaços duplos deixados para trás
                     enderecoExtraido = enderecoExtraido
                         .replace(/[,;|\t\-]+/g, ' ')
                         .replace(/\s+/g, ' ')
@@ -267,10 +411,19 @@
                         enderecoExtraido = "Endereço não identificado na linha";
                     }
 
+                    // Divide uma estimativa amigável de Logradouro e Complemento para a UI do Widget
+                    let partes = enderecoExtraido.split(/\s(?=\d)/);
+                    let tituloRua = partes[0] + (partes[1] ? ' ' + partes[1].split(' ')[0] : '');
+                    let subtituloBairro = enderecoExtraido.replace(tituloRua, '').trim() || "São Paulo";
+
                     if (!entregasFiltradas.some(e => e.codigo === codigoEncontrado)) {
                         entregasFiltradas.push({
                             codigo: codigoEncontrado,
-                            endereco: enderecoExtraido
+                            codigoAT: codigoAT,
+                            endereco: enderecoExtraido,
+                            ruaCurta: tituloRua,
+                            bairroCurto: subtituloBairro,
+                            linhaBrutaOriginal: linha.trim()
                         });
                     }
                 }
@@ -294,7 +447,6 @@
                 leitor.onload = async function(e) {
                     try {
                         const dadosArrayBuffer = new Uint8Array(e.target.result);
-                        
                         const carregandoPdf = pdfjsLib.getDocument({
                             data: dadosArrayBuffer,
                             disableWorker: true,
@@ -321,7 +473,6 @@
 
                         bancoDeDadosRotas = estruturarLinhasDeRota(textoCompletoPdf);
                         finalizarCarregamento();
-
                     } catch (erro) {
                         alert('Falha ao processar o arquivo PDF: ' + erro.message);
                     }
@@ -361,7 +512,61 @@
             }
         }
 
-        function visualizarNoMapaDoApp(endereco) {
+        // CONTROLADORES E REGRAS DE ALTERNÂNCIA DO CARD FLUTUANTE (WIDGET)
+        function carregarDadosNoWidget(index) {
+            indexEntregaAtiva = index;
+            const entrega = bancoDeDadosRotas[index];
+            const numExibicao = String(index + 1).padStart(2, '0');
+
+            // Injeta dados na interface minimizada
+            document.getElementById('widgetMinRua').innerText = entrega.ruaCurta;
+            document.getElementById('widgetMinSub').innerText = entrega.bairroCurto;
+
+            // Injeta dados na interface expandida (conforme imagens fornecidas)
+            document.getElementById('widgetIdTexto').innerText = numExibicao;
+            document.getElementById('widgetBadgeNum').innerText = index + 1;
+            document.getElementById('widgetExpRua').innerText = entrega.ruaCurta;
+            document.getElementById('widgetExpSub').innerText = entrega.bairroCurto;
+            document.getElementById('widgetExpLinhaBruta').innerText = entrega.linhaBrutaOriginal;
+
+            document.getElementById('widgetEntrega').style.display = 'block';
+        }
+
+        function alternarWidget(event) {
+            const widget = document.getElementById('widgetEntrega');
+            if (widget.classList.contains('minimizado')) {
+                widget.classList.remove('minimizado');
+                widget.classList.add('expandido');
+            }
+        }
+
+        function minimizarWidgetManualmente() {
+            const widget = document.getElementById('widgetEntrega');
+            widget.classList.remove('expandido');
+            widget.classList.add('minimizado');
+        }
+
+        // Funções internas dos botões de ação do Card Flutuante
+        function acaoAbrirApp(event) {
+            event.stopPropagation();
+            const entrega = bancoDeDadosRotas[indexEntregaAtiva];
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(entrega.endereco)}`, '_blank');
+        }
+
+        function acaoNaoEntregue(event) {
+            event.stopPropagation();
+            alert(`Marcado: Entrega #${indexEntregaAtiva + 1} não concluída.`);
+            minimizarWidgetManualmente();
+        }
+
+        function acaoEntregue(event) {
+            event.stopPropagation();
+            alert(`Sucesso: Entrega #${indexEntregaAtiva + 1} concluída.`);
+            minimizarWidgetManualmente();
+        }
+
+        function selecionarParadaDeEntrega(index, endereco) {
+            carregarDadosNoWidget(index);
             document.getElementById('campoEndereco').value = endereco;
             mudarAba('mapa');
             buscarEnderecoNoMapa();
@@ -370,21 +575,16 @@
         function buscarEnderecoNoMapa() {
             const endereco = document.getElementById('campoEndereco').value;
             if (!endereco.trim() || endereco.includes("Endereço não identificado")) {
-                alert('Endereço ausente ou inválido nesta linha.');
+                alert('Endereço ausente ou inválido.');
                 return;
             }
             const urlMapa = `https://maps.google.com/maps?q=${encodeURIComponent(endereco)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
             document.getElementById('iframeMapa').src = urlMapa;
         }
 
-        function abrirMapsExterno(endereco) {
-            if (!endereco || endereco.includes("Endereço não identificado")) return;
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`, '_blank');
-        }
-
         function finalizarCarregamento() {
             if (bancoDeDadosRotas.length === 0) {
-                alert('Atenção: Nenhum código iniciado com "BR" pôde ser extraído do arquivo selecionado. Verifique o documento.');
+                alert('Atenção: Nenhum código iniciado com "BR" pôde ser extraído do arquivo selecionado.');
                 return;
             }
 
@@ -395,7 +595,7 @@
                 const numeroParada = index + 1;
                 const item = document.createElement('div');
                 item.className = 'item-entrega';
-                item.setAttribute('onclick', `visualizarNoMapaDoApp("${entrega.endereco.replace(/"/g, '\\"')}")`);
+                item.setAttribute('onclick', `selecionarParadaDeEntrega(${index}, "${entrega.endereco.replace(/"/g, '\\"')}")`);
 
                 item.innerHTML = `
                     <div class="topo">
@@ -403,24 +603,21 @@
                         <span>${entrega.codigo}</span>
                     </div>
                     <div class="endereco">${entrega.endereco}</div>
-                    <div class="links-externos">
-                        <span class="btn-link" onclick="event.stopPropagation(); abrirMapsExterno('${entrega.endereco.replace(/"/g, '\\"')}')">➔ Abrir no Aplicativo do Maps</span>
-                    </div>
                 `;
                 container.appendChild(item);
             });
 
             document.getElementById('secaoUpload').style.display = 'none';
             document.getElementById('secaoScanner').style.display = 'block';
-            document.getElementById('statusRota').innerText = `Rota carregada! ${bancoDeDadosRotas.length} paradas com endereço limpo configuradas.`;
+            document.getElementById('statusRota').innerText = `Rota carregada! ${bancoDeDadosRotas.length} paradas configuradas.`;
             
+            // Carrega a primeira parada por padrão no widget flutuante
+            carregarDadosNoWidget(0);
             inicializarScanner();
         }
 
         function inicializarScanner() {
-            const html5QrcodeScanner = new Html5QrcodeScanner(
-                "reader", { fps: 15, qrbox: 260 }
-            );
+            const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 15, qrbox: 260 });
             html5QrcodeScanner.render(onScanSuccess, onScanFailure);
         }
 
@@ -438,10 +635,10 @@
                 const dadosEntrega = bancoDeDadosRotas[posicao];
                 
                 divResultado.className = "sucesso";
-                divResultado.innerHTML = `📌 PARADA: ${numeroParada}<br><span style="font-size:13px;">${dadosEntrega.codigo}</span><br><span style="font-size:11px; font-weight:normal; display:block; margin-top:4px;">${dadosEntrega.endereco}</span>`;
+                divResultado.innerHTML = `📌 PARADA: ${numeroParada}<br><span style="font-size:13px;">${dadosEntrega.codigo}</span>`;
                 falarTexto(`Parada ${numeroParada}`);
                 
-                visualizarNoMapaDoApp(dadosEntrega.endereco);
+                selecionarParadaDeEntrega(posicao, dadosEntrega.endereco);
             } else {
                 divResultado.className = "erro";
                 divResultado.innerHTML = `❌ NÃO ENCONTRADO<br><span style="font-size:14px;">Código: ${codigoBipado}</span>`;
