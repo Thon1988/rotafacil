@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -393,7 +393,6 @@
         let isProcessing = false;
         let indexEntregaAtiva = 0;
 
-        // Monitora quando o usuário sai do Rota Fácil para outra página/app e minimiza o card automaticamente
         document.addEventListener("visibilitychange", function() {
             if (document.hidden) {
                 const widget = document.getElementById('widgetEntrega');
@@ -418,6 +417,7 @@
             }
         }
 
+        // FUNÇÃO DE TRATAMENTO CORRIGIDA - EXTRAÇÃO LIMPA DE ENDEREÇO
         function estruturarLinhasDeRota(textoCompleto) {
             const linhas = textoCompleto.split(/\r?\n/);
             const padraoBR = /BR[A-Z0-9]{9,20}/i;
@@ -433,31 +433,64 @@
                     let matchAT = linha.match(padraoAT);
                     let codigoAT = matchAT ? matchAT[0].toUpperCase().trim() : "AT-N/I";
 
-                    let enderecoExtraido = linha.replace(matchBR[0], '');
-                    if (matchAT) {
-                        enderecoExtraido = enderecoExtraido.replace(matchAT[0], '');
+                    let enderecoLimpoForMaps = "";
+                    let ruaCurta = "";
+                    let bairroCurto = "";
+
+                    // Tratamento preciso para colunas de planilhas/textos estruturados por ";"
+                    if (linha.includes(';')) {
+                        const colunas = linha.split(';').map(c => c.trim());
+                        let idxBR = colunas.findIndex(c => padraoBR.test(c));
+                        
+                        if (idxBR !== -1 && colunas[idxBR + 1]) {
+                            let colRuaRaw = colunas[idxBR + 1]; 
+                            
+                            // Remove observações internas e referências com barras da rua (Ex: ", Final santa/ang...")
+                            let partesRua = colRuaRaw.split(',');
+                            let logradouro = partesRua[0].trim();
+                            
+                            // Se a segunda parte após a vírgula for apenas o número da residência, mantém
+                            if (partesRua[1] && /\d/.test(partesRua[1]) && !/final|prox|ref|atras/i.test(partesRua[1])) {
+                                logradouro += ', ' + partesRua[1].trim();
+                            }
+
+                            let bairro = colunas[idxBR + 2] || "";
+                            let cidade = colunas[idxBR + 3] || "";
+                            let cep = colunas[idxBR + 4] || "";
+
+                            // Limpa barras ou observações remanescentes das colunas adicionais
+                            bairro = bairro.split(/[\/;]/)[0].trim();
+                            cidade = cidade.split(/[\/;]/)[0].trim();
+                            cep = cep.split(/[\/;]/)[0].trim();
+
+                            ruaCurta = logradouro;
+                            bairroCurto = `${bairro}${cidade ? ', ' + cidade : ''}`;
+                            enderecoLimpoForMaps = `${logradouro} - ${bairro}, ${cidade}${cep ? ' - CEP ' + cep : ''}`;
+                        }
                     }
 
-                    enderecoExtraido = enderecoExtraido
-                        .replace(/[,;|\t\-]+/g, ' ')
-                        .replace(/\s+/g, ' ')
-                        .trim();
-                    
-                    if (enderecoExtraido.length < 5) {
-                        enderecoExtraido = "Endereço não identificado na linha";
-                    }
+                    // Fallback genérico caso a linha não use ponto e vírgula estruturado
+                    if (!enderecoLimpoForMaps || enderecoLimpoForMaps.length < 10) {
+                        let textoLimpo = linha.replace(matchBR[0], '').replace(codigoAT, '');
+                        
+                        // Corta imediatamente observações que usem barras ou termos internos de entrega
+                        textoLimpo = textoLimpo.split(/(?:Final|Próximo|Ref:|Ponto de ref|obs:|\/)/i)[0];
+                        textoLimpo = textoLimpo.replace(/[;|\t\-]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-                    let partes = enderecoExtraido.split(/\s(?=\d)/);
-                    let tituloRua = partes[0] + (partes[1] ? ' ' + partes[1].split(' ')[0] : '');
-                    let subtituloBairro = enderecoExtraido.replace(tituloRua, '').trim() || "São Paulo";
+                        enderecoLimpoForMaps = textoLimpo;
+                        
+                        let partes = enderecoLimpoForMaps.split(/\s(?=\d)/);
+                        ruaCurta = partes[0] + (partes[1] ? ' ' + partes[1].split(' ')[0] : '');
+                        bairroCurto = enderecoLimpoForMaps.replace(ruaCurta, '').trim();
+                    }
 
                     if (!entregasFiltradas.some(e => e.codigo === codigoEncontrado)) {
                         entregasFiltradas.push({
                             codigo: codigoEncontrado,
                             codigoAT: codigoAT,
-                            endereco: enderecoExtraido,
-                            ruaCurta: tituloRua,
-                            bairroCurto: subtituloBairro,
+                            endereco: enderecoLimpoForMaps.replace(/\s+/g, ' ').trim(),
+                            ruaCurta: ruaCurta.replace(/[,;\s\-]+$/, '').trim(),
+                            bairroCurto: bairroCurto.replace(/^[,\s\-]+|[,\s\-]+$/g, '').trim(),
                             linhaBrutaOriginal: linha.trim()
                         });
                     }
@@ -579,11 +612,8 @@
             widget.classList.add('minimizado');
         }
 
-        // TRAZ O FOCO DE VOLTA PARA O ROTA FÁCIL E ABRE A INSTÂNCIA INTERNA
         function acaoVoltarParaRotaFacil(event) {
             event.stopPropagation();
-            
-            // Força a janela do Rota Fácil a voltar para o primeiro plano no aparelho
             window.focus();
             
             const entrega = bancoDeDadosRotas[indexEntregaAtiva];
