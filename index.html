@@ -13,7 +13,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <style>
-        /* RESET E VARIÁVEIS PARA REPRODUZIR EXATAMENTE AS DIRETRIZES VISUAIS */
         :root {
             --cor-laranja: #ea580c;
             --cor-verde: #16a34a;
@@ -30,7 +29,6 @@
             overflow: hidden;
         }
 
-        /* --- TELA 1: IMPORTAÇÃO DE ARQUIVO --- */
         #tela-setup {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -56,7 +54,6 @@
             margin-top: 20px;
         }
 
-        /* --- TELA 2: INTERFACE PRINCIPAL --- */
         #mapa-container {
             position: absolute;
             top: 0; left: 0; right: 0;
@@ -69,7 +66,6 @@
             height: 100%;
         }
 
-        /* Estilo dos Pinos do Mapa */
         .marker-pin {
             display: flex;
             align-items: center;
@@ -84,7 +80,6 @@
             box-shadow: 0 3px 6px rgba(0,0,0,0.4);
         }
 
-        /* Botão Menu Hambúrguer sobre o mapa */
         .btn-menu {
             position: absolute;
             top: 20px; left: 20px;
@@ -98,11 +93,10 @@
             font-size: 24px;
             border: none;
             cursor: pointer;
-            z-index: 1000; /* Leaflet usa z-index até 400 */
+            z-index: 1000;
             color: #333;
         }
 
-        /* Menu Overlay */
         #menu-opcoes {
             display: none;
             position: absolute;
@@ -131,7 +125,6 @@
             width: 100%;
         }
 
-        /* Metade Inferior: Bottom Sheet (Lista) */
         #bottom-sheet {
             position: absolute;
             top: 40vh;
@@ -152,7 +145,6 @@
             margin: 0 0 15px 0;
         }
 
-        /* Itens da Lista */
         .item-lista {
             border-bottom: 1px solid #eee;
             padding: 12px 0;
@@ -174,7 +166,6 @@
             margin-top: 6px;
         }
 
-        /* Widget Escuro Flutuante */
         #widget-escuro {
             position: absolute;
             bottom: 175px;
@@ -196,7 +187,6 @@
         .w-rua { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; }
         .w-sub { font-size: 13px; color: #888; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* Barra de Ações Inferior Fixa */
         #barra-acoes-inferior {
             position: absolute;
             bottom: 0; left: 0; right: 0;
@@ -261,7 +251,6 @@
         .btn-acao-dark .icone-verde { stroke: var(--cor-verde); }
         .btn-acao-dark .icone-vermelho { stroke: var(--cor-vermelho); }
 
-        /* Modal do Scanner Fullscreen */
         #modalScanner {
             display: none;
             position: fixed;
@@ -349,7 +338,6 @@
         let indexAtivo = null;
         let processandoLeitura = false;
         
-        // Variaveis Globais do Mapa
         let map;
         let layerMarkers = [];
         let mapPolyline = null;
@@ -361,16 +349,14 @@
             
             if (bdRotas.length > 0) {
                 document.getElementById('tela-setup').style.display = 'none';
-                map.invalidateSize(); // Recalcula o mapa apos esconder a tela de setup
+                map.invalidateSize();
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
             }
         };
 
-        // --- SISTEMA DE MAPAS E PINOS REAIS ---
         function inicializarMapa() {
-            // Inicializa no centro de São Paulo como base
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap'
@@ -380,7 +366,6 @@
         function plotarNoMapa() {
             if (!map) return;
             
-            // Limpa pinos e linhas antigas
             layerMarkers.forEach(m => map.removeLayer(m));
             layerMarkers = [];
             if (mapPolyline) map.removeLayer(mapPolyline);
@@ -391,10 +376,8 @@
             let latlngsLinha = [];
 
             bdRotas.forEach((e, idx) => {
-                // Define a cor baseada no status
                 let cor = e.status === 'pendente' ? '#3b82f6' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
                 
-                // Criação do icone HTML Customizado para ficar igual do app (Bolinha com Numero)
                 let customIcon = L.divIcon({
                     className: 'custom-pin-wrapper',
                     html: `<div class="marker-pin" style="background-color: ${cor};">${idx + 1}</div>`,
@@ -404,24 +387,20 @@
 
                 let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
                 
-                // Ao clicar no pino do mapa, abre o widget inferior
                 marker.on('click', () => ativarWidget(idx));
                 
                 layerMarkers.push(marker);
                 bounds.push([e.lat, e.lon]);
 
-                // Só conecta a linha azul se o pedido estiver pendente (Para desenhar o trajeto restante)
                 if(e.status === 'pendente') {
                     latlngsLinha.push([e.lat, e.lon]);
                 }
             });
 
-            // Desenha a linha de trajeto conectando os pontos
             if(latlngsLinha.length > 1) {
                 mapPolyline = L.polyline(latlngsLinha, {color: '#3b82f6', weight: 4, opacity: 0.8}).addTo(map);
             }
 
-            // Centraliza o mapa abrangendo todos os pontos da rota
             if (bounds.length > 0) {
                 map.fitBounds(bounds, { padding: [30, 30] });
             }
@@ -442,7 +421,6 @@
             } catch (e) { console.log("Áudio indisponível."); }
         }
 
-        // PROCESSADOR DE ARQUIVOS
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if(input.files.length === 0) return alert("Selecione um arquivo de rota primeiro.");
@@ -522,14 +500,13 @@
             linhas.forEach((linha) => {
                 if (linha.trim().length < 5) return;
 
-                const match = linha.match(/(BR[A-Z0-9]{5,25})/i);
+                // AJUSTE: Padrão Shopee rígido (BR + 11 dígitos)
+                const match = linha.match(/(BR\d{11})/i);
                 if (!match) return;
 
                 let codigo = match[1].toUpperCase();
                 let endereco = linha.replace(new RegExp(codigo, 'i'), '').replace(/[;\t\|]+/g, ' ').trim();
 
-                // Como ainda não temos motor de Geocodificação (converter rua em LAT/LON), 
-                // espalhamos os pontos geograficamente na região simulando os endereços da rota.
                 bdRotas.push({
                     id: idCounter++,
                     codigo: codigo,
@@ -544,12 +521,12 @@
             if(bdRotas.length > 0) {
                 salvarBD();
                 document.getElementById('tela-setup').style.display = 'none';
-                map.invalidateSize(); // Ajusta o canvas do mapa pós load
+                map.invalidateSize();
                 renderizarLista();
                 atualizarContador();
-                plotarNoMapa(); // Renderiza pontos
+                plotarNoMapa();
             } else {
-                alert("Nenhum código no padrão 'BR' foi localizado no arquivo importado.");
+                alert("Nenhum código no padrão Shopee (BR + 11 dígitos) localizado.");
                 document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
             }
         }
@@ -605,7 +582,6 @@
             
             document.getElementById('widget-escuro').style.display = 'block';
 
-            // Centraliza o mapa levemente acima do ponto selecionado para o widget nao cobrir
             map.flyTo([e.lat - 0.015, e.lon], 14, { animate: true, duration: 1 });
         }
 
@@ -620,7 +596,7 @@
             salvarBD();
             renderizarLista();
             atualizarContador();
-            plotarNoMapa(); // Atualiza cores do mapa
+            plotarNoMapa();
             
             document.getElementById('widget-escuro').style.display = 'none';
             indexAtivo = null;
@@ -629,8 +605,7 @@
         function navegarApp() {
             if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
             const end = bdRotas[indexAtivo].endereco;
-            // Abre o Maps nativo passando o endereço como destino
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(end)}`, '_blank');
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`, '_blank');
         }
 
         function executarOtimizacaoTSP() {
@@ -661,7 +636,7 @@
             
             salvarBD();
             renderizarLista();
-            plotarNoMapa(); // Refaz as linhas de rota e reordena os numeros dos pinos
+            plotarNoMapa();
             alert("Rota otimizada com sucesso via motor de proximidade TSP.");
         }
 
