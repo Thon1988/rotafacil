@@ -19,37 +19,45 @@
             --cor-vermelho: #dc2626;
             --bg-escuro: #1c1c1e;
             --bg-botoes: #232733;
+            --cor-azul-rota: #3b82f6;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background-color: #f4f4f9; overflow: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f9; overflow: hidden; }
 
         #tela-setup { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 99999; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .btn-upload { background: var(--cor-laranja); color: white; border: none; padding: 16px; border-radius: 8px; font-weight: bold; width: 100%; max-width: 400px; cursor: pointer; margin-top: 20px; }
+        .btn-upload { background: var(--cor-laranja); color: white; border: none; padding: 16px; border-radius: 8px; font-size: 16px; font-weight: bold; width: 100%; max-width: 400px; cursor: pointer; margin-top: 20px; }
 
         #mapa-container { position: absolute; top: 0; left: 0; right: 0; height: 50vh; background: #e5e3df; z-index: 1; }
         #mapa { width: 100%; height: 100%; }
 
-        .btn-menu { position: absolute; top: 20px; left: 20px; width: 45px; height: 45px; background: white; border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000; border: none; font-size: 24px; cursor: pointer; color: #333; }
+        .marker-pin { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; color: white; font-weight: bold; font-size: 13px; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
+        .btn-menu { position: absolute; top: 20px; left: 20px; width: 45px; height: 45px; background: white; border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000; border: none; cursor: pointer; color: #333; font-size: 24px; }
         
-        #menu-opcoes { display: none; position: absolute; top: 75px; left: 20px; background: white; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 2000; flex-direction: column; width: 260px; }
-        .menu-item { padding: 16px 20px; font-weight: bold; border-bottom: 1px solid #f0f0f0; cursor: pointer; border: none; background: none; text-align: left; }
+        #menu-opcoes { display: none; position: absolute; top: 75px; left: 20px; background: white; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 2000; flex-direction: column; width: 260px; overflow: hidden; }
+        .menu-item { padding: 16px 20px; font-size: 15px; font-weight: bold; color: #333; border: none; border-bottom: 1px solid #f0f0f0; cursor: pointer; text-align: left; background: none; }
 
-        #bottom-sheet { position: absolute; top: 40vh; bottom: 165px; left: 0; right: 0; background: white; border-radius: 20px 20px 0 0; padding: 20px 15px; overflow-y: auto; z-index: 10; }
+        #bottom-sheet { position: absolute; top: 40vh; bottom: 165px; left: 0; right: 0; background: white; border-radius: 20px 20px 0 0; padding: 20px 15px; overflow-y: auto; z-index: 10; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); }
+        .titulo-passo2 { color: #d35400; text-align: center; font-size: 20px; font-weight: bold; margin: 0 0 15px 0; }
         .item-lista { border-bottom: 1px solid #eee; padding: 12px 0; cursor: pointer; }
+        .item-lista.concluido { opacity: 0.5; }
+        .parada-titulo { color: #d35400; font-weight: bold; }
+        .parada-codigo { color: #d35400; font-size: 14px; font-weight: bold; }
 
-        #widget-escuro { position: absolute; bottom: 175px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 380px; background: var(--bg-escuro); color: white; border-radius: 12px; padding: 15px; z-index: 20; display: none; }
-        .w-controles { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 5px; }
-        .btn-widget { background: #333; border: none; color: white; border-radius: 4px; padding: 2px 10px; cursor: pointer; font-weight: bold; }
-        .w-rua { font-size: 16px; margin: 0; }
+        #widget-escuro { position: absolute; bottom: 175px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 380px; background: var(--bg-escuro); color: white; border-radius: 12px; padding: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); z-index: 20; display: none; }
+        .w-rua { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; }
+        .w-sub { font-size: 13px; color: #888; margin: 0; }
 
         #barra-acoes-inferior { position: absolute; bottom: 0; left: 0; right: 0; height: 165px; background: white; padding: 10px 15px; z-index: 30; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
         .linha-3-botoes { display: flex; gap: 10px; margin-top: 10px; }
-        .btn-acao-dark { flex: 1; background: var(--bg-botoes); color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; }
+        .btn-acao-dark { flex: 1; background: var(--bg-botoes); color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; font-size: 12px; }
+
+        #modalScanner { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 999999; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
     </style>
 </head>
 <body>
 
     <div id="tela-setup">
         <h1 style="color: #ea580c;">📦 AppEgg Rota Fácil</h1>
+        <p style="color: #666; text-align: center;">Carregue sua lista (PDF, Excel, TXT).</p>
         <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="border: 2px dashed #ea580c; padding: 15px; border-radius: 8px; margin-top: 20px;">
         <button class="btn-upload" onclick="processarArquivoFisico()">Processar Rota Ativa</button>
     </div>
@@ -66,17 +74,12 @@
     <div id="bottom-sheet"><div id="container-lista"></div></div>
 
     <div id="widget-escuro">
-        <div class="w-controles">
-            <button class="btn-widget" onclick="minimizarWidget()">-</button>
-            <button class="btn-widget" onclick="fecharWidget()">X</button>
-        </div>
-        <div id="conteudo-widget">
-            <h3 class="w-rua" id="wg-rua">Selecione uma parada</h3>
-            <p id="wg-detalhe" style="font-size: 13px; color: #888;">...</p>
-        </div>
+        <h3 class="w-rua" id="wg-rua">Selecione uma parada</h3>
+        <p class="w-sub" id="wg-detalhe">...</p>
     </div>
 
     <div id="barra-acoes-inferior">
+        <div style="text-align: center; font-weight: bold; margin-bottom: 10px;">⚡ <span id="contador-restantes">0</span> Paradas</div>
         <div class="linha-3-botoes">
             <button class="btn-acao-dark" onclick="navegarApp()">Navegar</button>
             <button class="btn-acao-dark" style="color:var(--cor-vermelho)" onclick="registrarAcaoFinal('falhou')">Não Entregue</button>
@@ -84,11 +87,15 @@
         </div>
     </div>
 
+    <div id="modalScanner">
+        <button onclick="fecharScanner()" style="padding: 12px; background: #dc2626; color: white; border: none; border-radius: 8px; width: 100%;">✕ Fechar Scanner</button>
+        <div id="reader" style="width: 100%; max-width: 400px; margin-top: 20px;"></div>
+    </div>
+
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
-        let indexAtivo = null;
         let map;
 
         window.onload = () => {
@@ -105,20 +112,26 @@
             bdRotas = [];
             
             linhas.forEach((linha) => {
-                // Regex aprimorado: busca BR, permite qualquer quantidade de espaços entre as letras/numeros
-                // Remove espaços do próprio match para padronizar o código
-                const match = linha.match(/(BR[\s0-9A-Z]{5,})/i);
+                // Regex ajustado para Shopee: BR + 10 a 25 caracteres, permitindo espaços entre eles
+                const match = linha.match(/(BR\s*[A-Z0-9\s]{10,25})/i);
                 if (!match) return; 
 
-                const codigoLimpo = match[0].replace(/\s+/g, '').toUpperCase();
+                // Extrai o código, remove todos os espaços para salvar limpo
+                const codigoCru = match[0];
+                const codigoLimpo = codigoCru.replace(/\s+/g, '').toUpperCase();
                 
-                bdRotas.push({
-                    codigo: codigoLimpo,
-                    endereco: linha.replace(match[0], '').trim(),
-                    status: 'pendente',
-                    lat: -23.55 + (Math.random() - 0.5) * 0.15,
-                    lon: -46.63 + (Math.random() - 0.5) * 0.15
-                });
+                // Remove a versão "suja" do código da linha de texto para obter o endereço limpo
+                const endereco = linha.replace(codigoCru, '').trim();
+                
+                if(endereco.length > 3) {
+                    bdRotas.push({
+                        codigo: codigoLimpo,
+                        endereco: endereco,
+                        status: 'pendente',
+                        lat: -23.55 + (Math.random() - 0.5) * 0.15,
+                        lon: -46.63 + (Math.random() - 0.5) * 0.15
+                    });
+                }
             });
 
             if(bdRotas.length > 0) {
@@ -126,7 +139,7 @@
                 document.getElementById('tela-setup').style.display = 'none';
                 renderizarLista();
             } else {
-                alert("Nenhum código 'BR' identificado. Se o arquivo for um PDF, verifique se ele é texto ou imagem (scans não são lidos automaticamente).");
+                alert("Nenhum código no padrão 'BR' (Shopee) localizado. Verifique se o arquivo possui a lista corretamente.");
             }
         }
 
@@ -138,33 +151,27 @@
 
             if (file.name.endsWith('.pdf')) {
                 reader.onload = async function() {
-                    const typedarray = new Uint8Array(this.result);
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
                     let text = "";
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const content = await page.getTextContent();
-                        // Join vazio evita quebras de linha/espaços que fragmentam o ID BR
-                        text += content.items.map(item => item.str).join(""); 
-                        text += "\n"; // Adiciona quebra de linha apenas entre páginas
+                        // join com ESPAÇO preserva palavras (e acentos) de endereços
+                        text += content.items.map(item => item.str).join(" ") + "\n";
                     }
                     estruturarBancoDeDados(text);
                 };
                 reader.readAsArrayBuffer(file);
             } 
-            else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-                reader.onload = function(e) {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
+            else if (file.name.match(/\.xlsx|\.xls/)) {
+                reader.onload = (e) => {
+                    const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
                     let text = "";
-                    workbook.SheetNames.forEach(name => {
-                        text += XLSX.utils.sheet_to_csv(workbook.Sheets[name]);
-                    });
+                    wb.SheetNames.forEach(n => text += XLSX.utils.sheet_to_csv(wb.Sheets[n]));
                     estruturarBancoDeDados(text);
                 };
                 reader.readAsArrayBuffer(file);
-            } 
-            else {
+            } else {
                 reader.onload = (e) => estruturarBancoDeDados(e.target.result);
                 reader.readAsText(file);
             }
@@ -173,37 +180,29 @@
         function renderizarLista() {
             const container = document.getElementById('container-lista');
             container.innerHTML = '';
+            document.getElementById('contador-restantes').innerText = bdRotas.filter(r => r.status === 'pendente').length;
+            
             bdRotas.forEach((e, idx) => {
                 const div = document.createElement('div');
                 div.className = 'item-lista';
-                div.innerHTML = `<strong>${e.codigo}</strong><br>${e.endereco.substring(0, 50)}`;
-                div.onclick = () => ativarWidget(idx);
+                div.innerHTML = `<div class="parada-titulo">Parada ${idx+1}</div><div class="parada-codigo">${e.codigo}</div><div style="font-size:13px;">${e.endereco}</div>`;
+                div.onclick = () => {
+                    document.getElementById('wg-rua').innerText = e.endereco.substring(0,30);
+                    document.getElementById('wg-detalhe').innerText = "Cód: " + e.codigo;
+                    document.getElementById('widget-escuro').style.display = 'block';
+                };
                 container.appendChild(div);
             });
         }
 
-        function fecharWidget() { document.getElementById('widget-escuro').style.display = 'none'; }
-        function minimizarWidget() { 
-            const cont = document.getElementById('conteudo-widget');
-            cont.style.display = cont.style.display === 'none' ? 'block' : 'none';
-        }
-        function ativarWidget(idx) {
-            indexAtivo = idx;
-            const e = bdRotas[idx];
-            document.getElementById('wg-rua').innerText = e.endereco.substring(0, 30) + "...";
-            document.getElementById('wg-detalhe').innerText = "Cód: " + e.codigo;
-            document.getElementById('widget-escuro').style.display = 'block';
-            document.getElementById('conteudo-widget').style.display = 'block';
-        }
-        function toggleMenu() {
-            const menu = document.getElementById('menu-opcoes');
-            menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
-        }
+        // Funções mantidas para não quebrar o fluxo
+        function toggleMenu() { const m = document.getElementById('menu-opcoes'); m.style.display = m.style.display === 'flex' ? 'none' : 'flex'; }
         function limparSessao() { localStorage.removeItem('rota_facil_db_oficial'); location.reload(); }
-        function abrirScanner() { alert("Scanner em desenvolvimento"); }
-        function executarOtimizacaoTSP() { alert("Otimização de rota iniciada"); }
-        function navegarApp() { alert("Abrindo navegação..."); }
-        function registrarAcaoFinal(status) { alert("Status: " + status); }
+        function abrirScanner() { alert("Scanner: Aponte para o código BR"); document.getElementById('modalScanner').style.display = 'flex'; }
+        function fecharScanner() { document.getElementById('modalScanner').style.display = 'none'; }
+        function navegarApp() { alert("Abrindo Maps..."); }
+        function registrarAcaoFinal(st) { alert("Status " + st); document.getElementById('widget-escuro').style.display = 'none'; }
+        function executarOtimizacaoTSP() { alert("Otimizado"); }
     </script>
 </body>
 </html>
