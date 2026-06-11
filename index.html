@@ -268,7 +268,7 @@
     </div>
 
     <div id="mapa-container">
-        <iframe id="iframeMapa" src="https://maps.google.com/maps?daddr=$4" allowfullscreen></iframe>
+        <iframe id="iframeMapa" src="https://maps.google.com/maps?daddr=$3" allowfullscreen></iframe>
     </div>
 
     <button class="btn-menu" onclick="toggleMenu()">☰</button>
@@ -356,14 +356,13 @@
             } catch (e) { console.log("Áudio indisponível."); }
         }
 
-        // MOTOR REFEITO COM LEITURA EXCEL COMPLETA E CORREÇÃO DE QUEBRA DE LINHA DO PDF
+        // PROCESSADOR DE ARQUIVOS COM FILTRAGEM ESTRITA DO PADRÃO BR
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if(input.files.length === 0) return alert("Selecione um arquivo de rota primeiro.");
             const arquivo = input.files[0];
 
             document.querySelector('.btn-upload').innerText = "Processando arquivo...";
-
             const nomeArquivo = arquivo.name.toLowerCase();
 
             // CASO 1: ARQUIVOS EXCEL (.XLSX / .XLS)
@@ -401,7 +400,6 @@
                             const page = await pdf.getPage(i);
                             const content = await page.getTextContent();
                             
-                            // Ordena os fragmentos por linha (Y descendente) e depois por coluna (X ascendente)
                             let items = content.items.sort((a, b) => {
                                 if (Math.abs(a.transform[5] - b.transform[5]) < 5) {
                                     return a.transform[4] - b.transform[4];
@@ -429,7 +427,7 @@
                 };
                 leitor.readAsArrayBuffer(arquivo);
 
-            // CASO 3: ARQUIVOS DE TEXTO PLANO (.CSV / .TXT)
+            // CASO 3: TEXTO / CSV (.CSV / .TXT)
             } else {
                 const leitor = new FileReader();
                 leitor.onload = (e) => estruturarBancoDeDados(e.target.result);
@@ -439,24 +437,30 @@
 
         function estruturarBancoDeDados(texto) {
             const linhas = texto.split(/\r?\n/);
+            let idCounter = 0;
+            bdRotas = [];
             
-            bdRotas = linhas.filter(l => l.trim().length > 5).map((linha, i) => {
-                const latBase = -23.55 + (Math.random() - 0.5) * 0.15;
-                const lonBase = -46.63 + (Math.random() - 0.5) * 0.15;
-                
-                const match = linha.match(/(BR[A-Z0-9]{7,25})|([A-Z0-9]{9,25})/i);
-                let codigo = match ? (match[1] || match[2]).toUpperCase() : `APP-${String(i+1).padStart(4,'0')}`;
-                let endereco = linha.replace(codigo, '').replace(/[;\t\|]+/g, ' ').trim();
+            linhas.forEach((linha) => {
+                if (linha.trim().length < 5) return;
 
-                return {
-                    id: i,
+                // Captura estritamente o código que contém ou inicia com BR (padrão de rastreio)
+                const match = linha.match(/(BR[A-Z0-9]{5,25})/i);
+                
+                // Se a linha não tiver o padrão BR de rastreamento, ela é descartada (ignora cabeçalhos/lixo)
+                if (!match) return;
+
+                let codigo = match[1].toUpperCase();
+                let endereco = linha.replace(new RegExp(codigo, 'i'), '').replace(/[;\t\|]+/g, ' ').trim();
+
+                bdRotas.push({
+                    id: idCounter++,
                     codigo: codigo,
                     endereco: endereco,
                     status: 'pendente',
                     timestamp: null,
-                    lat: latBase,
-                    lon: lonBase
-                };
+                    lat: -23.55 + (Math.random() - 0.5) * 0.15,
+                    lon: -46.63 + (Math.random() - 0.5) * 0.15
+                });
             });
 
             if(bdRotas.length > 0) {
@@ -465,7 +469,7 @@
                 renderizarLista();
                 atualizarContador();
             } else {
-                alert("Nenhuma parada válida foi extraída. Verifique a estrutura do arquivo.");
+                alert("Nenhum código no padrão 'BR' foi localizado no arquivo importado.");
                 document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
             }
         }
@@ -540,12 +544,7 @@
         function navegarApp() {
             if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
             const end = bdRotas[indexAtivo].endereco;
-            window.open(`https://maps.google.com/maps?daddr=$5{encodeURIComponent(end)}`, '_blank');
-        }
-
-        function executingOtimizacaoTSP() {
-            // Alias para manter compatibilidade com botões legados se houver
-            executarOtimizacaoTSP();
+            window.open(`https://maps.google.com/maps?daddr=$4{encodeURIComponent(end)}`, '_blank');
         }
 
         function executarOtimizacaoTSP() {
@@ -642,6 +641,7 @@
             }
         }
 
+        // DADOS E RELATÓRIOS
         function exportarRelatorioCSV() {
             toggleMenu();
             if(bdRotas.length === 0) return alert("Sem dados.");
