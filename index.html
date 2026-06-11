@@ -659,8 +659,11 @@
             plotarNoMapa();
 
             if(mostrarAlert) {
-                let tempoMinutos = Math.round((distTotal / 20) * 60);
-                let msg = `Rota Otimizada!\nDistância: ${distTotal.toFixed(1)} km\nTempo estimado: ${tempoMinutos} min.`;
+                let tempoHoras = distTotal / 30; // Velocidade média 30km/h
+                let horas = Math.floor(tempoHoras);
+                let minutos = Math.round((tempoHoras - horas) * 60);
+                
+                let msg = `Rota Otimizada!\nDistância: ${distTotal.toFixed(1)} km\nTempo estimado: ${horas > 0 ? horas + 'h e ' : ''}${minutos} min.`;
                 falar(msg);
                 alert(msg);
             }
