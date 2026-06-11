@@ -105,16 +105,16 @@
             bdRotas = [];
             
             linhas.forEach((linha) => {
-                // Regex aprimorado: Aceita espaços entre BR e os números (ex: BR 123 456)
-                const match = linha.match(/(BR\s*[A-Z0-9]{5,})/i);
+                // Regex aprimorado: busca BR, permite qualquer quantidade de espaços entre as letras/numeros
+                // Remove espaços do próprio match para padronizar o código
+                const match = linha.match(/(BR[\s0-9A-Z]{5,})/i);
                 if (!match) return; 
 
-                // Limpa o código removendo espaços e converte para maiúsculo
                 const codigoLimpo = match[0].replace(/\s+/g, '').toUpperCase();
                 
                 bdRotas.push({
                     codigo: codigoLimpo,
-                    endereco: linha.replace(match[0], '').trim(), // Remove o código original da string de endereço
+                    endereco: linha.replace(match[0], '').trim(),
                     status: 'pendente',
                     lat: -23.55 + (Math.random() - 0.5) * 0.15,
                     lon: -46.63 + (Math.random() - 0.5) * 0.15
@@ -126,7 +126,7 @@
                 document.getElementById('tela-setup').style.display = 'none';
                 renderizarLista();
             } else {
-                alert("Nenhum código 'BR' identificado. Verifique se o formato do arquivo é suportado (PDF texto, Excel ou TXT).");
+                alert("Nenhum código 'BR' identificado. Se o arquivo for um PDF, verifique se ele é texto ou imagem (scans não são lidos automaticamente).");
             }
         }
 
@@ -144,7 +144,9 @@
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const content = await page.getTextContent();
-                        text += content.items.map(item => item.str).join(" ");
+                        // Join vazio evita quebras de linha/espaços que fragmentam o ID BR
+                        text += content.items.map(item => item.str).join(""); 
+                        text += "\n"; // Adiciona quebra de linha apenas entre páginas
                     }
                     estruturarBancoDeDados(text);
                 };
@@ -198,7 +200,6 @@
             menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
         }
         function limparSessao() { localStorage.removeItem('rota_facil_db_oficial'); location.reload(); }
-        // Funções de apoio mantidas intactas para não reduzir funcionalidade
         function abrirScanner() { alert("Scanner em desenvolvimento"); }
         function executarOtimizacaoTSP() { alert("Otimização de rota iniciada"); }
         function navegarApp() { alert("Abrindo navegação..."); }
