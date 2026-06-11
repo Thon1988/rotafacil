@@ -19,12 +19,11 @@
             --cor-vermelho: #dc2626;
             --bg-escuro: #1c1c1e;
             --bg-botoes: #232733;
-            --cor-azul-rota: #3b82f6;
         }
-        body { font-family: -apple-system, sans-serif; margin: 0; background-color: #f4f4f9; overflow: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background-color: #f4f4f9; overflow: hidden; }
 
         #tela-setup { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 99999; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .btn-upload { background: var(--cor-laranja); color: white; border: none; padding: 16px; border-radius: 8px; font-weight: bold; width: 100%; max-width: 400px; cursor: pointer; }
+        .btn-upload { background: var(--cor-laranja); color: white; border: none; padding: 16px; border-radius: 8px; font-weight: bold; width: 100%; max-width: 400px; cursor: pointer; margin-top: 20px; }
 
         #mapa-container { position: absolute; top: 0; left: 0; right: 0; height: 50vh; background: #e5e3df; z-index: 1; }
         #mapa { width: 100%; height: 100%; }
@@ -36,13 +35,12 @@
 
         #bottom-sheet { position: absolute; top: 40vh; bottom: 165px; left: 0; right: 0; background: white; border-radius: 20px 20px 0 0; padding: 20px 15px; overflow-y: auto; z-index: 10; }
         .item-lista { border-bottom: 1px solid #eee; padding: 12px 0; cursor: pointer; }
-        .item-lista.concluido { opacity: 0.5; }
 
         #widget-escuro { position: absolute; bottom: 175px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 380px; background: var(--bg-escuro); color: white; border-radius: 12px; padding: 15px; z-index: 20; display: none; }
-        .w-controles { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 10px; }
-        .btn-widget { background: #444; border: none; color: white; border-radius: 4px; padding: 2px 12px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .w-controles { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 5px; }
+        .btn-widget { background: #333; border: none; color: white; border-radius: 4px; padding: 2px 10px; cursor: pointer; font-weight: bold; }
         .w-rua { font-size: 16px; margin: 0; }
-        
+
         #barra-acoes-inferior { position: absolute; bottom: 0; left: 0; right: 0; height: 165px; background: white; padding: 10px 15px; z-index: 30; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
         .linha-3-botoes { display: flex; gap: 10px; margin-top: 10px; }
         .btn-acao-dark { flex: 1; background: var(--bg-botoes); color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; }
@@ -74,7 +72,7 @@
         </div>
         <div id="conteudo-widget">
             <h3 class="w-rua" id="wg-rua">Selecione uma parada</h3>
-            <p id="wg-detalhe" style="font-size: 13px; color: #888; margin-top:5px;">...</p>
+            <p id="wg-detalhe" style="font-size: 13px; color: #888;">...</p>
         </div>
     </div>
 
@@ -87,6 +85,9 @@
     </div>
 
     <script>
+        // Configuração PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
         let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
         let indexAtivo = null;
         let map;
@@ -100,28 +101,19 @@
             }
         };
 
+        // Função core de processamento
         function estruturarBancoDeDados(texto) {
             const linhas = texto.split(/\r?\n/);
             bdRotas = [];
             
             linhas.forEach((linha) => {
-                // AQUI: Limpa excesso de espaços mas mantém acentuação intacta
-                const linhaLimpa = linha.replace(/\s+/g, ' ').trim();
-                
-                // Regex: Procura BR seguido de caracteres alfanuméricos. Se não achar BR, ignora linha.
-                const match = linhaLimpa.match(/(BR[A-Z0-9]{5,25})/i);
+                // Regex aprimorado: Busca BR seguido de alfanuméricos
+                const match = linha.match(/(BR[A-Z0-9]{5,25})/i);
                 if (!match) return; 
 
-                const codigo = match[0].toUpperCase();
-                // Remove o código da linha para sobrar o endereço, sem dividir por espaço
-                let endereco = linhaLimpa.replace(codigo, '').trim();
-                
-                // Limpeza extra de caracteres residuais de formatação de tabela
-                endereco = endereco.replace(/^[-,;\s]+|[-,;\s]+$/g, '');
-
                 bdRotas.push({
-                    codigo: codigo,
-                    endereco: endereco,
+                    codigo: match[0].toUpperCase(),
+                    endereco: linha.replace(match[0], '').trim(),
                     status: 'pendente',
                     lat: -23.55 + (Math.random() - 0.5) * 0.15,
                     lon: -46.63 + (Math.random() - 0.5) * 0.15
@@ -133,35 +125,50 @@
                 document.getElementById('tela-setup').style.display = 'none';
                 renderizarLista();
             } else {
-                alert("Nenhum código no padrão 'BR' localizado. Verifique se o arquivo contém as encomendas.");
+                alert("Nenhum código no padrão 'BR' localizado. Verifique se o arquivo possui os códigos.");
             }
         }
 
-        function fecharWidget() { document.getElementById('widget-escuro').style.display = 'none'; }
-        
-        function minimizarWidget() { 
-            const cont = document.getElementById('conteudo-widget');
-            cont.style.display = cont.style.display === 'none' ? 'block' : 'none';
-        }
-
-        function ativarWidget(idx) {
-            indexAtivo = idx;
-            const e = bdRotas[idx];
-            document.getElementById('wg-rua').innerText = e.endereco;
-            document.getElementById('wg-detalhe').innerText = "Cód: " + e.codigo;
-            document.getElementById('widget-escuro').style.display = 'block';
-            document.getElementById('conteudo-widget').style.display = 'block';
-        }
-
-        // --- Processamento de Arquivos ---
+        // Processador inteligente de arquivos
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if(input.files.length === 0) return alert("Selecione um arquivo.");
-            const arquivo = input.files[0];
-            
-            const leitor = new FileReader();
-            leitor.onload = (e) => estruturarBancoDeDados(e.target.result);
-            leitor.readAsText(arquivo);
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            // PDF
+            if (file.name.endsWith('.pdf')) {
+                reader.onload = async function() {
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    let text = "";
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        text += content.items.map(item => item.str).join(" ");
+                    }
+                    estruturarBancoDeDados(text);
+                };
+                reader.readAsArrayBuffer(file);
+            } 
+            // Excel
+            else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    let text = "";
+                    workbook.SheetNames.forEach(name => {
+                        text += XLSX.utils.sheet_to_csv(workbook.Sheets[name]);
+                    });
+                    estruturarBancoDeDados(text);
+                };
+                reader.readAsArrayBuffer(file);
+            } 
+            // TXT/CSV
+            else {
+                reader.onload = (e) => estruturarBancoDeDados(e.target.result);
+                reader.readAsText(file);
+            }
         }
 
         function renderizarLista() {
@@ -170,20 +177,31 @@
             bdRotas.forEach((e, idx) => {
                 const div = document.createElement('div');
                 div.className = 'item-lista';
-                div.innerHTML = `<strong>${e.codigo}</strong><br>${e.endereco}`;
+                div.innerHTML = `<strong>${e.codigo}</strong><br>${e.endereco.substring(0, 50)}`;
                 div.onclick = () => ativarWidget(idx);
                 container.appendChild(div);
             });
         }
 
+        // Funções UI
+        function fecharWidget() { document.getElementById('widget-escuro').style.display = 'none'; }
+        function minimizarWidget() { 
+            const cont = document.getElementById('conteudo-widget');
+            cont.style.display = cont.style.display === 'none' ? 'block' : 'none';
+        }
+        function ativarWidget(idx) {
+            indexAtivo = idx;
+            const e = bdRotas[idx];
+            document.getElementById('wg-rua').innerText = e.endereco.substring(0, 30) + "...";
+            document.getElementById('wg-detalhe').innerText = "Cód: " + e.codigo;
+            document.getElementById('widget-escuro').style.display = 'block';
+            document.getElementById('conteudo-widget').style.display = 'block';
+        }
         function toggleMenu() {
             const menu = document.getElementById('menu-opcoes');
             menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
         }
-
         function limparSessao() { localStorage.removeItem('rota_facil_db_oficial'); location.reload(); }
-        
-        // (Outras funções de suporte omitidas para brevidade, mantenha as originais aqui)
     </script>
 </body>
 </html>
