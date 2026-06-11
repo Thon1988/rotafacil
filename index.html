@@ -29,14 +29,15 @@
         #mapa-container { position: absolute; top: 0; left: 0; right: 0; height: 50vh; background: #e5e3df; z-index: 1; }
         #mapa { width: 100%; height: 100%; }
 
+        /* Estilo dos Pinos */
         .marker-pin { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; color: white; font-weight: bold; font-size: 13px; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
+        
         .btn-menu { position: absolute; top: 20px; left: 20px; width: 45px; height: 45px; background: white; border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000; border: none; cursor: pointer; color: #333; font-size: 24px; }
         
         #menu-opcoes { display: none; position: absolute; top: 75px; left: 20px; background: white; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 2000; flex-direction: column; width: 260px; overflow: hidden; }
         .menu-item { padding: 16px 20px; font-size: 15px; font-weight: bold; color: #333; border: none; border-bottom: 1px solid #f0f0f0; cursor: pointer; text-align: left; background: none; }
 
         #bottom-sheet { position: absolute; top: 40vh; bottom: 165px; left: 0; right: 0; background: white; border-radius: 20px 20px 0 0; padding: 20px 15px; overflow-y: auto; z-index: 10; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); }
-        .titulo-passo2 { color: #d35400; text-align: center; font-size: 20px; font-weight: bold; margin: 0 0 15px 0; }
         .item-lista { border-bottom: 1px solid #eee; padding: 12px 0; cursor: pointer; }
         .item-lista.concluido { opacity: 0.5; }
         .parada-titulo { color: #d35400; font-weight: bold; }
@@ -57,7 +58,6 @@
 
     <div id="tela-setup">
         <h1 style="color: #ea580c;">📦 AppEgg Rota Fácil</h1>
-        <p style="color: #666; text-align: center;">Carregue sua lista (PDF, Excel, TXT).</p>
         <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="border: 2px dashed #ea580c; padding: 15px; border-radius: 8px; margin-top: 20px;">
         <button class="btn-upload" onclick="processarArquivoFisico()">Processar Rota Ativa</button>
     </div>
@@ -96,51 +96,49 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
-        let map;
+        let map, layerMarkers = [], html5QrcodeScanner = null;
 
         window.onload = () => {
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             if (bdRotas.length > 0) {
                 document.getElementById('tela-setup').style.display = 'none';
+                map.invalidateSize();
                 renderizarLista();
+                plotarNoMapa();
             }
         };
+
+        function plotarNoMapa() {
+            layerMarkers.forEach(m => map.removeLayer(m));
+            layerMarkers = [];
+            bdRotas.forEach((e, idx) => {
+                let cor = e.status === 'pendente' ? '#3b82f6' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
+                let icon = L.divIcon({ className: 'custom-pin', html: `<div class="marker-pin" style="background-color: ${cor};">${idx + 1}</div>`, iconSize: [28, 28] });
+                let marker = L.marker([e.lat, e.lon], { icon }).addTo(map).on('click', () => {
+                    document.getElementById('wg-rua').innerText = e.endereco.substring(0,30);
+                    document.getElementById('wg-detalhe').innerText = "Cód: " + e.codigo;
+                    document.getElementById('widget-escuro').style.display = 'block';
+                });
+                layerMarkers.push(marker);
+            });
+        }
 
         function estruturarBancoDeDados(texto) {
             const linhas = texto.split(/\r?\n/);
             bdRotas = [];
-            
             linhas.forEach((linha) => {
-                // Regex ajustado para Shopee: BR + 10 a 25 caracteres, permitindo espaços entre eles
                 const match = linha.match(/(BR\s*[A-Z0-9\s]{10,25})/i);
                 if (!match) return; 
-
-                // Extrai o código, remove todos os espaços para salvar limpo
-                const codigoCru = match[0];
-                const codigoLimpo = codigoCru.replace(/\s+/g, '').toUpperCase();
-                
-                // Remove a versão "suja" do código da linha de texto para obter o endereço limpo
-                const endereco = linha.replace(codigoCru, '').trim();
-                
-                if(endereco.length > 3) {
-                    bdRotas.push({
-                        codigo: codigoLimpo,
-                        endereco: endereco,
-                        status: 'pendente',
-                        lat: -23.55 + (Math.random() - 0.5) * 0.15,
-                        lon: -46.63 + (Math.random() - 0.5) * 0.15
-                    });
-                }
+                const codigoLimpo = match[0].replace(/\s+/g, '').toUpperCase();
+                const endereco = linha.replace(match[0], '').trim();
+                bdRotas.push({ codigo: codigoLimpo, endereco, status: 'pendente', lat: -23.55 + (Math.random()-0.5)*0.1, lon: -46.63 + (Math.random()-0.5)*0.1 });
             });
-
-            if(bdRotas.length > 0) {
-                localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
-                document.getElementById('tela-setup').style.display = 'none';
-                renderizarLista();
-            } else {
-                alert("Nenhum código no padrão 'BR' (Shopee) localizado. Verifique se o arquivo possui a lista corretamente.");
-            }
+            localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
+            document.getElementById('tela-setup').style.display = 'none';
+            map.invalidateSize();
+            renderizarLista();
+            plotarNoMapa();
         }
 
         async function processarArquivoFisico() {
@@ -156,14 +154,12 @@
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const content = await page.getTextContent();
-                        // join com ESPAÇO preserva palavras (e acentos) de endereços
                         text += content.items.map(item => item.str).join(" ") + "\n";
                     }
                     estruturarBancoDeDados(text);
                 };
                 reader.readAsArrayBuffer(file);
-            } 
-            else if (file.name.match(/\.xlsx|\.xls/)) {
+            } else if (file.name.match(/\.xlsx|\.xls/)) {
                 reader.onload = (e) => {
                     const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
                     let text = "";
@@ -181,7 +177,6 @@
             const container = document.getElementById('container-lista');
             container.innerHTML = '';
             document.getElementById('contador-restantes').innerText = bdRotas.filter(r => r.status === 'pendente').length;
-            
             bdRotas.forEach((e, idx) => {
                 const div = document.createElement('div');
                 div.className = 'item-lista';
@@ -195,14 +190,24 @@
             });
         }
 
-        // Funções mantidas para não quebrar o fluxo
         function toggleMenu() { const m = document.getElementById('menu-opcoes'); m.style.display = m.style.display === 'flex' ? 'none' : 'flex'; }
         function limparSessao() { localStorage.removeItem('rota_facil_db_oficial'); location.reload(); }
-        function abrirScanner() { alert("Scanner: Aponte para o código BR"); document.getElementById('modalScanner').style.display = 'flex'; }
-        function fecharScanner() { document.getElementById('modalScanner').style.display = 'none'; }
+        
+        function abrirScanner() {
+            toggleMenu();
+            document.getElementById('modalScanner').style.display = 'flex';
+            if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (decodedText) => {
+                const code = decodedText.trim().toUpperCase();
+                const idx = bdRotas.findIndex(r => code.includes(r.codigo));
+                if(idx !== -1) { alert("Encontrado: " + bdRotas[idx].codigo); fecharScanner(); }
+            });
+        }
+        function fecharScanner() { document.getElementById('modalScanner').style.display = 'none'; if(html5QrcodeScanner) html5QrcodeScanner.stop(); }
+        
+        function registrarAcaoFinal(st) { alert("Status: " + st); document.getElementById('widget-escuro').style.display = 'none'; }
         function navegarApp() { alert("Abrindo Maps..."); }
-        function registrarAcaoFinal(st) { alert("Status " + st); document.getElementById('widget-escuro').style.display = 'none'; }
-        function executarOtimizacaoTSP() { alert("Otimizado"); }
+        function executarOtimizacaoTSP() { alert("Rota otimizada"); }
     </script>
 </body>
 </html>
