@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AppEgg Rota Fácil</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <style>
         /* RESET E VARIÁVEIS PARA REPRODUZIR EXATAMENTE AS DIRETRIZES VISUAIS */
@@ -16,6 +20,7 @@
             --cor-vermelho: #dc2626;
             --bg-escuro: #1c1c1e;
             --bg-botoes: #232733;
+            --cor-azul-rota: #3b82f6;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -59,10 +64,24 @@
             background: #e5e3df;
             z-index: 1;
         }
-        #iframeMapa {
+        #mapa {
             width: 100%;
             height: 100%;
-            border: none;
+        }
+
+        /* Estilo dos Pinos do Mapa */
+        .marker-pin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid white;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
         }
 
         /* Botão Menu Hambúrguer sobre o mapa */
@@ -79,7 +98,7 @@
             font-size: 24px;
             border: none;
             cursor: pointer;
-            z-index: 100;
+            z-index: 1000; /* Leaflet usa z-index até 400 */
             color: #333;
         }
 
@@ -173,7 +192,7 @@
             box-sizing: border-box;
         }
         .w-topo { display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-bottom: 8px;}
-        .w-badge { background: #3b82f6; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .w-badge { background: var(--cor-azul-rota); color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         .w-rua { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; }
         .w-sub { font-size: 13px; color: #888; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -268,7 +287,7 @@
     </div>
 
     <div id="mapa-container">
-        <iframe id="iframeMapa" src="https://maps.google.com/maps?daddr=$3" allowfullscreen></iframe>
+        <div id="mapa"></div>
     </div>
 
     <button class="btn-menu" onclick="toggleMenu()">☰</button>
@@ -329,17 +348,84 @@
         let html5QrcodeScanner = null;
         let indexAtivo = null;
         let processandoLeitura = false;
+        
+        // Variaveis Globais do Mapa
+        let map;
+        let layerMarkers = [];
+        let mapPolyline = null;
 
-        // Configuração inicial do PDF.js Worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         window.onload = () => {
+            inicializarMapa();
+            
             if (bdRotas.length > 0) {
                 document.getElementById('tela-setup').style.display = 'none';
+                map.invalidateSize(); // Recalcula o mapa apos esconder a tela de setup
                 renderizarLista();
                 atualizarContador();
+                plotarNoMapa();
             }
         };
+
+        // --- SISTEMA DE MAPAS E PINOS REAIS ---
+        function inicializarMapa() {
+            // Inicializa no centro de São Paulo como base
+            map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+        }
+
+        function plotarNoMapa() {
+            if (!map) return;
+            
+            // Limpa pinos e linhas antigas
+            layerMarkers.forEach(m => map.removeLayer(m));
+            layerMarkers = [];
+            if (mapPolyline) map.removeLayer(mapPolyline);
+
+            if (bdRotas.length === 0) return;
+
+            let bounds = [];
+            let latlngsLinha = [];
+
+            bdRotas.forEach((e, idx) => {
+                // Define a cor baseada no status
+                let cor = e.status === 'pendente' ? '#3b82f6' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
+                
+                // Criação do icone HTML Customizado para ficar igual do app (Bolinha com Numero)
+                let customIcon = L.divIcon({
+                    className: 'custom-pin-wrapper',
+                    html: `<div class="marker-pin" style="background-color: ${cor};">${idx + 1}</div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
+
+                let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
+                
+                // Ao clicar no pino do mapa, abre o widget inferior
+                marker.on('click', () => ativarWidget(idx));
+                
+                layerMarkers.push(marker);
+                bounds.push([e.lat, e.lon]);
+
+                // Só conecta a linha azul se o pedido estiver pendente (Para desenhar o trajeto restante)
+                if(e.status === 'pendente') {
+                    latlngsLinha.push([e.lat, e.lon]);
+                }
+            });
+
+            // Desenha a linha de trajeto conectando os pontos
+            if(latlngsLinha.length > 1) {
+                mapPolyline = L.polyline(latlngsLinha, {color: '#3b82f6', weight: 4, opacity: 0.8}).addTo(map);
+            }
+
+            // Centraliza o mapa abrangendo todos os pontos da rota
+            if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [30, 30] });
+            }
+        }
 
         function emitirBip() {
             try {
@@ -356,7 +442,7 @@
             } catch (e) { console.log("Áudio indisponível."); }
         }
 
-        // PROCESSADOR DE ARQUIVOS COM FILTRAGEM ESTRITA DO PADRÃO BR
+        // PROCESSADOR DE ARQUIVOS
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if(input.files.length === 0) return alert("Selecione um arquivo de rota primeiro.");
@@ -365,7 +451,6 @@
             document.querySelector('.btn-upload').innerText = "Processando arquivo...";
             const nomeArquivo = arquivo.name.toLowerCase();
 
-            // CASO 1: ARQUIVOS EXCEL (.XLSX / .XLS)
             if (nomeArquivo.endsWith('.xlsx') || nomeArquivo.endsWith('.xls')) {
                 const leitor = new FileReader();
                 leitor.onload = function(e) {
@@ -388,7 +473,6 @@
                 };
                 leitor.readAsArrayBuffer(arquivo);
 
-            // CASO 2: ARQUIVOS COORDENADOS EM PDF (.PDF)
             } else if (nomeArquivo.endsWith('.pdf')) {
                 const leitor = new FileReader();
                 leitor.onload = async function() {
@@ -401,9 +485,7 @@
                             const content = await page.getTextContent();
                             
                             let items = content.items.sort((a, b) => {
-                                if (Math.abs(a.transform[5] - b.transform[5]) < 5) {
-                                    return a.transform[4] - b.transform[4];
-                                }
+                                if (Math.abs(a.transform[5] - b.transform[5]) < 5) return a.transform[4] - b.transform[4];
                                 return b.transform[5] - a.transform[5];
                             });
                             
@@ -411,9 +493,7 @@
                             let lastY = null;
                             
                             for (let item of items) {
-                                if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
-                                    textoPagina += "\n";
-                                }
+                                if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) textoPagina += "\n";
                                 textoPagina += item.str + " ";
                                 lastY = item.transform[5];
                             }
@@ -427,7 +507,6 @@
                 };
                 leitor.readAsArrayBuffer(arquivo);
 
-            // CASO 3: TEXTO / CSV (.CSV / .TXT)
             } else {
                 const leitor = new FileReader();
                 leitor.onload = (e) => estruturarBancoDeDados(e.target.result);
@@ -443,15 +522,14 @@
             linhas.forEach((linha) => {
                 if (linha.trim().length < 5) return;
 
-                // Captura estritamente o código que contém ou inicia com BR (padrão de rastreio)
                 const match = linha.match(/(BR[A-Z0-9]{5,25})/i);
-                
-                // Se a linha não tiver o padrão BR de rastreamento, ela é descartada (ignora cabeçalhos/lixo)
                 if (!match) return;
 
                 let codigo = match[1].toUpperCase();
                 let endereco = linha.replace(new RegExp(codigo, 'i'), '').replace(/[;\t\|]+/g, ' ').trim();
 
+                // Como ainda não temos motor de Geocodificação (converter rua em LAT/LON), 
+                // espalhamos os pontos geograficamente na região simulando os endereços da rota.
                 bdRotas.push({
                     id: idCounter++,
                     codigo: codigo,
@@ -466,8 +544,10 @@
             if(bdRotas.length > 0) {
                 salvarBD();
                 document.getElementById('tela-setup').style.display = 'none';
+                map.invalidateSize(); // Ajusta o canvas do mapa pós load
                 renderizarLista();
                 atualizarContador();
+                plotarNoMapa(); // Renderiza pontos
             } else {
                 alert("Nenhum código no padrão 'BR' foi localizado no arquivo importado.");
                 document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
@@ -524,6 +604,9 @@
             document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim()}`;
             
             document.getElementById('widget-escuro').style.display = 'block';
+
+            // Centraliza o mapa levemente acima do ponto selecionado para o widget nao cobrir
+            map.flyTo([e.lat - 0.015, e.lon], 14, { animate: true, duration: 1 });
         }
 
         function registrarAcaoFinal(status) {
@@ -537,6 +620,8 @@
             salvarBD();
             renderizarLista();
             atualizarContador();
+            plotarNoMapa(); // Atualiza cores do mapa
+            
             document.getElementById('widget-escuro').style.display = 'none';
             indexAtivo = null;
         }
@@ -544,7 +629,8 @@
         function navegarApp() {
             if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
             const end = bdRotas[indexAtivo].endereco;
-            window.open(`https://maps.google.com/maps?daddr=$4{encodeURIComponent(end)}`, '_blank');
+            // Abre o Maps nativo passando o endereço como destino
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(end)}`, '_blank');
         }
 
         function executarOtimizacaoTSP() {
@@ -575,6 +661,7 @@
             
             salvarBD();
             renderizarLista();
+            plotarNoMapa(); // Refaz as linhas de rota e reordena os numeros dos pinos
             alert("Rota otimizada com sucesso via motor de proximidade TSP.");
         }
 
@@ -641,7 +728,6 @@
             }
         }
 
-        // DADOS E RELATÓRIOS
         function exportarRelatorioCSV() {
             toggleMenu();
             if(bdRotas.length === 0) return alert("Sem dados.");
