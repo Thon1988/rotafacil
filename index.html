@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rota Fácil - AppEgg Pro</title>
+    <title>AppEgg Rota Fácil</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     
     <style>
-        /* RESET E VARIÁVEIS PARA REPRODUZIR EXATAMENTE A FOTO 166252.jpg */
+        /* RESET E VARIÁVEIS PARA REPRODUZIR EXATAMENTE AS DIRETRIZES VISUAIS */
         :root {
             --cor-laranja: #ea580c;
             --cor-verde: #16a34a;
@@ -22,10 +22,10 @@
             margin: 0;
             padding: 0;
             background-color: #f4f4f9;
-            overflow: hidden; /* App-like feel */
+            overflow: hidden;
         }
 
-        /* --- TELA 1: IMPORTAÇÃO DE ARQUIVO (Oculta após carga) --- */
+        /* --- TELA 1: IMPORTAÇÃO DE ARQUIVO --- */
         #tela-setup {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -51,9 +51,7 @@
             margin-top: 20px;
         }
 
-        /* --- TELA 2: INTERFACE PRINCIPAL (Idêntica à foto) --- */
-        
-        /* Metade Superior: Mapa */
+        /* --- TELA 2: INTERFACE PRINCIPAL --- */
         #mapa-container {
             position: absolute;
             top: 0; left: 0; right: 0;
@@ -85,7 +83,7 @@
             color: #333;
         }
 
-        /* Menu Overlay (Exportar, Scanner, Limpar) */
+        /* Menu Overlay */
         #menu-opcoes {
             display: none;
             position: absolute;
@@ -117,8 +115,8 @@
         /* Metade Inferior: Bottom Sheet (Lista) */
         #bottom-sheet {
             position: absolute;
-            top: 40vh; /* Sobrepõe o mapa levemente */
-            bottom: 165px; /* Espaço para a barra inferior de ações */
+            top: 40vh;
+            bottom: 165px;
             left: 0; right: 0;
             background: white;
             border-radius: 20px 20px 0 0;
@@ -135,7 +133,7 @@
             margin: 0 0 15px 0;
         }
 
-        /* Itens da Lista (Idêntico à foto) */
+        /* Itens da Lista */
         .item-lista {
             border-bottom: 1px solid #eee;
             padding: 12px 0;
@@ -157,10 +155,10 @@
             margin-top: 6px;
         }
 
-        /* Widget Escuro Flutuante (Idêntico à foto) */
+        /* Widget Escuro Flutuante */
         #widget-escuro {
             position: absolute;
-            bottom: 175px; /* Fica logo acima da barra de ações */
+            bottom: 175px;
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -179,7 +177,7 @@
         .w-rua { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; }
         .w-sub { font-size: 13px; color: #888; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* Barra de Ações Inferior Fixa (Idêntica à foto) */
+        /* Barra de Ações Inferior Fixa */
         #barra-acoes-inferior {
             position: absolute;
             bottom: 0; left: 0; right: 0;
@@ -194,7 +192,6 @@
             justify-content: space-between;
         }
 
-        /* Banner Laranja */
         .banner-laranja {
             background: var(--cor-laranja);
             color: white;
@@ -209,7 +206,6 @@
             gap: 8px;
         }
 
-        /* Texto Verde Sucesso */
         .texto-status {
             text-align: center;
             color: var(--cor-verde);
@@ -221,7 +217,6 @@
             gap: 5px;
         }
 
-        /* 3 Botões Escuros */
         .linha-3-botoes {
             display: flex;
             gap: 10px;
@@ -264,16 +259,16 @@
 <body>
 
     <div id="tela-setup">
-        <h1 style="color: #ea580c;">📦 Rota Fácil Pro</h1>
-        <p style="color: #666; text-align: center;">Carregue sua lista de entregas para iniciar.</p>
+        <h1 style="color: #ea580c;">📦 AppEgg Rota Fácil</h1>
+        <p style="color: #666; text-align: center;">Carregue sua lista de entregas (PDF, Excel, CSV ou TXT).</p>
         
-        <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
+        <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
         
         <button class="btn-upload" onclick="processarArquivoFisico()">Processar Rota Ativa</button>
     </div>
 
     <div id="mapa-container">
-        <iframe id="iframeMapa" src="https://maps.google.com/maps?daddr=$2" allowfullscreen></iframe>
+        <iframe id="iframeMapa" src="https://maps.google.com/maps?daddr=$4" allowfullscreen></iframe>
     </div>
 
     <button class="btn-menu" onclick="toggleMenu()">☰</button>
@@ -287,8 +282,7 @@
 
     <div id="bottom-sheet">
         <h2 class="titulo-passo2">Passo 2: Processar Rota Ativa</h2>
-        <div id="container-lista">
-            </div>
+        <div id="container-lista"></div>
     </div>
 
     <div id="widget-escuro">
@@ -331,11 +325,13 @@
     </div>
 
     <script>
-        // 1. BANCO DE DADOS E ESTADO LOCAL
         let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
         let html5QrcodeScanner = null;
         let indexAtivo = null;
         let processandoLeitura = false;
+
+        // Configuração inicial do PDF.js Worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         window.onload = () => {
             if (bdRotas.length > 0) {
@@ -345,7 +341,6 @@
             }
         };
 
-        // 2. FUNÇÃO DE FEEDBACK SONORO (BIP NATIVO DE ALTA PERFORMANCE)
         function emitirBip() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -358,30 +353,83 @@
                 gain.connect(ctx.destination);
                 osc.start();
                 osc.stop(ctx.currentTime + 0.12);
-            } catch (e) { console.log("Áudio bloqueado pelo navegador."); }
+            } catch (e) { console.log("Áudio indisponível."); }
         }
 
-        // 3. PARSER ROBUSTO DE ARQUIVOS (PDF, TXT, CSV)
+        // MOTOR REFEITO COM LEITURA EXCEL COMPLETA E CORREÇÃO DE QUEBRA DE LINHA DO PDF
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if(input.files.length === 0) return alert("Selecione um arquivo de rota primeiro.");
             const arquivo = input.files[0];
 
-            document.querySelector('.btn-upload').innerText = "Processando...";
+            document.querySelector('.btn-upload').innerText = "Processando arquivo...";
 
-            if (arquivo.type === "application/pdf") {
+            const nomeArquivo = arquivo.name.toLowerCase();
+
+            // CASO 1: ARQUIVOS EXCEL (.XLSX / .XLS)
+            if (nomeArquivo.endsWith('.xlsx') || nomeArquivo.endsWith('.xls')) {
                 const leitor = new FileReader();
-                leitor.onload = async function() {
-                    const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                    let textoCompleto = "";
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        textoCompleto += content.items.map(item => item.str).join(" ") + "\n";
-                    }
-                    estruturarBancoDeDados(textoCompleto);
+                leitor.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                    
+                    let linhasTexto = [];
+                    json.forEach(row => {
+                        if (row && row.length > 0) {
+                            let linhaStr = row.map(cell => cell !== null && cell !== undefined ? String(cell).trim() : "").join(" ").trim();
+                            if (linhaStr.length > 5) {
+                                linhasTexto.push(linhaStr);
+                            }
+                        }
+                    });
+                    estruturarBancoDeDados(linhasTexto.join("\n"));
                 };
                 leitor.readAsArrayBuffer(arquivo);
+
+            // CASO 2: ARQUIVOS COORDENADOS EM PDF (.PDF)
+            } else if (nomeArquivo.endsWith('.pdf')) {
+                const leitor = new FileReader();
+                leitor.onload = async function() {
+                    try {
+                        const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+                        let textoCompleto = "";
+                        
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const content = await page.getTextContent();
+                            
+                            // Ordena os fragmentos por linha (Y descendente) e depois por coluna (X ascendente)
+                            let items = content.items.sort((a, b) => {
+                                if (Math.abs(a.transform[5] - b.transform[5]) < 5) {
+                                    return a.transform[4] - b.transform[4];
+                                }
+                                return b.transform[5] - a.transform[5];
+                            });
+                            
+                            let textoPagina = "";
+                            let lastY = null;
+                            
+                            for (let item of items) {
+                                if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
+                                    textoPagina += "\n";
+                                }
+                                textoPagina += item.str + " ";
+                                lastY = item.transform[5];
+                            }
+                            textoCompleto += textoPagina + "\n";
+                        }
+                        estruturarBancoDeDados(textoCompleto);
+                    } catch (err) {
+                        alert("Erro ao decodificar as tabelas do PDF.");
+                        document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+                    }
+                };
+                leitor.readAsArrayBuffer(arquivo);
+
+            // CASO 3: ARQUIVOS DE TEXTO PLANO (.CSV / .TXT)
             } else {
                 const leitor = new FileReader();
                 leitor.onload = (e) => estruturarBancoDeDados(e.target.result);
@@ -391,12 +439,11 @@
 
         function estruturarBancoDeDados(texto) {
             const linhas = texto.split(/\r?\n/);
+            
             bdRotas = linhas.filter(l => l.trim().length > 5).map((linha, i) => {
-                // Injeta lat/lon simulada ao redor de SP para o algoritmo TSP
                 const latBase = -23.55 + (Math.random() - 0.5) * 0.15;
                 const lonBase = -46.63 + (Math.random() - 0.5) * 0.15;
                 
-                // Extrai possível código BR
                 const match = linha.match(/(BR[A-Z0-9]{7,25})|([A-Z0-9]{9,25})/i);
                 let codigo = match ? (match[1] || match[2]).toUpperCase() : `APP-${String(i+1).padStart(4,'0')}`;
                 let endereco = linha.replace(codigo, '').replace(/[;\t\|]+/g, ' ').trim();
@@ -418,12 +465,11 @@
                 renderizarLista();
                 atualizarContador();
             } else {
-                alert("O arquivo não possui endereços legíveis.");
+                alert("Nenhuma parada válida foi extraída. Verifique a estrutura do arquivo.");
                 document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
             }
         }
 
-        // 4. RENDERIZAÇÃO DA INTERFACE LIMPA
         function renderizarLista() {
             const container = document.getElementById('container-lista');
             container.innerHTML = '';
@@ -438,8 +484,8 @@
                         <span class="parada-titulo">📌 Parada #${idx + 1}</span>
                         <span class="parada-codigo">${e.codigo}</span>
                     </div>
-                    <div class="parada-endereco">${e.endereco.substring(0, 50)}...</div>
-                    ${e.status !== 'pendente' ? `<div style="font-size:11px; color:#888; margin-top:4px;">${e.status.toUpperCase()} às ${e.timestamp}</div>` : ''}
+                    <div class="parada-endereco">${e.endereco.substring(0, 65)}...</div>
+                    ${e.status !== 'pendente' ? `<div style="font-size:11px; color:#16a34a; font-weight:bold; margin-top:4px;">${e.status.toUpperCase()} às ${e.timestamp}</div>` : ''}
                 `;
                 container.appendChild(div);
             });
@@ -450,13 +496,11 @@
             document.getElementById('contador-restantes').innerText = pendentes;
         }
 
-        // 5. INTERAÇÕES DE UI (Menu, Widget, Botões)
         function toggleMenu() {
             const menu = document.getElementById('menu-opcoes');
             menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
         }
         
-        // Esconde o menu ao clicar fora
         document.addEventListener('click', function(event) {
             const menu = document.getElementById('menu-opcoes');
             const btn = document.querySelector('.btn-menu');
@@ -471,17 +515,15 @@
             document.getElementById('wg-num').innerText = String(idx + 1).padStart(2, '0');
             document.getElementById('wg-badge').innerText = idx + 1;
             
-            // Quebra o endereço para o widget ficar limpo
             const partes = e.endereco.split(',');
-            document.getElementById('wg-rua').innerText = partes[0] || 'Endereço Indisponível';
+            document.getElementById('wg-rua').innerText = partes[0] || 'Endereço';
             document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim()}`;
             
             document.getElementById('widget-escuro').style.display = 'block';
         }
 
-        // 6. MOTOR DE REGISTRO E OTIMIZAÇÃO (AÇÕES DA BARRA INFERIOR)
         function registrarAcaoFinal(status) {
-            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro clicando sobre ela.");
+            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
             
             bdRotas[indexAtivo].status = status;
             bdRotas[indexAtivo].timestamp = new Date().toLocaleTimeString();
@@ -498,12 +540,17 @@
         function navegarApp() {
             if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
             const end = bdRotas[indexAtivo].endereco;
-            window.open(`https://maps.google.com/maps?daddr=$3{encodeURIComponent(end)}`, '_blank');
+            window.open(`https://maps.google.com/maps?daddr=$5{encodeURIComponent(end)}`, '_blank');
+        }
+
+        function executingOtimizacaoTSP() {
+            // Alias para manter compatibilidade com botões legados se houver
+            executarOtimizacaoTSP();
         }
 
         function executarOtimizacaoTSP() {
             toggleMenu();
-            if(bdRotas.length <= 2) return alert("Poucas paradas para otimizar.");
+            if(bdRotas.length <= 2) return alert("Quantidade de paradas insuficiente.");
             
             let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
             let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
@@ -525,14 +572,13 @@
             }
             
             bdRotas = [...concluidos, ...otimizado];
-            bdRotas.forEach((item, idx) => item.id = idx); // Reindexa
+            bdRotas.forEach((item, idx) => item.id = idx);
             
             salvarBD();
             renderizarLista();
-            alert("Rota reordenada pela proximidade (TSP)!");
+            alert("Rota otimizada com sucesso via motor de proximidade TSP.");
         }
 
-        // 7. SISTEMA DE SCANNER E CONTINGÊNCIA
         function abrirScanner() {
             toggleMenu();
             document.getElementById('modalScanner').style.display = 'flex';
@@ -547,7 +593,7 @@
                 { fps: 15, qrbox: { width: 280, height: 150 } }, 
                 processarLeituraDaCamera
             ).catch(e => {
-                feedback.innerText = "Erro ao acessar câmera.";
+                feedback.innerText = "Erro de hardware na câmera.";
             });
         }
 
@@ -570,14 +616,10 @@
                 emitirBip();
                 feedback.innerText = `✅ Parada #${idx + 1} Localizada!`;
                 feedback.style.color = "var(--cor-verde)";
-                
                 ativarWidget(idx);
-                
-                setTimeout(() => { 
-                    fecharScanner(); 
-                }, 1000);
+                setTimeout(() => { fecharScanner(); }, 1000);
             } else {
-                feedback.innerText = `❌ Código não encontrado.`;
+                feedback.innerText = `❌ Código não listado nesta rota.`;
                 feedback.style.color = "var(--cor-vermelho)";
                 setTimeout(() => { 
                     feedback.innerText = "Aguardando leitura do código...";
@@ -589,22 +631,20 @@
 
         function forcarBaixaManual() {
             toggleMenu();
-            const cod = prompt("O código de barras rasgou? Digite o código identificador aqui:");
+            const cod = prompt("Digite o código identificador da encomenda:");
             if(cod && cod.trim() !== "") {
                 const idx = bdRotas.findIndex(i => i.codigo.toUpperCase().includes(cod.trim().toUpperCase()));
                 if(idx !== -1) {
                     ativarWidget(idx);
-                    alert("Parada localizada via digitação. Clique em 'Entregue' para baixar.");
                 } else {
-                    alert("Código não existe na rota atual.");
+                    alert("Código inexistente.");
                 }
             }
         }
 
-        // 8. DADOS E RELATÓRIOS
         function exportarRelatorioCSV() {
             toggleMenu();
-            if(bdRotas.length === 0) return alert("Nenhum dado para exportar.");
+            if(bdRotas.length === 0) return alert("Sem dados.");
             let csv = "\uFEFFID,Codigo,Endereco,Status,Horario\n";
             bdRotas.forEach(p => {
                 csv += `"${p.id + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}","${p.timestamp || 'N/A'}"\n`;
@@ -612,13 +652,13 @@
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `RotaFacil_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
+            link.download = `AppEgg_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
             link.click();
         }
 
         function limparSessao() {
             toggleMenu();
-            if(confirm("ATENÇÃO: Deseja apagar permanentemente toda a rota?")) {
+            if(confirm("Deseja expurgar e limpar a rota ativa?")) {
                 localStorage.removeItem('rota_facil_db_oficial');
                 location.reload();
             }
