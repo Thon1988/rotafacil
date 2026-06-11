@@ -311,7 +311,7 @@
 
     <div id="barra-acoes-inferior">
         <div class="banner-laranja">
-            ⚡ <span id="contador-restantes">0</span> Paradas Restantes (Rota Otimizada)
+            ⚡ <span id="contador-restantes">0</span> Paradas Restantes
         </div>
         <div class="texto-status">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--cor-verde)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
@@ -320,7 +320,7 @@
         <div class="linha-3-botoes">
             <button class="btn-acao-dark" onclick="navegarApp()">
                 <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
-                Abrir app
+                Navegar
             </button>
             <button class="btn-acao-dark" onclick="registrarAcaoFinal('falhou')">
                 <svg class="icone-vermelho" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
@@ -367,6 +367,14 @@
             const msg = new SpeechSynthesisUtterance(texto);
             msg.lang = 'pt-BR';
             window.speechSynthesis.speak(msg);
+        }
+
+        function calcularDistancia(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
         function inicializarMapa() {
@@ -516,9 +524,7 @@
             });
 
             if(bdRotas.length > 0) {
-                // Auto-otimizar por proximidade logo no carregamento
                 executarOtimizacaoTSP(false); 
-                
                 salvarBD();
                 document.getElementById('tela-setup').style.display = 'none';
                 map.invalidateSize();
@@ -618,30 +624,31 @@
         function navegarApp() {
             if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
             const end = bdRotas[indexAtivo].endereco;
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`, '_blank');
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(end)}&travelmode=driving`, '_blank');
         }
 
         function executarOtimizacaoTSP(mostrarAlert = true) {
             if(mostrarAlert) toggleMenu();
-            if(bdRotas.length <= 2) return mostrarAlert ? alert("Quantidade de paradas insuficiente.") : null;
+            let pendentes = bdRotas.filter(r => r.status === 'pendente');
+            if(pendentes.length <= 1) return mostrarAlert ? alert("Quantidade insuficiente para otimizar.") : null;
             
-            let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
             let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
+            let otimizado = [pendentes.shift()];
             
-            if(rascunho.length === 0) return;
+            let distTotal = 0;
             
-            let otimizado = [rascunho.shift()];
-            
-            while(rascunho.length > 0) {
+            while(pendentes.length > 0) {
                 let atual = otimizado[otimizado.length - 1];
                 let indexMaisProximo = 0;
                 let menorDist = Infinity;
                 
-                for(let i=0; i<rascunho.length; i++) {
-                    let d = Math.sqrt(Math.pow(atual.lat - rascunho[i].lat, 2) + Math.pow(atual.lon - rascunho[i].lon, 2));
+                for(let i=0; i<pendentes.length; i++) {
+                    let d = calcularDistancia(atual.lat, atual.lon, pendentes[i].lat, pendentes[i].lon);
                     if(d < menorDist) { menorDist = d; indexMaisProximo = i; }
                 }
-                otimizado.push(rascunho.splice(indexMaisProximo, 1)[0]);
+                let prox = pendentes.splice(indexMaisProximo, 1)[0];
+                distTotal += menorDist;
+                otimizado.push(prox);
             }
             
             bdRotas = [...concluidos, ...otimizado];
@@ -650,9 +657,12 @@
             salvarBD();
             renderizarLista();
             plotarNoMapa();
+
             if(mostrarAlert) {
-                falar("Rota otimizada com sucesso.");
-                alert("Rota otimizada com sucesso via motor de proximidade TSP.");
+                let tempoMinutos = Math.round((distTotal / 20) * 60);
+                let msg = `Rota Otimizada!\nDistância: ${distTotal.toFixed(1)} km\nTempo estimado: ${tempoMinutos} min.`;
+                falar(msg);
+                alert(msg);
             }
         }
 
