@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg Rota Fácil - Versão Completa</title>
+    <title>AppEgg Rota Fácil</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -21,268 +21,743 @@
             --bg-botoes: #232733;
             --cor-azul-rota: #3b82f6;
         }
-
-        * { box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            margin: 0; padding: 0; background-color: #f4f4f9; 
-            overflow: hidden; width: 100vw; height: 100vh; 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            overflow: hidden;
         }
 
-        .tela-full {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
-            background: white; z-index: 999999; padding: 20px; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        #tela-setup {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: white;
+            z-index: 99999;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-upload {
+            background: var(--cor-laranja);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            max-width: 400px;
+            cursor: pointer;
+            margin-top: 20px;
         }
 
-        .btn-principal {
-            background-color: var(--cor-laranja); color: white; border: none; 
-            padding: 16px; border-radius: 8px; font-size: 16px; font-weight: bold; 
-            width: 100%; max-width: 400px; cursor: pointer; margin-top: 15px; text-align: center;
+        #mapa-container {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 50vh;
+            background: #e5e3df;
+            z-index: 1;
+        }
+        #mapa {
+            width: 100%;
+            height: 100%;
         }
 
-        #mapa-container { position: absolute; top: 0; left: 0; right: 0; height: 50vh; background-color: #e5e3df; z-index: 1; }
-        #mapa { width: 100%; height: 100%; }
-
-        .btn-menu { 
-            position: absolute; top: 20px; left: 20px; width: 45px; height: 45px; 
-            background-color: white; border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
-            z-index: 1000; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;
+        .marker-pin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid white;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
         }
 
-        #menu-opcoes { 
-            display: none; position: absolute; top: 75px; left: 20px; background-color: white; 
-            border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 2000; 
-            flex-direction: column; width: 260px; 
+        .btn-menu {
+            position: absolute;
+            top: 20px; left: 20px;
+            width: 45px; height: 45px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            border: none;
+            cursor: pointer;
+            z-index: 1000;
+            color: #333;
         }
 
-        .menu-item { 
-            padding: 16px 20px; font-size: 15px; font-weight: bold; color: #333; 
-            border-bottom: 1px solid #f0f0f0; cursor: pointer; background: none; 
-            border: none; text-align: left; width: 100%; 
+        #menu-opcoes {
+            display: none;
+            position: absolute;
+            top: 75px; left: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 2000;
+            flex-direction: column;
+            width: 260px;
+            overflow: hidden;
+        }
+        .menu-item {
+            padding: 16px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: none;
+            border-left: none; border-right: none; border-top: none;
+            text-align: left;
+            width: 100%;
         }
 
-        #bottom-sheet { 
-            position: absolute; top: 40vh; bottom: 165px; left: 0; right: 0; 
-            background-color: white; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); 
-            padding: 20px 15px; overflow-y: auto; z-index: 10; 
+        #bottom-sheet {
+            position: absolute;
+            top: 40vh;
+            bottom: 165px;
+            left: 0; right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            padding: 20px 15px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+        .titulo-passo2 {
+            color: #d35400;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 0 15px 0;
         }
 
-        #barra-acoes-inferior { 
-            position: absolute; bottom: 0; left: 0; right: 0; height: 165px; 
-            background-color: white; padding: 10px 15px; z-index: 30; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); 
+        .item-lista {
+            border-bottom: 1px solid #eee;
+            padding: 12px 0;
+            cursor: pointer;
+        }
+        .item-lista.concluido { opacity: 0.5; }
+        .item-topo {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 15px;
+        }
+        .parada-titulo { color: #d35400; }
+        .parada-codigo { color: #d35400; font-size: 14px; }
+        .parada-endereco {
+            color: #444;
+            font-size: 14px;
+            margin-top: 6px;
         }
 
-        .linha-3-botoes { display: flex; gap: 10px; width: 100%; margin-top: 10px; }
-        .btn-acao-dark { 
-            flex: 1; background-color: var(--bg-botoes); color: white; border: none; 
-            border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px;
+        #widget-escuro {
+            position: absolute;
+            bottom: 175px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 380px;
+            background: var(--bg-escuro);
+            color: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            z-index: 20;
+            display: none;
+            box-sizing: border-box;
+        }
+        .widget-controls { position: absolute; top: 5px; right: 10px; display: flex; gap: 10px; }
+        .btn-ctrl { background: none; border: none; color: #aaa; cursor: pointer; font-size: 16px; font-weight: bold; padding: 5px; }
+
+        .w-topo { display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-bottom: 8px;}
+        .w-badge { background: var(--cor-azul-rota); color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .w-rua { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; }
+        .w-sub { font-size: 13px; color: #888; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        #barra-acoes-inferior {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 165px;
+            background: white;
+            padding: 10px 15px;
+            box-sizing: border-box;
+            z-index: 30;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .banner-laranja {
+            background: var(--cor-laranja);
+            color: white;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .texto-status {
+            text-align: center;
+            color: var(--cor-verde);
+            font-weight: bold;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .linha-3-botoes {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+        .btn-acao-dark {
+            flex: 1;
+            background: var(--bg-botoes);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 5px;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .btn-acao-dark svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; }
+        .btn-acao-dark .icone-verde { stroke: var(--cor-verde); }
+        .btn-acao-dark .icone-vermelho { stroke: var(--cor-vermelho); }
+
+        #modalScanner {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 999999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
     </style>
 </head>
 <body>
 
-    <div id="tela-login" class="tela-full">
-        <h1>🔐 AppEgg Login</h1>
-        <input type="email" id="in-email" placeholder="Email" style="padding: 15px; width: 80%; max-width: 300px; margin: 10px; border: 1px solid #ccc; border-radius: 8px;">
-        <input type="password" id="in-pass" placeholder="Senha" style="padding: 15px; width: 80%; max-width: 300px; margin: 10px; border: 1px solid #ccc; border-radius: 8px;">
-        <button class="btn-principal" onclick="tentarLogin()">Entrar</button>
-    </div>
-
-    <div id="tela-comprar" class="tela-full" style="display:none;">
-        <h1 style="color: var(--cor-laranja);">💰 Saldo Insuficiente</h1>
-        <p>Você precisa de créditos para processar rotas. (2 centavos por pacote)</p>
-        <div style="background: #f0fdf4; padding: 20px; border-radius: 12px; text-align: center; border: 2px solid var(--cor-verde); width: 90%; max-width: 350px;">
-            <h2>1000 Pacotes = R$ 20,00</h2>
-            <button class="btn-principal" onclick="comprarCreditos()">Pagar via PIX (Simulado)</button>
-        </div>
-        <button onclick="fecharTela('tela-comprar')" style="margin-top: 20px; border:none; background:none; color:gray;">Voltar</button>
-    </div>
-
-    <div id="tela-setup" class="tela-full" style="display:none;">
+    <div id="tela-setup">
         <h1 style="color: #ea580c;">📦 AppEgg Rota Fácil</h1>
-        <p id="info-creditos" style="font-weight: bold; color: var(--cor-azul-rota);"></p>
-        <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="padding: 15px; border: 2px dashed #ea580c; width: 80%; max-width: 300px;">
-        <button class="btn-principal" onclick="processarArquivoFisico()">Processar Rota Ativa</button>
+        <p style="color: #666; text-align: center;">Carregue sua lista de entregas (PDF, Excel, CSV ou TXT).</p>
+        
+        <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
+        
+        <button class="btn-upload" onclick="processarArquivoFisico()">Processar Rota Ativa</button>
     </div>
 
-    <div id="mapa-container"><div id="mapa"></div></div>
+    <div id="mapa-container">
+        <div id="mapa"></div>
+    </div>
+
     <button class="btn-menu" onclick="toggleMenu()">☰</button>
-    
     <div id="menu-opcoes">
-        <div style="padding: 15px; font-weight: bold; border-bottom: 2px solid #eee;">Saldo: <span id="menu-saldo">0</span> pacotes</div>
-        <button class="menu-item" onclick="abrirTelaComprar()">➕ Comprar Créditos</button>
-        <button class="menu-item" onclick="executarOtimizacaoTSP()">⚡ Otimizar Rota</button>
-        <button class="menu-item" onclick="limparSessao()" style="color: #dc2626;">🗑️ Sair/Limpar</button>
+        <button class="menu-item" onclick="abrirScanner()">📷 Iniciar Scanner</button>
+        <button class="menu-item" onclick="executarOtimizacaoTSP()">⚡ Otimizar Rota Atual</button>
+        <button class="menu-item" onclick="exportarRelatorioCSV()">📥 Exportar Relatório</button>
+        <button class="menu-item" onclick="forcarBaixaManual()">✍️ Digitar Código Manual</button>
+        <button class="menu-item" style="color: #dc2626;" onclick="limparSessao()">🗑️ Apagar Rota</button>
     </div>
 
     <div id="bottom-sheet">
+        <h2 class="titulo-passo2">Passo 2: Processar Rota Ativa</h2>
         <div id="container-lista"></div>
     </div>
 
+    <div id="widget-escuro">
+        <div class="widget-controls">
+            <button class="btn-ctrl" onclick="minimizarWidget()">−</button>
+            <button class="btn-ctrl" onclick="fecharWidget()">×</button>
+        </div>
+        <div class="w-topo">
+            <span id="wg-num">01</span>
+            <span class="w-badge" id="wg-badge">1</span>
+        </div>
+        <h3 class="w-rua" id="wg-rua">Rua Selecionada, 00</h3>
+        <p class="w-sub" id="wg-detalhe">Detalhes e código da encomenda</p>
+    </div>
+
     <div id="barra-acoes-inferior">
-        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px;">
-            <span>Restantes: <span id="contador-restantes">0</span></span>
-            <span>Créditos: <span id="saldo-atual">0</span></span>
+        <div class="banner-laranja">
+            ⚡ <span id="contador-restantes">0</span> Paradas Restantes
+        </div>
+        <div class="texto-status">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--cor-verde)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            Rota em Execução!
         </div>
         <div class="linha-3-botoes">
-            <button class="btn-acao-dark" onclick="navegarApp()">Navegar</button>
-            <button class="btn-acao-dark" onclick="registrarAcaoFinal('falhou')">Falhou</button>
-            <button class="btn-acao-dark" onclick="registrarAcaoFinal('entregue')">Entregue</button>
+            <button class="btn-acao-dark" onclick="navegarApp()">
+                <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                Navegar
+            </button>
+            <button class="btn-acao-dark" onclick="registrarAcaoFinal('falhou')">
+                <svg class="icone-vermelho" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                Não entre...
+            </button>
+            <button class="btn-acao-dark" onclick="registrarAcaoFinal('entregue')">
+                <svg class="icone-verde" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+                Entregue
+            </button>
         </div>
     </div>
 
+    <div id="modalScanner">
+        <button onclick="fecharScanner()" style="padding: 12px; margin-bottom: 20px; background: #dc2626; color: white; border: none; border-radius: 8px; font-size: 16px; width: 100%; max-width: 400px; font-weight: bold;">✕ Fechar Scanner</button>
+        <div id="reader" style="width: 100%; max-width: 400px; background: #000; border-radius: 8px; overflow: hidden; border: 2px solid #333;"></div>
+        <div id="scannerFeedback" style="color: white; margin-top: 20px; font-size: 18px; font-weight: bold; text-align: center;">Aguardando leitura do código...</div>
+    </div>
+
     <script>
-        let usuario = JSON.parse(localStorage.getItem('appegg_user')) || {email: '', saldo: 0};
         let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
-        let map;
+        let html5QrcodeScanner = null;
         let indexAtivo = null;
+        let processandoLeitura = false;
+        
+        let map;
+        let layerMarkers = [];
+        let mapPolyline = null;
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         window.onload = () => {
             inicializarMapa();
-            if (usuario.email) mostrarSetup();
-        };
-
-        function tentarLogin() {
-            usuario = {email: document.getElementById('in-email').value, saldo: 0};
-            localStorage.setItem('appegg_user', JSON.stringify(usuario));
-            document.getElementById('tela-login').style.display = 'none';
-            mostrarSetup();
-        }
-
-        function abrirTelaComprar() {
-            toggleMenu();
-            document.getElementById('tela-comprar').style.display = 'flex';
-        }
-
-        function fecharTela(id) { document.getElementById(id).style.display = 'none'; }
-
-        function comprarCreditos() {
-            usuario.saldo += 1000;
-            localStorage.setItem('appegg_user', JSON.stringify(usuario));
-            alert("Pagamento confirmado! +1000 créditos.");
-            document.getElementById('tela-comprar').style.display = 'none';
-            atualizarUIFinanceira();
-        }
-
-        function deduzirCreditos(qtd) {
-            usuario.saldo -= qtd;
-            localStorage.setItem('appegg_user', JSON.stringify(usuario));
-            atualizarUIFinanceira();
-        }
-
-        function atualizarUIFinanceira() {
-            document.getElementById('saldo-atual').innerText = usuario.saldo;
-            document.getElementById('menu-saldo').innerText = usuario.saldo;
-            document.getElementById('info-creditos').innerText = `Seu saldo: ${usuario.saldo} pacotes`;
-        }
-
-        function mostrarSetup() {
-            document.getElementById('tela-setup').style.display = 'flex';
-            atualizarUIFinanceira();
-        }
-
-        async function processarArquivoFisico() {
-            const input = document.getElementById('arquivoPlanilha');
-            if(input.files.length === 0) return alert("Selecione um arquivo.");
-            const file = input.files[0];
-            const reader = new FileReader();
             
-            reader.onload = async (e) => {
-                let texto = e.target.result;
-                if (file.name.endsWith('.pdf')) {
-                    const pdf = await pdfjsLib.getDocument(new Uint8Array(e.target.result)).promise;
-                    texto = "";
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        content.items.forEach(item => texto += item.str + " ");
-                    }
-                }
-                const linhas = texto.split(/\r?\n/);
-                let novasRotas = [];
-                linhas.forEach(linha => {
-                    const match = linha.match(/(BR\d{11})/i);
-                    if (match) {
-                        novasRotas.push({
-                            codigo: match[1].toUpperCase(),
-                            endereco: linha.replace(match[1], '').trim(),
-                            status: 'pendente',
-                            lat: -23.55 + (Math.random() - 0.5) * 0.1,
-                            lon: -46.63 + (Math.random() - 0.5) * 0.1
-                        });
-                    }
-                });
-                if (novasRotas.length === 0) return alert("Nenhum código encontrado.");
-                if (novasRotas.length > usuario.saldo) return alert(`Saldo insuficiente. Você precisa de ${novasRotas.length} créditos.`);
-                
-                deduzirCreditos(novasRotas.length);
-                bdRotas = novasRotas;
-                salvarBD();
+            if (bdRotas.length > 0) {
                 document.getElementById('tela-setup').style.display = 'none';
+                map.invalidateSize();
                 renderizarLista();
                 atualizarContador();
-            };
-            if (file.name.endsWith('.pdf')) reader.readAsArrayBuffer(file);
-            else reader.readAsText(file);
+                plotarNoMapa();
+            }
+        };
+
+        function falar(texto) {
+            const msg = new SpeechSynthesisUtterance(texto);
+            msg.lang = 'pt-BR';
+            window.speechSynthesis.speak(msg);
+        }
+
+        function calcularDistancia(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
         function inicializarMapa() {
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
         }
 
-        function executarOtimizacaoTSP() {
-            toggleMenu();
-            let pendentes = bdRotas.filter(r => r.status === 'pendente');
-            if(pendentes.length <= 1) return alert("Quantidade insuficiente.");
-            let otimizado = [pendentes.shift()];
-            while(pendentes.length > 0) {
-                let atual = otimizado[otimizado.length - 1];
-                let indexMaisProximo = 0;
-                let menorDist = Infinity;
-                for(let i=0; i<pendentes.length; i++) {
-                    let d = Math.sqrt(Math.pow(atual.lat - pendentes[i].lat, 2) + Math.pow(atual.lon - pendentes[i].lon, 2));
-                    if(d < menorDist) { menorDist = d; indexMaisProximo = i; }
+        function plotarNoMapa() {
+            if (!map) return;
+            
+            layerMarkers.forEach(m => map.removeLayer(m));
+            layerMarkers = [];
+            if (mapPolyline) map.removeLayer(mapPolyline);
+
+            if (bdRotas.length === 0) return;
+
+            let bounds = [];
+            let latlngsLinha = [];
+
+            bdRotas.forEach((e, idx) => {
+                let cor = e.status === 'pendente' ? '#3b82f6' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
+                
+                let customIcon = L.divIcon({
+                    className: 'custom-pin-wrapper',
+                    html: `<div class="marker-pin" style="background-color: ${cor};">${idx + 1}</div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
+
+                let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
+                
+                marker.on('click', () => ativarWidget(idx));
+                
+                layerMarkers.push(marker);
+                bounds.push([e.lat, e.lon]);
+
+                if(e.status === 'pendente') {
+                    latlngsLinha.push([e.lat, e.lon]);
                 }
-                otimizado.push(pendentes.splice(indexMaisProximo, 1)[0]);
+            });
+
+            if(latlngsLinha.length > 1) {
+                mapPolyline = L.polyline(latlngsLinha, {color: '#3b82f6', weight: 4, opacity: 0.8}).addTo(map);
             }
-            bdRotas = [...bdRotas.filter(r => r.status !== 'pendente'), ...otimizado];
-            salvarBD();
-            renderizarLista();
-            alert("Rota otimizada com sucesso.");
+
+            if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [30, 30] });
+            }
+        }
+
+        async function processarArquivoFisico() {
+            const input = document.getElementById('arquivoPlanilha');
+            if(input.files.length === 0) return alert("Selecione um arquivo de rota primeiro.");
+            const arquivo = input.files[0];
+
+            document.querySelector('.btn-upload').innerText = "Processando arquivo...";
+            const nomeArquivo = arquivo.name.toLowerCase();
+
+            if (nomeArquivo.endsWith('.xlsx') || nomeArquivo.endsWith('.xls')) {
+                const leitor = new FileReader();
+                leitor.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                    
+                    let linhasTexto = [];
+                    json.forEach(row => {
+                        if (row && row.length > 0) {
+                            let linhaStr = row.map(cell => cell !== null && cell !== undefined ? String(cell).trim() : "").join(" ").trim();
+                            if (linhaStr.length > 5) {
+                                linhasTexto.push(linhaStr);
+                            }
+                        }
+                    });
+                    estruturarBancoDeDados(linhasTexto.join("\n"));
+                };
+                leitor.readAsArrayBuffer(arquivo);
+
+            } else if (nomeArquivo.endsWith('.pdf')) {
+                const leitor = new FileReader();
+                leitor.onload = async function() {
+                    try {
+                        const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+                        let textoCompleto = "";
+                        
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const content = await page.getTextContent();
+                            
+                            let items = content.items.sort((a, b) => {
+                                if (Math.abs(a.transform[5] - b.transform[5]) < 5) return a.transform[4] - b.transform[4];
+                                return b.transform[5] - a.transform[5];
+                            });
+                            
+                            let textoPagina = "";
+                            let lastY = null;
+                            
+                            for (let item of items) {
+                                if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) textoPagina += "\n";
+                                textoPagina += item.str + " ";
+                                lastY = item.transform[5];
+                            }
+                            textoCompleto += textoPagina + "\n";
+                        }
+                        estruturarBancoDeDados(textoCompleto);
+                    } catch (err) {
+                        alert("Erro ao decodificar as tabelas do PDF.");
+                        document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+                    }
+                };
+                leitor.readAsArrayBuffer(arquivo);
+
+            } else {
+                const leitor = new FileReader();
+                leitor.onload = (e) => estruturarBancoDeDados(e.target.result);
+                leitor.readAsText(arquivo);
+            }
+        }
+
+        function estruturarBancoDeDados(texto) {
+            const linhas = texto.split(/\r?\n/);
+            let idCounter = 0;
+            bdRotas = [];
+            
+            linhas.forEach((linha) => {
+                if (linha.trim().length < 5) return;
+
+                const match = linha.match(/(BR\d{11})/i);
+                if (!match) return;
+
+                let codigo = match[1].toUpperCase();
+                let endereco = linha.replace(new RegExp(codigo, 'i'), '').replace(/[;\t\|]+/g, ' ').trim();
+
+                bdRotas.push({
+                    id: idCounter++,
+                    codigo: codigo,
+                    endereco: endereco,
+                    status: 'pendente',
+                    timestamp: null,
+                    lat: -23.55 + (Math.random() - 0.5) * 0.15,
+                    lon: -46.63 + (Math.random() - 0.5) * 0.15
+                });
+            });
+
+            if(bdRotas.length > 0) {
+                executarOtimizacaoTSP(false); 
+                salvarBD();
+                document.getElementById('tela-setup').style.display = 'none';
+                map.invalidateSize();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+                falar("Rota carregada e otimizada por proximidade com sucesso.");
+            } else {
+                alert("Nenhum código no padrão Shopee (BR + 11 dígitos) localizado.");
+                document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+            }
         }
 
         function renderizarLista() {
             const container = document.getElementById('container-lista');
             container.innerHTML = '';
+            
             bdRotas.forEach((e, idx) => {
                 const div = document.createElement('div');
-                div.style.padding = "10px"; div.style.borderBottom = "1px solid #eee";
-                div.innerHTML = `<strong>#${idx + 1} - ${e.codigo}</strong><br>${e.endereco}`;
-                div.onclick = () => { indexAtivo = idx; };
+                div.className = `item-lista ${e.status !== 'pendente' ? 'concluido' : ''}`;
+                div.onclick = () => ativarWidget(idx);
+                
+                div.innerHTML = `
+                    <div class="item-topo">
+                        <span class="parada-titulo">📌 Parada #${idx + 1}</span>
+                        <span class="parada-codigo">${e.codigo}</span>
+                    </div>
+                    <div class="parada-endereco">${e.endereco.substring(0, 65)}...</div>
+                    ${e.status !== 'pendente' ? `<div style="font-size:11px; color:#16a34a; font-weight:bold; margin-top:4px;">${e.status.toUpperCase()} às ${e.timestamp}</div>` : ''}
+                `;
                 container.appendChild(div);
             });
         }
 
-        function atualizarContador() { document.getElementById('contador-restantes').innerText = bdRotas.filter(r => r.status === 'pendente').length; }
-        function toggleMenu() { const m = document.getElementById('menu-opcoes'); m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; }
-        function salvarBD() { localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas)); }
-        function limparSessao() { localStorage.clear(); location.reload(); }
-        function navegarApp() {
-            if(indexAtivo === null) return alert("Selecione uma parada.");
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bdRotas[indexAtivo].endereco)}`, '_blank');
+        function atualizarContador() {
+            const pendentes = bdRotas.filter(r => r.status === 'pendente').length;
+            document.getElementById('contador-restantes').innerText = pendentes;
         }
+
+        function toggleMenu() {
+            const menu = document.getElementById('menu-opcoes');
+            menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+        }
+        
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('menu-opcoes');
+            const btn = document.querySelector('.btn-menu');
+            if (menu.style.display === 'flex' && !menu.contains(event.target) && event.target !== btn) {
+                menu.style.display = 'none';
+            }
+        });
+
+        function fecharWidget() { document.getElementById('widget-escuro').style.display = 'none'; }
+        
+        function minimizarWidget() {
+            const det = document.getElementById('wg-detalhe');
+            det.style.display = (det.style.display === 'none') ? 'block' : 'none';
+        }
+
+        function ativarWidget(idx) {
+            indexAtivo = idx;
+            const e = bdRotas[idx];
+            document.getElementById('wg-num').innerText = String(idx + 1).padStart(2, '0');
+            document.getElementById('wg-badge').innerText = idx + 1;
+            
+            const partes = e.endereco.split(',');
+            document.getElementById('wg-rua').innerText = partes[0] || 'Endereço';
+            document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim()}`;
+            
+            document.getElementById('widget-escuro').style.display = 'block';
+
+            map.flyTo([e.lat - 0.015, e.lon], 14, { animate: true, duration: 1 });
+            falar("Parada " + (idx + 1) + ". " + (partes[0] || ""));
+        }
+
         function registrarAcaoFinal(status) {
-            if(indexAtivo === null) return alert("Selecione uma parada.");
+            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
+            
             bdRotas[indexAtivo].status = status;
+            bdRotas[indexAtivo].timestamp = new Date().toLocaleTimeString();
+            
+            if (status === 'entregue') {
+                falar("Encomendada entregue com sucesso.");
+            } else {
+                falar("Status registrado como falha.");
+            }
+            
             salvarBD();
             renderizarLista();
             atualizarContador();
-            alert("Status: " + status);
+            plotarNoMapa();
+            
+            document.getElementById('widget-escuro').style.display = 'none';
+            indexAtivo = null;
+        }
+
+        function navegarApp() {
+            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
+            const end = bdRotas[indexAtivo].endereco;
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(end)}&travelmode=driving`, '_blank');
+        }
+
+        function executarOtimizacaoTSP(mostrarAlert = true) {
+            if(mostrarAlert) toggleMenu();
+            let pendentes = bdRotas.filter(r => r.status === 'pendente');
+            if(pendentes.length <= 1) return mostrarAlert ? alert("Quantidade insuficiente para otimizar.") : null;
+            
+            let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
+            let otimizado = [pendentes.shift()];
+            
+            let distTotal = 0;
+            
+            while(pendentes.length > 0) {
+                let atual = otimizado[otimizado.length - 1];
+                let indexMaisProximo = 0;
+                let menorDist = Infinity;
+                
+                for(let i=0; i<pendentes.length; i++) {
+                    let d = calcularDistancia(atual.lat, atual.lon, pendentes[i].lat, pendentes[i].lon);
+                    if(d < menorDist) { menorDist = d; indexMaisProximo = i; }
+                }
+                let prox = pendentes.splice(indexMaisProximo, 1)[0];
+                distTotal += menorDist;
+                otimizado.push(prox);
+            }
+            
+            bdRotas = [...concluidos, ...otimizado];
+            bdRotas.forEach((item, idx) => item.id = idx);
+            
+            salvarBD();
+            renderizarLista();
+            plotarNoMapa();
+
+            if(mostrarAlert) {
+                let tempoHoras = distTotal / 30; // Velocidade média 30km/h
+                let horas = Math.floor(tempoHoras);
+                let minutos = Math.round((tempoHoras - horas) * 60);
+                
+                let msg = `Rota Otimizada!\nDistância: ${distTotal.toFixed(1)} km\nTempo estimado: ${horas > 0 ? horas + 'h e ' : ''}${minutos} min.`;
+                falar(msg);
+                alert(msg);
+            }
+        }
+
+        function abrirScanner() {
+            toggleMenu();
+            document.getElementById('modalScanner').style.display = 'flex';
+            const feedback = document.getElementById('scannerFeedback');
+            feedback.innerText = "Aguardando leitura do código...";
+            feedback.style.color = "white";
+            falar("Scanner iniciado.");
+            
+            if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
+            
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, 
+                { fps: 15, qrbox: { width: 280, height: 150 } }, 
+                processarLeituraDaCamera
+            ).catch(e => {
+                feedback.innerText = "Erro de hardware na câmera.";
+            });
+        }
+
+        function fecharScanner() {
+            document.getElementById('modalScanner').style.display = 'none';
+            if (html5QrcodeScanner) html5QrcodeScanner.stop();
+            processandoLeitura = false;
+        }
+
+        function processarLeituraDaCamera(textoLido) {
+            if (processandoLeitura) return;
+            processandoLeitura = true;
+            
+            const token = textoLido.trim().toUpperCase();
+            const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
+            
+            const feedback = document.getElementById('scannerFeedback');
+            
+            if (idx !== -1) {
+                falar("Parada localizada.");
+                feedback.innerText = `✅ Parada #${idx + 1} Localizada!`;
+                feedback.style.color = "var(--cor-verde)";
+                ativarWidget(idx);
+                setTimeout(() => { fecharScanner(); }, 1000);
+            } else {
+                falar("Código não encontrado na rota.");
+                feedback.innerText = `❌ Código não listado nesta rota.`;
+                feedback.style.color = "var(--cor-vermelho)";
+                setTimeout(() => { 
+                    feedback.innerText = "Aguardando leitura do código...";
+                    feedback.style.color = "white";
+                    processandoLeitura = false; 
+                }, 2000);
+            }
+        }
+
+        function forcarBaixaManual() {
+            toggleMenu();
+            const cod = prompt("Digite o código identificador da encomenda:");
+            if(cod && cod.trim() !== "") {
+                const idx = bdRotas.findIndex(i => i.codigo.toUpperCase().includes(cod.trim().toUpperCase()));
+                if(idx !== -1) {
+                    ativarWidget(idx);
+                } else {
+                    alert("Código inexistente.");
+                }
+            }
+        }
+
+        function exportarRelatorioCSV() {
+            toggleMenu();
+            if(bdRotas.length === 0) return alert("Sem dados.");
+            let csv = "\uFEFFID,Codigo,Endereco,Status,Horario\n";
+            bdRotas.forEach(p => {
+                csv += `"${p.id + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}","${p.timestamp || 'N/A'}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `AppEgg_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
+        function limparSessao() {
+            toggleMenu();
+            if(confirm("Deseja expurgar e limpar a rota ativa?")) {
+                localStorage.removeItem('rota_facil_db_oficial');
+                location.reload();
+            }
+        }
+
+        function salvarBD() {
+            localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
         }
     </script>
 </body>
