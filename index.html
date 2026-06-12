@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RotaFacil - Gestão Avançada de Entregas</title>
+    <title>AppEgg Rota Fácil - Versão Completa</title>
     
-    <!-- Bibliotecas de Processamento de Arquivos e Renderização de Mapas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     
-    <!-- Leaflet Map CSS e JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
@@ -21,1113 +20,270 @@
             --bg-escuro: #1c1c1e;
             --bg-botoes: #232733;
             --cor-azul-rota: #3b82f6;
-            --cinza-claro: #f4f4f9;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; padding: 0; background-color: #f4f4f9; 
+            overflow: hidden; width: 100vw; height: 100vh; 
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--cinza-claro);
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        /* Camadas de Telas Modais Globais */
         .tela-full {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: white;
-            z-index: 999999;
-            padding: 30px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            overflow-y: auto;
-        }
-
-        .titulo-tela {
-            font-size: 26px;
-            font-weight: 800;
-            color: #111827;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        .subtitulo-tela {
-            font-size: 14px;
-            color: #6b7280;
-            margin-bottom: 25px;
-            text-align: center;
-            max-width: 320px;
-        }
-
-        .input-padrao {
-            width: 100%;
-            max-width: 340px;
-            padding: 16px;
-            margin-bottom: 15px;
-            border: 1px solid #d1d5db;
-            border-radius: 10px;
-            font-size: 15px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .input-padrao:focus {
-            border-color: var(--cor-laranja);
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+            background: white; z-index: 999999; padding: 20px; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
         .btn-principal {
-            background-color: var(--cor-laranja);
-            color: white;
-            border: none;
-            padding: 16px;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            width: 100%;
-            max-width: 340px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
-            transition: opacity 0.2s;
-            margin-bottom: 10px;
+            background-color: var(--cor-laranja); color: white; border: none; 
+            padding: 16px; border-radius: 8px; font-size: 16px; font-weight: bold; 
+            width: 100%; max-width: 400px; cursor: pointer; margin-top: 15px; text-align: center;
         }
 
-        .btn-principal:active {
-            opacity: 0.9;
+        #mapa-container { position: absolute; top: 0; left: 0; right: 0; height: 50vh; background-color: #e5e3df; z-index: 1; }
+        #mapa { width: 100%; height: 100%; }
+
+        .btn-menu { 
+            position: absolute; top: 20px; left: 20px; width: 45px; height: 45px; 
+            background-color: white; border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
+            z-index: 1000; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;
         }
 
-        .link-alternativo {
-            margin-top: 15px;
-            color: var(--cor-azul-rota);
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            background: none;
-            border: none;
+        #menu-opcoes { 
+            display: none; position: absolute; top: 75px; left: 20px; background-color: white; 
+            border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 2000; 
+            flex-direction: column; width: 260px; 
         }
 
-        /* Container do Box de Pagamento PIX */
-        .box-pix {
-            background-color: #f0fdf4;
-            border: 2px dashed var(--cor-verde);
-            border-radius: 16px;
-            padding: 25px;
-            width: 100%;
-            max-width: 340px;
-            text-align: center;
-            margin-bottom: 20px;
+        .menu-item { 
+            padding: 16px 20px; font-size: 15px; font-weight: bold; color: #333; 
+            border-bottom: 1px solid #f0f0f0; cursor: pointer; background: none; 
+            border: none; text-align: left; width: 100%; 
         }
 
-        .preco-pix {
-            font-size: 24px;
-            font-weight: 800;
-            color: var(--cor-verde);
-            margin: 10px 0;
+        #bottom-sheet { 
+            position: absolute; top: 40vh; bottom: 165px; left: 0; right: 0; 
+            background-color: white; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); 
+            padding: 20px 15px; overflow-y: auto; z-index: 10; 
         }
 
-        /* Layout do Mapa */
-        #mapa-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 45vh;
-            background-color: #e5e3df;
-            z-index: 1;
+        #barra-acoes-inferior { 
+            position: absolute; bottom: 0; left: 0; right: 0; height: 165px; 
+            background-color: white; padding: 10px 15px; z-index: 30; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); 
         }
 
-        #mapa {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Botão do Menu Hambúrguer */
-        .btn-menu {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            width: 48px;
-            height: 48px;
-            background-color: white;
-            border-radius: 50%;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: none;
-            cursor: pointer;
-            font-size: 20px;
-        }
-
-        /* Menu Lateral / Dropdown de Opções */
-        #menu-opcoes {
-            display: none;
-            position: absolute;
-            top: 75px;
-            left: 15px;
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-            z-index: 2000;
-            flex-direction: column;
-            width: 280px;
-            overflow: hidden;
-        }
-
-        .menu-header {
-            background-color: #f8fafc;
-            padding: 16px;
-            font-weight: bold;
-            font-size: 14px;
-            border-bottom: 1px solid #e2e8f0;
-            color: #334155;
-        }
-
-        .menu-item {
-            padding: 16px 20px;
-            font-size: 15px;
-            font-weight: 600;
-            color: #1e293b;
-            border-bottom: 1px solid #f1f5f9;
-            cursor: pointer;
-            background: none;
-            border: none;
-            text-align: left;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .menu-item:active {
-            background-color: #f8fafc;
-        }
-
-        /* Bottom Sheet - Lista Dinâmica de Entregas */
-        #bottom-sheet {
-            position: absolute;
-            top: 45vh;
-            bottom: 165px;
-            left: 0;
-            right: 0;
-            background-color: white;
-            border-radius: 24px 24px 0 0;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
-            padding: 20px 16px 10px 16px;
-            overflow-y: auto;
-            z-index: 10;
-        }
-
-        .item-lista {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .item-lista.ativo {
-            background-color: #eff6ff;
-            border-color: var(--cor-azul-rota);
-        }
-
-        .item-lista.entregue {
-            border-left: 5px solid var(--cor-verde);
-            opacity: 0.7;
-        }
-
-        .item-lista.falhou {
-            border-left: 5px solid var(--cor-vermelho);
-            opacity: 0.7;
-        }
-
-        .item-info {
-            flex: 1;
-            padding-right: 10px;
-        }
-
-        .item-codigo {
-            font-weight: 700;
-            font-size: 15px;
-            color: #0f172a;
-            margin-bottom: 2px;
-        }
-
-        .item-endereco {
-            font-size: 12px;
-            color: #64748b;
-            line-height: 1.4;
-        }
-
-        .badge-status {
-            font-size: 11px;
-            font-weight: 700;
-            padding: 4px 8px;
-            border-radius: 6px;
-            text-transform: uppercase;
-        }
-
-        .status-pendente { background: #e2e8f0; color: #475569; }
-        .status-entregue { background: #dcfce7; color: #15803d; }
-        .status-falhou { background: #fee2e2; color: #b91c1c; }
-
-        /* Widget Flutuante Detalhado Mode Escuro */
-        #widget-escuro {
-            position: absolute;
-            bottom: 180px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 92%;
-            max-width: 390px;
-            background-color: var(--bg-escuro);
-            color: white;
-            border-radius: 16px;
-            padding: 16px;
-            z-index: 20;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            display: none;
-        }
-
-        #widget-escuro h3 {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 4px;
-            color: #fff;
-        }
-
-        #widget-escuro p {
-            font-size: 12px;
-            color: #9ca3af;
-            line-height: 1.4;
-        }
-
-        /* Barra de Ações Inferior Fixa */
-        #barra-acoes-inferior {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 165px;
-            background-color: white;
-            padding: 15px 16px;
-            z-index: 30;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.04);
-            border-top: 1px solid #f1f5f9;
-        }
-
-        .painel-contadores {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 700;
-            font-size: 14px;
-            color: #334155;
-            margin-bottom: 15px;
-            padding: 0 4px;
-        }
-
-        .destaque-contador {
-            color: var(--cor-laranja);
-            font-weight: 800;
-        }
-
-        .destaque-saldo {
-            color: var(--cor-verde);
-            font-weight: 800;
-        }
-
-        .linha-3-botoes {
-            display: flex;
-            gap: 12px;
-            width: 100%;
-        }
-
-        .btn-acao-dark {
-            flex: 1;
-            background-color: var(--bg-botoes);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 14px 8px;
-            font-weight: 700;
-            font-size: 13px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: background-color 0.2s;
-        }
-
-        .btn-acao-dark:active {
-            background-color: #11131c;
-        }
-
-        .btn-acao-dark.btn-navegar { background-color: var(--cor-azul-rota); }
-        .btn-acao-dark.btn-falhou { background-color: #374151; }
-        .btn-acao-dark.btn-entregue { background-color: var(--cor-verde); }
-
-        .btn-acao-dark svg {
-            width: 20px;
-            height: 20px;
-            margin-bottom: 6px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 2.5;
-        }
-
-        /* Estilização Customizada do Marcador do Leaflet */
-        .marker-pin-custom {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 30px;
-            height: 30px;
-            border-radius: 50% 50% 50% 0;
-            background: var(--cor-azul-rota);
-            transform: rotate(-45deg);
-            border: 2px solid white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
-        .marker-pin-custom span {
-            transform: rotate(45deg);
-            color: white;
-            font-weight: 800;
-            font-size: 11px;
-        }
-
-        .marker-pin-custom.concluido {
-            background: var(--cor-verde);
-        }
-
-        .marker-pin-custom.erro {
-            background: var(--cor-vermelho);
-        }
-
-        /* Estilo customizado para o input do tipo File */
-        .file-wrapper {
-            position: relative;
-            width: 100%;
-            max-width: 340px;
-            height: 120px;
-            border: 2px dashed var(--cor-laranja);
-            border-radius: 14px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background-color: #fff7ed;
-            margin-bottom: 20px;
-            cursor: pointer;
-        }
-
-        .file-wrapper input[type="file"] {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .file-wrapper p {
-            font-size: 13px;
-            color: #c2410c;
-            font-weight: 600;
-            margin-top: 8px;
-            text-align: center;
-            padding: 0 10px;
+        .linha-3-botoes { display: flex; gap: 10px; width: 100%; margin-top: 10px; }
+        .btn-acao-dark { 
+            flex: 1; background-color: var(--bg-botoes); color: white; border: none; 
+            border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px;
         }
     </style>
 </head>
 <body>
 
-    <!-- TELA 1: AUTENTICAÇÃO / LOGIN -->
     <div id="tela-login" class="tela-full">
-        <div class="titulo-tela">🚀 RotaFacil</div>
-        <div class="subtitulo-tela">Insira suas credenciais para acessar o painel operacional.</div>
-        <input type="email" id="in-email" class="input-padrao" placeholder="Seu e-mail de acesso">
-        <input type="password" id="in-pass" class="input-padrao" placeholder="Sua senha secreta">
-        <button class="btn-principal" onclick="SistemaControle.executarLogin()">Autenticar no Sistema</button>
-        <button class="link-alternativo" onclick="SistemaControle.irParaTelaCadastro()">Não tem conta? Cadastre-se</button>
+        <h1>🔐 AppEgg Login</h1>
+        <input type="email" id="in-email" placeholder="Email" style="padding: 15px; width: 80%; max-width: 300px; margin: 10px; border: 1px solid #ccc; border-radius: 8px;">
+        <input type="password" id="in-pass" placeholder="Senha" style="padding: 15px; width: 80%; max-width: 300px; margin: 10px; border: 1px solid #ccc; border-radius: 8px;">
+        <button class="btn-principal" onclick="tentarLogin()">Entrar</button>
     </div>
 
-    <!-- TELA DE CADASTRO -->
-    <div id="tela-cadastro" class="tela-full" style="display:none;">
-        <div class="titulo-tela">📝 Criar Conta</div>
-        <div class="subtitulo-tela">Registre uma nova conta de operador para utilizar o RotaFacil.</div>
-        <input type="text" id="cad-nome" class="input-padrao" placeholder="Nome Completo">
-        <input type="email" id="cad-email" class="input-padrao" placeholder="E-mail de Acesso">
-        <input type="password" id="cad-pass" class="input-padrao" placeholder="Defina sua senha">
-        <button class="btn-principal" onclick="SistemaControle.executarCadastro()">Finalizar Registro</button>
-        <button class="link-alternativo" onclick="SistemaControle.irParaTelaLogin()">Já possui conta? Fazer Login</button>
-    </div>
-
-    <!-- TELA 2: COMPRA DE CRÉDITOS PRE-PAGO VIA PIX -->
     <div id="tela-comprar" class="tela-full" style="display:none;">
-        <div class="titulo-tela">💰 Carteira de Créditos</div>
-        <div class="subtitulo-tela">Para carregar e processar planilhas de rotas, adicione saldo à sua conta.</div>
-        
-        <div class="box-pix">
-            <div style="font-size: 14px; font-weight: 700; color: #1e293b;">PACOTE PADRÃO OPERACIONAL</div>
-            <div class="preco-pix">R$ 20,00</div>
-            <div style="font-size: 12px; color: #16a34a; font-weight: 600;">Garante o processamento de 1000 pacotes<br>(Custo de R$ 0,02 por rota)</div>
+        <h1 style="color: var(--cor-laranja);">💰 Saldo Insuficiente</h1>
+        <p>Você precisa de créditos para processar rotas. (2 centavos por pacote)</p>
+        <div style="background: #f0fdf4; padding: 20px; border-radius: 12px; text-align: center; border: 2px solid var(--cor-verde); width: 90%; max-width: 350px;">
+            <h2>1000 Pacotes = R$ 20,00</h2>
+            <button class="btn-principal" onclick="comprarCreditos()">Pagar via PIX (Simulado)</button>
         </div>
-
-        <button class="btn-principal" style="background-color: var(--cor-verde); box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);" onclick="SistemaControle.confirmarPagamentoPix()">Simular Pagamento PIX</button>
-        <button onclick="SistemaControle.fecharModal('tela-comprar')" style="margin-top: 20px; border: none; background: none; color: #64748b; font-weight: 600; font-size: 14px; cursor: pointer;">Voltar para o Painel</button>
+        <button onclick="fecharTela('tela-comprar')" style="margin-top: 20px; border:none; background:none; color:gray;">Voltar</button>
     </div>
 
-    <!-- TELA 3: CARREGAMENTO INICIAL DE ARQUIVOS (SETUP DE ROTA) -->
     <div id="tela-setup" class="tela-full" style="display:none;">
-        <div class="titulo-tela">📦 Carregar Entregas</div>
-        <div id="info-creditos-setup" class="subtitulo-tela" style="color: var(--cor-azul-rota); font-weight: 700;">Verificando créditos...</div>
-        
-        <div class="file-wrapper">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-            <p id="label-arquivo">Toque para selecionar arquivo (PDF, XLSX, CSV, TXT)</p>
-            <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" onchange="SistemaControle.atualizarNomeArquivo(this)">
-        </div>
-
-        <button class="btn-principal" onclick="SistemaControle.processarArquivoEntregas()">Processar e Otimizar Rota Ativa</button>
-        <button id="btn-ignorar-setup" onclick="SistemaControle.fecharModal('tela-setup')" style="margin-top: 20px; border: none; background: none; color: #94a3b8; font-weight: 600; font-size: 13px; cursor: pointer; display: none;">Visualizar rota anterior</button>
+        <h1 style="color: #ea580c;">📦 AppEgg Rota Fácil</h1>
+        <p id="info-creditos" style="font-weight: bold; color: var(--cor-azul-rota);"></p>
+        <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="padding: 15px; border: 2px dashed #ea580c; width: 80%; max-width: 300px;">
+        <button class="btn-principal" onclick="processarArquivoFisico()">Processar Rota Ativa</button>
     </div>
 
-    <!-- TELA PRINCIPAL: MAPA INTERATIVO -->
-    <div id="mapa-container">
-        <div id="mapa"></div>
-    </div>
+    <div id="mapa-container"><div id="mapa"></div></div>
+    <button class="btn-menu" onclick="toggleMenu()">☰</button>
     
-    <!-- Botão do Menu Hambúrguer -->
-    <button class="btn-menu" onclick="SistemaControle.alternarMenuOpcoes()">☰</button>
-    
-    <!-- Menu Dropdown Lateral de Controle -->
     <div id="menu-opcoes">
-        <div id="label-role-menu" class="menu-header">Operação: RotaFacil Pro</div>
-        <div style="padding: 12px 20px; font-weight: 800; font-size: 13px; color: var(--cor-azul-rota); background-color: #eff6ff;">
-            Carteira: <span id="menu-saldo">0</span> un. restantes
-        </div>
-        <button class="menu-item" onclick="SistemaControle.abrirModalCompra()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            Comprar Créditos (PIX)
-        </button>
-        <button class="menu-item" onclick="SistemaControle.forçarReotimizacaoTSP()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-            Forçar Otimização (TSP)
-        </button>
-        <button class="menu-item" onclick="SistemaControle.abrirModalSetupRapido()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Importar Novo Arquivo
-        </button>
-        <button class="menu-item" onclick="SistemaControle.limparSessaoGeral()" style="color: var(--cor-vermelho); background-color: #fef2f2;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-            Encerrar Sessão / Sair
-        </button>
+        <div style="padding: 15px; font-weight: bold; border-bottom: 2px solid #eee;">Saldo: <span id="menu-saldo">0</span> pacotes</div>
+        <button class="menu-item" onclick="abrirTelaComprar()">➕ Comprar Créditos</button>
+        <button class="menu-item" onclick="executarOtimizacaoTSP()">⚡ Otimizar Rota</button>
+        <button class="menu-item" onclick="limparSessao()" style="color: #dc2626;">🗑️ Sair/Limpar</button>
     </div>
 
-    <!-- Lista Deslizante de Paradas das Rotas (Bottom Sheet) -->
     <div id="bottom-sheet">
-        <div id="container-lista">
-            <!-- Injetado dinamicamente via engine javascript -->
-        </div>
+        <div id="container-lista"></div>
     </div>
 
-    <!-- Widget Informativo Flutuante em Dark Mode -->
-    <div id="widget-escuro">
-        <h3 id="wg-rua">Carregando próxima parada...</h3>
-        <p id="wg-detalhe">Nenhum dado ativo no momento.</p>
-    </div>
-
-    <!-- Barra de Navegação e Ação Operacional Fixa na Base -->
     <div id="barra-acoes-inferior">
-        <div class="painel-contadores">
-            <span>Pacotes Pendentes: <span id="contador-restantes" class="destaque-contador">0</span></span>
-            <span>Créditos: <span id="saldo-atual" class="destaque-saldo">0</span></span>
+        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px;">
+            <span>Restantes: <span id="contador-restantes">0</span></span>
+            <span>Créditos: <span id="saldo-atual">0</span></span>
         </div>
         <div class="linha-3-botoes">
-            <button class="btn-acao-dark btn-navegar" onclick="SistemaControle.abrirGpsExterno()">
-                <svg viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                Navegar GPS
-            </button>
-            <button class="btn-acao-dark btn-falhou" onclick="SistemaControle.atualizarStatusEntrega('falhou')">
-                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                Falhou
-            </button>
-            <button class="btn-acao-dark btn-entregue" onclick="SistemaControle.atualizarStatusEntrega('entregue')">
-                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                Entregue
-            </button>
+            <button class="btn-acao-dark" onclick="navegarApp()">Navegar</button>
+            <button class="btn-acao-dark" onclick="registrarAcaoFinal('falhou')">Falhou</button>
+            <button class="btn-acao-dark" onclick="registrarAcaoFinal('entregue')">Entregue</button>
         </div>
     </div>
 
     <script>
-        /**
-         * ENGINE CENTRAL - ROTAFACIL MOTOR LOGÍSTICO E FINANCEIRO
-         */
-        
+        let usuario = JSON.parse(localStorage.getItem('appegg_user')) || {email: '', saldo: 0};
+        let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
+        let map;
+        let indexAtivo = null;
+
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        const SistemaControle = {
-            // Gerenciamento de Estados do Core
-            usuario: JSON.parse(localStorage.getItem('rotafacil_user')) || null,
-            bancoRotas: JSON.parse(localStorage.getItem('rotafacil_db_rotas')) || [],
-            indexAtivo: null,
-            mapaObjeto: null,
-            camadaMarcadores: null,
-
-            // Credenciais Fixas do Administrador do Sistema
-            ADMIN_CREDENTIALS: {
-                email: "milton.amaral.pereira88@gmail.com",
-                senha: "*Mespykes007",
-                role: "Administrador"
-            },
-
-            inicializarInstancia: function() {
-                this.montarMapaBase();
-                
-                if (this.usuario && this.usuario.email) {
-                    this.esconderTodasAsTelasIniciais();
-                    if (this.bancoRotas && this.bancoRotas.length > 0) {
-                        document.getElementById('btn-ignorar-setup').style.display = 'block';
-                    }
-                    this.abrirModalSetupRapido();
-                } else {
-                    this.irParaTelaLogin();
-                }
-                this.sincronizarComponentesUIFinanceira();
-            },
-
-            montarMapaBase: function() {
-                this.mapaObjeto = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
-                }).addTo(this.mapaObjeto);
-                
-                this.camadaMarcadores = L.layerGroup().addTo(this.mapaObjeto);
-            },
-
-            irParaTelaCadastro: function() {
-                document.getElementById('tela-login').style.display = 'none';
-                document.getElementById('tela-cadastro').style.display = 'flex';
-            },
-
-            irParaTelaLogin: function() {
-                document.getElementById('tela-cadastro').style.display = 'none';
-                document.getElementById('tela-login').style.display = 'flex';
-            },
-
-            esconderTodasAsTelasIniciais: function() {
-                document.getElementById('tela-login').style.display = 'none';
-                document.getElementById('tela-cadastro').style.display = 'none';
-            },
-
-            executarLogin: function() {
-                const emailInput = document.getElementById('in-email').value.trim();
-                const senhaInput = document.getElementById('in-pass').value.trim();
-
-                if (!emailInput || !senhaInput) {
-                    alert("Por favor, preencha todos os campos obrigatórios de autenticação.");
-                    return;
-                }
-
-                // 1. Verificação do Perfil Administrador Hardcoded
-                if (emailInput === this.ADMIN_CREDENTIALS.email && senhaInput === this.ADMIN_CREDENTIALS.senha) {
-                    let cacheAdmin = JSON.parse(localStorage.getItem('rotafacil_user_cache_' + btoa(emailInput)));
-                    this.usuario = {
-                        nome: "Milton Amaral Pereira",
-                        email: emailInput,
-                        role: "Administrador",
-                        saldo: cacheAdmin ? cacheAdmin.saldo : 5000 // Admin começa com bônus caso novo
-                    };
-                    this.salvarEstadoUsuario();
-                    alert("Bem-vindo de volta, Administrador Milton!");
-                    this.concluirAutenticacaoFluxo();
-                    return;
-                }
-
-                // 2. Verificação de Contas Cadastradas Localmente
-                const chaveUsuario = 'rotafacil_user_cache_' + btoa(emailInput);
-                const contaLocal = JSON.parse(localStorage.getItem(chaveUsuario));
-
-                if (contaLocal && contaLocal.senha === senhaInput) {
-                    this.usuario = {
-                        nome: contaLocal.nome,
-                        email: contaLocal.email,
-                        role: "Operador",
-                        saldo: contaLocal.saldo
-                    };
-                    this.salvarEstadoUsuario();
-                    this.concluirAutenticacaoFluxo();
-                } else {
-                    alert("Credenciais Inválidas! Verifique o e-mail e a senha informados.");
-                }
-            },
-
-            executarCadastro: function() {
-                const nome = document.getElementById('cad-nome').value.trim();
-                const email = document.getElementById('cad-email').value.trim();
-                const senha = document.getElementById('cad-pass').value.trim();
-
-                if (!nome || !email || !senha) {
-                    alert("Todos os campos do formulário são obrigatórios para a criação da conta.");
-                    return;
-                }
-
-                if (email === this.ADMIN_CREDENTIALS.email) {
-                    alert("Este endereço de e-mail é reservado para o administrador do sistema.");
-                    return;
-                }
-
-                const chaveUsuario = 'rotafacil_user_cache_' + btoa(email);
-                
-                if (localStorage.getItem(chaveUsuario)) {
-                    alert("Este endereço de e-mail já se encontra registrado no sistema.");
-                    return;
-                }
-
-                const novaConta = {
-                    nome: nome,
-                    email: email,
-                    senha: senha,
-                    saldo: 0 // Inicia zerado até recarga via PIX
-                };
-
-                localStorage.setItem(chaveUsuario, JSON.stringify(novaConta));
-                alert("Conta criada com sucesso! Faça login para continuar.");
-                this.irParaTelaLogin();
-            },
-
-            concluirAutenticacaoFluxo: function() {
-                this.esconderTodasAsTelasIniciais();
-                if (this.bancoRotas && this.bancoRotas.length > 0) {
-                    document.getElementById('btn-ignorar-setup').style.display = 'block';
-                }
-                document.getElementById('label-role-menu').innerText = `Perfil: ${this.usuario.role}`;
-                this.abrirModalSetupRapido();
-            },
-
-            abrirModalCompra: function() {
-                this.ocultarMenuOpcoes();
-                document.getElementById('tela-comprar').style.display = 'flex';
-            },
-
-            confirmarPagamentoPix: function() {
-                // Modelo Comercial: R$ 20,00 = 1000 pacotes (R$ 0,02 cada)
-                this.usuario.saldo += 1000;
-                this.salvarEstadoUsuario();
-
-                // CADASTRO DO PIX NO HISTÓRICO FINANCEIRO (ADMIN / USUÁRIO)
-                let historicoPix = JSON.parse(localStorage.getItem('rotafacil_financeiro_pix')) || [];
-                const novoRegistroPix = {
-                    id: 'PIX_' + Date.now(),
-                    usuarioEmail: this.usuario.email,
-                    perfil: this.usuario.role,
-                    valor: 20.00,
-                    creditosInjetados: 1000,
-                    dataHora: new Date().toISOString()
-                };
-                historicoPix.push(novoRegistroPix);
-                localStorage.setItem('rotafacil_financeiro_pix', JSON.stringify(historicoPix));
-                
-                this.sincronizarComponentesUIFinanceira();
-                
-                alert(`Pagamento PIX Confirmado!\n\nForam adicionados 1.000 créditos à conta.\nRegistro salvo com sucesso para o perfil ${this.usuario.role}.`);
-                document.getElementById('tela-comprar').style.display = 'none';
-            },
-
-            abrirModalSetupRapido: function() {
-                this.ocultarMenuOpcoes();
-                document.getElementById('tela-setup').style.display = 'flex';
-                this.sincronizarComponentesUIFinanceira();
-            },
-
-            fecharModal: function(idComponente) {
-                document.getElementById(idComponente).style.display = 'none';
-                if (this.bancoRotas && this.bancoRotas.length > 0) {
-                    this.renderizarListaDom();
-                    this.atualizarFluxoMapa();
-                }
-            },
-
-            atualizarNomeArquivo: function(inputElement) {
-                const label = document.getElementById('label-arquivo');
-                if (inputElement.files && inputElement.files.length > 0) {
-                    label.innerText = `Arquivo Pronto: ${inputElement.files[0].name}`;
-                    label.style.color = "var(--cor-verde)";
-                } else {
-                    label.innerText = "Toque para selecionar arquivo (PDF, XLSX, CSV, TXT)";
-                    label.style.color = "#c2410c";
-                }
-            },
-
-            processarArquivoEntregas: function() {
-                const seletorArquivos = document.getElementById('arquivoPlanilha');
-                if (!seletorArquivos.files || seletorArquivos.files.length === 0) {
-                    alert("Selecione um arquivo de manifesto ou planilha para continuar.");
-                    return;
-                }
-
-                const arquivoAlvo = seletorArquivos.files[0];
-                const leitorInstancia = new FileReader();
-
-                if (arquivoAlvo.name.toLowerCase().endsWith('.pdf')) {
-                    leitorInstancia.onload = async (evento) => {
-                        try {
-                            const arrayBuffer = evento.target.result;
-                            const carregamentoPdf = await pdfjsLib.getDocument(new Uint8Array(arrayBuffer)).promise;
-                            let stringTextoCompleto = "";
-
-                            for (let paginaAtual = 1; paginaAtual <= carregamentoPdf.numPages; paginaAtual++) {
-                                const paginaObjeto = await carregamentoPdf.getPage(paginaAtual);
-                                const conteudoTexto = await paginaObjeto.getTextContent();
-                                conteudoTexto.items.forEach(itemStr => {
-                                    stringTextoCompleto += itemStr.str + " ";
-                                });
-                            }
-                            this.fazerParsingEFiltragemDados(stringTextoCompleto);
-                        } catch (erroPdf) {
-                            alert("Falha no processamento do arquivo PDF.");
-                        }
-                    };
-                    leitorInstancia.readAsArrayBuffer(arquivoAlvo);
-                } else {
-                    leitorInstancia.onload = (evento) => {
-                        this.fazerParsingEFiltragemDados(evento.target.result);
-                    };
-                    leitorInstancia.readAsText(arquivoAlvo, "UTF-8");
-                }
-            },
-
-            fazerParsingEFiltragemDados: function(textoBruto) {
-                const linhasSeparadas = textoBruto.split(/\r?\n/);
-                let pacotesIdentificados = [];
-                const baseLat = -23.5505;
-                const baseLon = -46.6333;
-
-                for (let i = 0; i < linhasSeparadas.length; i++) {
-                    const linhaCorrente = linhasSeparadas[i].trim();
-                    const detectorCodigoBR = linhaCorrente.match(/(BR\d{11})/i);
-
-                    if (detectorCodigoBR) {
-                        const codigoLimpo = detectorCodigoBR[1].toUpperCase();
-                        let descricaoEndereco = linhaCorrente.replace(detectorCodigoBR[1], '').replace(/[,;|\t]/g, ' ').trim();
-                        
-                        if(descricaoEndereco.length < 5) {
-                            descricaoEndereco = `Endereço Vinculado ao Rastreio ${codigoLimpo}, Centro Expandido`;
-                        }
-
-                        if (!pacotesIdentificados.some(p => p.codigo === codigoLimpo)) {
-                            pacotesIdentificados.push({
-                                codigo: codigoLimpo,
-                                endereco: descricaoEndereco,
-                                status: 'pendente',
-                                lat: baseLat + (Math.random() - 0.5) * 0.09,
-                                lon: baseLon + (Math.random() - 0.5) * 0.09
-                            });
-                        }
-                    }
-                }
-
-                if (pacotesIdentificados.length === 0) {
-                    alert("Nenhum código padrão com prefixo 'BR' seguido por 11 dígitos numéricos foi localizado.");
-                    return;
-                }
-
-                const totalRequeridoDeCreditos = pacotesIdentificados.length;
-                if (this.usuario.saldo < totalRequeridoDeCreditos) {
-                    alert(`Saldo insuficiente!\n\nEste arquivo contém ${totalRequeridoDeCreditos} pacotes.\nSeu saldo atual é de ${this.usuario.saldo} créditos.\n\nPor favor, adicione fundos.`);
-                    document.getElementById('tela-setup').style.display = 'none';
-                    this.abrirModalCompra();
-                    return;
-                }
-
-                this.usuario.saldo -= totalRequeridoDeCreditos;
-                this.salvarEstadoUsuario();
-
-                this.bancoRotas = pacotesIdentificados;
-                this.salvarBancoRotas();
-                this.processarAlgoritmoTSP();
-                
-                document.getElementById('tela-setup').style.display = 'none';
-                this.indexAtivo = this.bancoRotas.length > 0 ? 0 : null;
-                
-                this.renderizarListaDom();
-                this.atualizarFluxoMapa();
-                this.sincronizarComponentesUIFinanceira();
-                
-                alert(`Sucesso! Foram faturados ${totalRequeridoDeCreditos} pacotes. Débito de R$ ${(totalRequeridoDeCreditos * 0.02).toFixed(2)} efetuado.`);
-            },
-
-            calcularDistanciaHarvesine: function(lat1, lon1, lat2, lon2) {
-                const RaioTerraKm = 6371;
-                const diferencaLat = (lat2 - lat1) * Math.PI / 180;
-                const diferencaLon = (lon2 - lon1) * Math.PI / 180;
-                const expressaoA = 
-                    Math.sin(diferencaLat / 2) * Math.sin(diferencaLat / 2) +
-                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(diferencaLon / 2) * Math.sin(diferencaLon / 2);
-                const expressaoC = 2 * Math.atan2(Math.sqrt(expressaoA), Math.sqrt(1 - expressaoA));
-                return RaioTerraKm * expressaoC;
-            },
-
-            processarAlgoritmoTSP: function() {
-                let paradasPendentes = [...this.bancoRotas.filter(r => r.status === 'pendente')];
-                let paradasConcluidas = [...this.bancoRotas.filter(r => r.status !== 'pendente')];
-                
-                if (paradasPendentes.length <= 1) return;
-
-                let sequenciaOtimizada = [];
-                let pontoAtual = paradasPendentes.shift();
-                sequenciaOtimizada.push(pontoAtual);
-                let acumuladorDistanciaTotal = 0;
-
-                while (paradasPendentes.length > 0) {
-                    let menorDistanciaRegistrada = Infinity;
-                    let alvoMaisProximoIndex = -1;
-
-                    for (let j = 0; j < paradasPendentes.length; j++) {
-                        let kmCalculado = this.calcularDistanciaHarvesine(
-                            pontoAtual.lat, pontoAtual.lon,
-                            paradasPendentes[j].lat, paradasPendentes[j].lon
-                        );
-
-                        if (kmCalculado < menorDistanciaRegistrada) {
-                            menorDistanciaRegistrada = kmCalculado;
-                            alvoMaisProximoIndex = j;
-                        }
-                    }
-
-                    if (alvoMaisProximoIndex !== -1) {
-                        acumuladorDistanciaTotal += menorDistanciaRegistrada;
-                        pontoAtual = paradasPendentes.splice(alvoMaisProximoIndex, 1)[0];
-                        sequenciaOtimizada.push(pontoAtual);
-                    }
-                }
-
-                this.bancoRotas = [...paradasConcluidas, ...sequenciaOtimizada];
-                this.salvarBancoRotas();
-            },
-
-            forçarReotimizacaoTSP: function() {
-                if (!this.bancoRotas || this.bancoRotas.length === 0) {
-                    alert("Não há dados carregados para otimização espacial.");
-                    return;
-                }
-                this.processarAlgoritmoTSP();
-                this.renderizarListaDom();
-                this.atualizarFluxoMapa();
-                this.ocultarMenuOpcoes();
-            },
-
-            renderizarListaDom: function() {
-                const boxLista = document.getElementById('container-lista');
-                boxLista.innerHTML = "";
-
-                if (this.bancoRotas.length === 0) {
-                    boxLista.innerHTML = `<div style='text-align:center; padding:30px; color:#94a3b8; font-weight:600; font-size:14px;'>Nenhuma entrega ativa no momento.</div>`;
-                    return;
-                }
-
-                this.bancoRotas.forEach((item, index) => {
-                    const cardElement = document.createElement('div');
-                    cardElement.className = `item-lista ${item.status} ${index === this.indexAtivo ? 'ativo' : ''}`;
-                    
-                    cardElement.innerHTML = `
-                        <div class="item-info">
-                            <div class="item-codigo">#${index + 1} • ${item.codigo}</div>
-                            <div class="item-endereco">${item.endereco}</div>
-                        </div>
-                        <div class="badge-status status-${item.status}">${item.status}</div>
-                    `;
-
-                    cardElement.onclick = () => {
-                        this.selecionarParadaEspecifica(index);
-                    };
-
-                    boxLista.appendChild(cardElement);
-                });
-
-                this.atualizarFocoWidgetsFlutuantes();
-            },
-
-            selecionarParadaEspecifica: function(indexAlvo) {
-                this.indexAtivo = indexAlvo;
-                const cards = document.querySelectorAll('.item-lista');
-                cards.forEach((c, idx) => {
-                    if (idx === indexAlvo) c.classList.add('ativo');
-                    else c.classList.remove('ativo');
-                });
-
-                this.atualizarFocoWidgetsFlutuantes();
-
-                const dadosPonto = this.bancoRotas[this.indexAtivo];
-                if (dadosPonto && this.mapaObjeto) {
-                    this.mapaObjeto.panTo(new L.LatLng(dadosPonto.lat, dadosPonto.lon));
-                }
-            },
-
-            atualizarFocoWidgetsFlutuantes: function() {
-                const widget = document.getElementById('widget-escuro');
-                
-                if (this.indexAtivo === null || !this.bancoRotas[this.indexAtivo]) {
-                    widget.style.display = "none";
-                    return;
-                }
-
-                const entregaCorrente = this.bancoRotas[this.indexAtivo];
-                widget.style.display = "block";
-                document.getElementById('wg-rua').innerText = `Destino #${this.indexAtivo + 1} • ${entregaCorrente.codigo}`;
-                document.getElementById('wg-detalhe').innerText = entregaCorrente.endereco;
-            },
-
-            atualizarFluxoMapa: function() {
-                if (!this.mapaObjeto || !this.camadaMarcadores) return;
-
-                this.camadaMarcadores.clearLayers();
-                let arrayCoordenadasLinha = [];
-
-                this.bancoRotas.forEach((ponto, idx) => {
-                    let marcadorClasseExtra = "";
-                    if (ponto.status === 'entregue') marcadorClasseExtra = "concluido";
-                    if (ponto.status === 'falhou') marcadorClasseExtra = "erro";
-
-                    const iconeHtmlCustomizado = L.divIcon({
-                        className: '',
-                        html: `<div class="marker-pin-custom ${marcadorClasseExtra}"><span>${idx + 1}</span></div>`,
-                        iconSize: [30, 42],
-                        iconAnchor: [15, 42]
-                    });
-
-                    const marcadorMapaInstancia = L.marker([ponto.lat, ponto.lon], { icon: iconeHtmlCustomizado });
-                    marcadorMapaInstancia.bindPopup(`<b>Entrega #${idx + 1}</b><br>${ponto.codigo}<br>${ponto.endereco}`);
-                    this.camadaMarcadores.addLayer(marcadorMapaInstancia);
-
-                    if (ponto.status === 'pendente') {
-                        arrayCoordenadasLinha.push([ponto.lat, ponto.lon]);
-                    }
-                });
-
-                if (arrayCoordenadasLinha.length > 1) {
-                    const linhaTrajeto = L.polyline(arrayCoordenadasLinha, {
-                        color: 'var(--cor-azul-rota)',
-                        weight: 4,
-                        opacity: 0.7,
-                        dashArray: '8, 8'
-                    });
-                    this.camadaMarcadores.addLayer(linhaTrajeto);
-                }
-
-                if (this.bancoRotas.length > 0) {
-                    const grupoPontos = L.featureGroup(this.camadaMarcadores.getLayers());
-                    this.mapaObjeto.fitBounds(grupoPontos.getBounds().pad(0.15));
-                }
-            },
-
-            atualizarStatusEntrega: function(novoStatus) {
-                if (this.indexAtivo === null || !this.bancoRotas[this.indexAtivo]) {
-                    alert("Selecione uma entrega na lista antes de alterar o status.");
-                    return;
-                }
-
-                this.bancoRotas[this.indexAtivo].status = novoStatus;
-                this.salvarBancoRotas();
-                
-                this.renderizarListaDom();
-                this.atualizarFluxoMapa();
-                this.sincronizarComponentesUIFinanceira();
-
-                let proximoIndiceEncontrado = null;
-                for (let k = 0; k < this.bancoRotas.length; k++) {
-                    if (this.bancoRotas[k].status === 'pendente') {
-                        proximoIndiceEncontrado = k;
-                        break;
-                    }
-                }
-
-                this.indexAtivo = proximoIndiceEncontrado;
-                this.renderizarListaDom();
-            },
-
-            abrirGpsExterno: function() {
-                if (this.indexAtivo === null || !this.bancoRotas[this.indexAtivo]) {
-                    alert("Escolha um destino ativo para navegar.");
-                    return;
-                }
-                const destinoString = encodeURIComponent(this.bancoRotas[this.indexAtivo].endereco);
-                const urlGoogleMaps = `https://www.google.com/maps/search/?api=1&query=${destinoString}`;
-                window.open(urlGoogleMaps, '_blank');
-            },
-
-            sincronizarComponentesUIFinanceira: function() {
-                const totalRestantesPendentes = this.bancoRotas.filter(r => r.status === 'pendente').length;
-                const saldoExibir = this.usuario ? this.usuario.saldo : 0;
-                
-                document.getElementById('saldo-atual').innerText = saldoExibir;
-                document.getElementById('menu-saldo').innerText = saldoExibir;
-                document.getElementById('contador-restantes').innerText = totalRestantesPendentes;
-
-                const labelSetup = document.getElementById('info-creditos-setup');
-                if (labelSetup) {
-                    labelSetup.innerText = `Créditos Disponíveis na Conta: ${saldoExibir} pacotes`;
-                }
-            },
-
-            alternarMenuOpcoes: function() {
-                const menuEstilo = document.getElementById('menu-opcoes');
-                menuEstilo.style.display = (menuEstilo.style.display === 'flex') ? 'none' : 'flex';
-            },
-
-            ocultarMenuOpcoes: function() {
-                document.getElementById('menu-opcoes').style.display = 'none';
-            },
-
-            salvarEstadoUsuario: function() {
-                if (this.usuario) {
-                    localStorage.setItem('rotafacil_user', JSON.stringify(this.usuario));
-                    // Salva em cache estático persistente para não perder saldo ao deslogar
-                    localStorage.setItem('rotafacil_user_cache_' + btoa(this.usuario.email), JSON.stringify({
-                        nome: this.usuario.nome,
-                        email: this.usuario.email,
-                        saldo: this.usuario.saldo,
-                        senha: this.usuario.email === this.ADMIN_CREDENTIALS.email ? this.ADMIN_CREDENTIALS.senha : (JSON.parse(localStorage.getItem('rotafacil_user_cache_' + btoa(this.usuario.email)))?.senha || "")
-                    }));
-                }
-            },
-
-            salvarBancoRotas: function() {
-                localStorage.setItem('rotafacil_db_rotas', JSON.stringify(this.bancoRotas));
-            },
-
-            limparSessaoGeral: function() {
-                if (confirm("Deseja realmente encerrar a sessão corrente? Seu saldo local de créditos permanecerá salvo na sua conta.")) {
-                    localStorage.removeItem('rotafacil_user');
-                    localStorage.removeItem('rotafacil_db_rotas');
-                    this.usuario = null;
-                    this.bancoRotas = [];
-                    window.location.reload();
-                }
-            }
+        window.onload = () => {
+            inicializarMapa();
+            if (usuario.email) mostrarSetup();
         };
 
-        window.addEventListener('DOMContentLoaded', () => {
-            SistemaControle.inicializarInstancia();
-        });
+        function tentarLogin() {
+            usuario = {email: document.getElementById('in-email').value, saldo: 0};
+            localStorage.setItem('appegg_user', JSON.stringify(usuario));
+            document.getElementById('tela-login').style.display = 'none';
+            mostrarSetup();
+        }
+
+        function abrirTelaComprar() {
+            toggleMenu();
+            document.getElementById('tela-comprar').style.display = 'flex';
+        }
+
+        function fecharTela(id) { document.getElementById(id).style.display = 'none'; }
+
+        function comprarCreditos() {
+            usuario.saldo += 1000;
+            localStorage.setItem('appegg_user', JSON.stringify(usuario));
+            alert("Pagamento confirmado! +1000 créditos.");
+            document.getElementById('tela-comprar').style.display = 'none';
+            atualizarUIFinanceira();
+        }
+
+        function deduzirCreditos(qtd) {
+            usuario.saldo -= qtd;
+            localStorage.setItem('appegg_user', JSON.stringify(usuario));
+            atualizarUIFinanceira();
+        }
+
+        function atualizarUIFinanceira() {
+            document.getElementById('saldo-atual').innerText = usuario.saldo;
+            document.getElementById('menu-saldo').innerText = usuario.saldo;
+            document.getElementById('info-creditos').innerText = `Seu saldo: ${usuario.saldo} pacotes`;
+        }
+
+        function mostrarSetup() {
+            document.getElementById('tela-setup').style.display = 'flex';
+            atualizarUIFinanceira();
+        }
+
+        async function processarArquivoFisico() {
+            const input = document.getElementById('arquivoPlanilha');
+            if(input.files.length === 0) return alert("Selecione um arquivo.");
+            const file = input.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = async (e) => {
+                let texto = e.target.result;
+                if (file.name.endsWith('.pdf')) {
+                    const pdf = await pdfjsLib.getDocument(new Uint8Array(e.target.result)).promise;
+                    texto = "";
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        content.items.forEach(item => texto += item.str + " ");
+                    }
+                }
+                const linhas = texto.split(/\r?\n/);
+                let novasRotas = [];
+                linhas.forEach(linha => {
+                    const match = linha.match(/(BR\d{11})/i);
+                    if (match) {
+                        novasRotas.push({
+                            codigo: match[1].toUpperCase(),
+                            endereco: linha.replace(match[1], '').trim(),
+                            status: 'pendente',
+                            lat: -23.55 + (Math.random() - 0.5) * 0.1,
+                            lon: -46.63 + (Math.random() - 0.5) * 0.1
+                        });
+                    }
+                });
+                if (novasRotas.length === 0) return alert("Nenhum código encontrado.");
+                if (novasRotas.length > usuario.saldo) return alert(`Saldo insuficiente. Você precisa de ${novasRotas.length} créditos.`);
+                
+                deduzirCreditos(novasRotas.length);
+                bdRotas = novasRotas;
+                salvarBD();
+                document.getElementById('tela-setup').style.display = 'none';
+                renderizarLista();
+                atualizarContador();
+            };
+            if (file.name.endsWith('.pdf')) reader.readAsArrayBuffer(file);
+            else reader.readAsText(file);
+        }
+
+        function inicializarMapa() {
+            map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+        }
+
+        function executarOtimizacaoTSP() {
+            toggleMenu();
+            let pendentes = bdRotas.filter(r => r.status === 'pendente');
+            if(pendentes.length <= 1) return alert("Quantidade insuficiente.");
+            let otimizado = [pendentes.shift()];
+            while(pendentes.length > 0) {
+                let atual = otimizado[otimizado.length - 1];
+                let indexMaisProximo = 0;
+                let menorDist = Infinity;
+                for(let i=0; i<pendentes.length; i++) {
+                    let d = Math.sqrt(Math.pow(atual.lat - pendentes[i].lat, 2) + Math.pow(atual.lon - pendentes[i].lon, 2));
+                    if(d < menorDist) { menorDist = d; indexMaisProximo = i; }
+                }
+                otimizado.push(pendentes.splice(indexMaisProximo, 1)[0]);
+            }
+            bdRotas = [...bdRotas.filter(r => r.status !== 'pendente'), ...otimizado];
+            salvarBD();
+            renderizarLista();
+            alert("Rota otimizada com sucesso.");
+        }
+
+        function renderizarLista() {
+            const container = document.getElementById('container-lista');
+            container.innerHTML = '';
+            bdRotas.forEach((e, idx) => {
+                const div = document.createElement('div');
+                div.style.padding = "10px"; div.style.borderBottom = "1px solid #eee";
+                div.innerHTML = `<strong>#${idx + 1} - ${e.codigo}</strong><br>${e.endereco}`;
+                div.onclick = () => { indexAtivo = idx; };
+                container.appendChild(div);
+            });
+        }
+
+        function atualizarContador() { document.getElementById('contador-restantes').innerText = bdRotas.filter(r => r.status === 'pendente').length; }
+        function toggleMenu() { const m = document.getElementById('menu-opcoes'); m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; }
+        function salvarBD() { localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas)); }
+        function limparSessao() { localStorage.clear(); location.reload(); }
+        function navegarApp() {
+            if(indexAtivo === null) return alert("Selecione uma parada.");
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bdRotas[indexAtivo].endereco)}`, '_blank');
+        }
+        function registrarAcaoFinal(status) {
+            if(indexAtivo === null) return alert("Selecione uma parada.");
+            bdRotas[indexAtivo].status = status;
+            salvarBD();
+            renderizarLista();
+            atualizarContador();
+            alert("Status: " + status);
+        }
     </script>
 </body>
 </html>
