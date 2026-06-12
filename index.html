@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>RotaFacil - Gestão Avançada de Entregas</title>
     
+    <!-- Bibliotecas de Processamento de Arquivos e Renderização de Mapas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     
+    <!-- Leaflet Map CSS e JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
@@ -51,6 +53,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            overflow-y: auto;
         }
 
         .titulo-tela {
@@ -98,10 +101,21 @@
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
             transition: opacity 0.2s;
+            margin-bottom: 10px;
         }
 
         .btn-principal:active {
             opacity: 0.9;
+        }
+
+        .link-alternativo {
+            margin-top: 15px;
+            color: var(--cor-azul-rota);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            background: none;
+            border: none;
         }
 
         /* Container do Box de Pagamento PIX */
@@ -445,28 +459,43 @@
 </head>
 <body>
 
+    <!-- TELA 1: AUTENTICAÇÃO / LOGIN -->
     <div id="tela-login" class="tela-full">
         <div class="titulo-tela">🚀 RotaFacil</div>
-        <div class="subtitulo-tela">Insira suas credenciais de acesso para iniciar a jornada de entregas.</div>
+        <div class="subtitulo-tela">Insira suas credenciais para acessar o painel operacional.</div>
         <input type="email" id="in-email" class="input-padrao" placeholder="Seu e-mail de acesso">
         <input type="password" id="in-pass" class="input-padrao" placeholder="Sua senha secreta">
         <button class="btn-principal" onclick="SistemaControle.executarLogin()">Autenticar no Sistema</button>
+        <button class="link-alternativo" onclick="SistemaControle.irParaTelaCadastro()">Não tem conta? Cadastre-se</button>
     </div>
 
+    <!-- TELA DE CADASTRO -->
+    <div id="tela-cadastro" class="tela-full" style="display:none;">
+        <div class="titulo-tela">📝 Criar Conta</div>
+        <div class="subtitulo-tela">Registre uma nova conta de operador para utilizar o RotaFacil.</div>
+        <input type="text" id="cad-nome" class="input-padrao" placeholder="Nome Completo">
+        <input type="email" id="cad-email" class="input-padrao" placeholder="E-mail de Acesso">
+        <input type="password" id="cad-pass" class="input-padrao" placeholder="Defina sua senha">
+        <button class="btn-principal" onclick="SistemaControle.executarCadastro()">Finalizar Registro</button>
+        <button class="link-alternativo" onclick="SistemaControle.irParaTelaLogin()">Já possui conta? Fazer Login</button>
+    </div>
+
+    <!-- TELA 2: COMPRA DE CRÉDITOS PRE-PAGO VIA PIX -->
     <div id="tela-comprar" class="tela-full" style="display:none;">
-        <div class="titulo-tela">💰 Saldo Zerado!</div>
-        <div class="subtitulo-tela">Para carregar e processar planilhas de rotas, você precisa possuir créditos ativos na carteira.</div>
+        <div class="titulo-tela">💰 Carteira de Créditos</div>
+        <div class="subtitulo-tela">Para carregar e processar planilhas de rotas, adicione saldo à sua conta.</div>
         
         <div class="box-pix">
-            <div style="font-size: 14px; font-weight: 700; color: #1e293b;">PACOTE PADRÃO COMERCIAL</div>
+            <div style="font-size: 14px; font-weight: 700; color: #1e293b;">PACOTE PADRÃO OPERACIONAL</div>
             <div class="preco-pix">R$ 20,00</div>
             <div style="font-size: 12px; color: #16a34a; font-weight: 600;">Garante o processamento de 1000 pacotes<br>(Custo de R$ 0,02 por rota)</div>
         </div>
 
-        <button class="btn-principal" style="background-color: var(--cor-verde); box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);" onclick="SistemaControle.confirmarPagamentoPix()">Simular Pagamento PIX Copia e Cola</button>
+        <button class="btn-principal" style="background-color: var(--cor-verde); box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);" onclick="SistemaControle.confirmarPagamentoPix()">Simular Pagamento PIX</button>
         <button onclick="SistemaControle.fecharModal('tela-comprar')" style="margin-top: 20px; border: none; background: none; color: #64748b; font-weight: 600; font-size: 14px; cursor: pointer;">Voltar para o Painel</button>
     </div>
 
+    <!-- TELA 3: CARREGAMENTO INICIAL DE ARQUIVOS (SETUP DE ROTA) -->
     <div id="tela-setup" class="tela-full" style="display:none;">
         <div class="titulo-tela">📦 Carregar Entregas</div>
         <div id="info-creditos-setup" class="subtitulo-tela" style="color: var(--cor-azul-rota); font-weight: 700;">Verificando créditos...</div>
@@ -478,17 +507,20 @@
         </div>
 
         <button class="btn-principal" onclick="SistemaControle.processarArquivoEntregas()">Processar e Otimizar Rota Ativa</button>
-        <button id="btn-ignorar-setup" onclick="SistemaControle.fecharModal('tela-setup')" style="margin-top: 20px; border: none; background: none; color: #94a3b8; font-weight: 600; font-size: 13px; cursor: pointer; display: none;">Visualizar rota carregada anteriormente</button>
+        <button id="btn-ignorar-setup" onclick="SistemaControle.fecharModal('tela-setup')" style="margin-top: 20px; border: none; background: none; color: #94a3b8; font-weight: 600; font-size: 13px; cursor: pointer; display: none;">Visualizar rota anterior</button>
     </div>
 
+    <!-- TELA PRINCIPAL: MAPA INTERATIVO -->
     <div id="mapa-container">
         <div id="mapa"></div>
     </div>
     
+    <!-- Botão do Menu Hambúrguer -->
     <button class="btn-menu" onclick="SistemaControle.alternarMenuOpcoes()">☰</button>
     
+    <!-- Menu Dropdown Lateral de Controle -->
     <div id="menu-opcoes">
-        <div class="menu-header">Operação: RotaFacil Pro</div>
+        <div id="label-role-menu" class="menu-header">Operação: RotaFacil Pro</div>
         <div style="padding: 12px 20px; font-weight: 800; font-size: 13px; color: var(--cor-azul-rota); background-color: #eff6ff;">
             Carteira: <span id="menu-saldo">0</span> un. restantes
         </div>
@@ -510,16 +542,20 @@
         </button>
     </div>
 
+    <!-- Lista Deslizante de Paradas das Rotas (Bottom Sheet) -->
     <div id="bottom-sheet">
         <div id="container-lista">
-            </div>
+            <!-- Injetado dinamicamente via engine javascript -->
+        </div>
     </div>
 
+    <!-- Widget Informativo Flutuante em Dark Mode -->
     <div id="widget-escuro">
         <h3 id="wg-rua">Carregando próxima parada...</h3>
         <p id="wg-detalhe">Nenhum dado ativo no momento.</p>
     </div>
 
+    <!-- Barra de Navegação e Ação Operacional Fixa na Base -->
     <div id="barra-acoes-inferior">
         <div class="painel-contadores">
             <span>Pacotes Pendentes: <span id="contador-restantes" class="destaque-contador">0</span></span>
@@ -544,43 +580,62 @@
     <script>
         /**
          * ENGINE CENTRAL - ROTAFACIL MOTOR LOGÍSTICO E FINANCEIRO
-         * Arquivo estruturado sem redução para manipulação total via Client-Side.
          */
         
-        // Ajuste global do Worker do PDF.js para renderização em Arrays de Memória
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         const SistemaControle = {
-            // Gerenciamento de Estados do Core persistidos no LocalStorage do Dispositivo
-            usuario: JSON.parse(localStorage.getItem('rotafacil_user')) || { email: '', saldo: 0 },
+            // Gerenciamento de Estados do Core
+            usuario: JSON.parse(localStorage.getItem('rotafacil_user')) || null,
             bancoRotas: JSON.parse(localStorage.getItem('rotafacil_db_rotas')) || [],
             indexAtivo: null,
             mapaObjeto: null,
             camadaMarcadores: null,
 
+            // Credenciais Fixas do Administrador do Sistema
+            ADMIN_CREDENTIALS: {
+                email: "milton.amaral.pereira88@gmail.com",
+                senha: "*Mespykes007",
+                role: "Administrador"
+            },
+
             inicializarInstancia: function() {
                 this.montarMapaBase();
                 
                 if (this.usuario && this.usuario.email) {
-                    document.getElementById('tela-login').style.display = 'none';
+                    this.esconderTodasAsTelasIniciais();
                     if (this.bancoRotas && this.bancoRotas.length > 0) {
                         document.getElementById('btn-ignorar-setup').style.display = 'block';
                     }
                     this.abrirModalSetupRapido();
                 } else {
-                    document.getElementById('tela-login').style.display = 'flex';
+                    this.irParaTelaLogin();
                 }
                 this.sincronizarComponentesUIFinanceira();
             },
 
             montarMapaBase: function() {
-                // Instanciação e configuração inicial do canvas Leaflet Map centrado no Estado de São Paulo
                 this.mapaObjeto = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap contributors'
                 }).addTo(this.mapaObjeto);
                 
                 this.camadaMarcadores = L.layerGroup().addTo(this.mapaObjeto);
+            },
+
+            irParaTelaCadastro: function() {
+                document.getElementById('tela-login').style.display = 'none';
+                document.getElementById('tela-cadastro').style.display = 'flex';
+            },
+
+            irParaTelaLogin: function() {
+                document.getElementById('tela-cadastro').style.display = 'none';
+                document.getElementById('tela-login').style.display = 'flex';
+            },
+
+            esconderTodasAsTelasIniciais: function() {
+                document.getElementById('tela-login').style.display = 'none';
+                document.getElementById('tela-cadastro').style.display = 'none';
             },
 
             executarLogin: function() {
@@ -592,15 +647,79 @@
                     return;
                 }
 
-                // Criação ou restauração da sessão local do RotaFacil
-                this.usuario.email = emailInput;
-                this.salvarEstadoUsuario();
+                // 1. Verificação do Perfil Administrador Hardcoded
+                if (emailInput === this.ADMIN_CREDENTIALS.email && senhaInput === this.ADMIN_CREDENTIALS.senha) {
+                    let cacheAdmin = JSON.parse(localStorage.getItem('rotafacil_user_cache_' + btoa(emailInput)));
+                    this.usuario = {
+                        nome: "Milton Amaral Pereira",
+                        email: emailInput,
+                        role: "Administrador",
+                        saldo: cacheAdmin ? cacheAdmin.saldo : 5000 // Admin começa com bônus caso novo
+                    };
+                    this.salvarEstadoUsuario();
+                    alert("Bem-vindo de volta, Administrador Milton!");
+                    this.concluirAutenticacaoFluxo();
+                    return;
+                }
+
+                // 2. Verificação de Contas Cadastradas Localmente
+                const chaveUsuario = 'rotafacil_user_cache_' + btoa(emailInput);
+                const contaLocal = JSON.parse(localStorage.getItem(chaveUsuario));
+
+                if (contaLocal && contaLocal.senha === senhaInput) {
+                    this.usuario = {
+                        nome: contaLocal.nome,
+                        email: contaLocal.email,
+                        role: "Operador",
+                        saldo: contaLocal.saldo
+                    };
+                    this.salvarEstadoUsuario();
+                    this.concluirAutenticacaoFluxo();
+                } else {
+                    alert("Credenciais Inválidas! Verifique o e-mail e a senha informados.");
+                }
+            },
+
+            executarCadastro: function() {
+                const nome = document.getElementById('cad-nome').value.trim();
+                const email = document.getElementById('cad-email').value.trim();
+                const senha = document.getElementById('cad-pass').value.trim();
+
+                if (!nome || !email || !senha) {
+                    alert("Todos os campos do formulário são obrigatórios para a criação da conta.");
+                    return;
+                }
+
+                if (email === this.ADMIN_CREDENTIALS.email) {
+                    alert("Este endereço de e-mail é reservado para o administrador do sistema.");
+                    return;
+                }
+
+                const chaveUsuario = 'rotafacil_user_cache_' + btoa(email);
                 
-                document.getElementById('tela-login').style.display = 'none';
-                
+                if (localStorage.getItem(chaveUsuario)) {
+                    alert("Este endereço de e-mail já se encontra registrado no sistema.");
+                    return;
+                }
+
+                const novaConta = {
+                    nome: nome,
+                    email: email,
+                    senha: senha,
+                    saldo: 0 // Inicia zerado até recarga via PIX
+                };
+
+                localStorage.setItem(chaveUsuario, JSON.stringify(novaConta));
+                alert("Conta criada com sucesso! Faça login para continuar.");
+                this.irParaTelaLogin();
+            },
+
+            concluirAutenticacaoFluxo: function() {
+                this.esconderTodasAsTelasIniciais();
                 if (this.bancoRotas && this.bancoRotas.length > 0) {
                     document.getElementById('btn-ignorar-setup').style.display = 'block';
                 }
+                document.getElementById('label-role-menu').innerText = `Perfil: ${this.usuario.role}`;
                 this.abrirModalSetupRapido();
             },
 
@@ -610,12 +729,26 @@
             },
 
             confirmarPagamentoPix: function() {
-                // Modelo Comercial: R$ 20,00 = 1000 pacotes (R$ 0,02 cada pacote puxado)
+                // Modelo Comercial: R$ 20,00 = 1000 pacotes (R$ 0,02 cada)
                 this.usuario.saldo += 1000;
                 this.salvarEstadoUsuario();
+
+                // CADASTRO DO PIX NO HISTÓRICO FINANCEIRO (ADMIN / USUÁRIO)
+                let historicoPix = JSON.parse(localStorage.getItem('rotafacil_financeiro_pix')) || [];
+                const novoRegistroPix = {
+                    id: 'PIX_' + Date.now(),
+                    usuarioEmail: this.usuario.email,
+                    perfil: this.usuario.role,
+                    valor: 20.00,
+                    creditosInjetados: 1000,
+                    dataHora: new Date().toISOString()
+                };
+                historicoPix.push(novoRegistroPix);
+                localStorage.setItem('rotafacil_financeiro_pix', JSON.stringify(historicoPix));
+                
                 this.sincronizarComponentesUIFinanceira();
                 
-                alert("Pagamento PIX Confirmado com sucesso pelo Gateway! Foram adicionados 1.000 créditos à sua conta.");
+                alert(`Pagamento PIX Confirmado!\n\nForam adicionados 1.000 créditos à conta.\nRegistro salvo com sucesso para o perfil ${this.usuario.role}.`);
                 document.getElementById('tela-comprar').style.display = 'none';
             },
 
@@ -647,7 +780,7 @@
             processarArquivoEntregas: function() {
                 const seletorArquivos = document.getElementById('arquivoPlanilha');
                 if (!seletorArquivos.files || seletorArquivos.files.length === 0) {
-                    alert("Operação Abortada: Selecione um arquivo válido de manifesto ou planilha para continuar.");
+                    alert("Selecione um arquivo de manifesto ou planilha para continuar.");
                     return;
                 }
 
@@ -670,7 +803,7 @@
                             }
                             this.fazerParsingEFiltragemDados(stringTextoCompleto);
                         } catch (erroPdf) {
-                            alert("Falha Crítica no Motor PDF: O documento está corrompido ou mal formatado.");
+                            alert("Falha no processamento do arquivo PDF.");
                         }
                     };
                     leitorInstancia.readAsArrayBuffer(arquivoAlvo);
@@ -683,11 +816,8 @@
             },
 
             fazerParsingEFiltragemDados: function(textoBruto) {
-                // Expressão Regular precisa capturar padrões de rastreio de pacotes de transporte (ex: BR12345678910)
                 const linhasSeparadas = textoBruto.split(/\r?\n/);
                 let pacotesIdentificados = [];
-
-                // Ponto de Geolocalização central simulado para geração de rota próxima em SP caso falte coordenadas reais
                 const baseLat = -23.5505;
                 const baseLon = -46.6333;
 
@@ -703,7 +833,6 @@
                             descricaoEndereco = `Endereço Vinculado ao Rastreio ${codigoLimpo}, Centro Expandido`;
                         }
 
-                        // Evita duplicidade no mesmo processamento
                         if (!pacotesIdentificados.some(p => p.codigo === codigoLimpo)) {
                             pacotesIdentificados.push({
                                 codigo: codigoLimpo,
@@ -717,27 +846,23 @@
                 }
 
                 if (pacotesIdentificados.length === 0) {
-                    alert("Aviso: Não encontramos nenhum código padrão com prefixo 'BR' seguido por 11 dígitos numéricos neste documento.");
+                    alert("Nenhum código padrão com prefixo 'BR' seguido por 11 dígitos numéricos foi localizado.");
                     return;
                 }
 
-                // VALIDAÇÃO FINANCEIRA E COBRANÇA CRÍTICA: 2 CENTAVOS POR PACOTE EXTRAÍDO DO ARQUIVO
                 const totalRequeridoDeCreditos = pacotesIdentificados.length;
                 if (this.usuario.saldo < totalRequeridoDeCreditos) {
-                    alert(`Operação Bloqueada por Falta de Crédito!\n\nEste arquivo contém ${totalRequeridoDeCreditos} pacotes de rotas identificadas.\nSeu saldo atual é de apenas ${this.usuario.saldo} pacotes.\n\nPor favor, compre mais pacotes de créditos via PIX.`);
+                    alert(`Saldo insuficiente!\n\nEste arquivo contém ${totalRequeridoDeCreditos} pacotes.\nSeu saldo atual é de ${this.usuario.saldo} créditos.\n\nPor favor, adicione fundos.`);
                     document.getElementById('tela-setup').style.display = 'none';
                     this.abrirModalCompra();
                     return;
                 }
 
-                // Deduzindo créditos da carteira do cliente (1 pacote processado = 1 crédito deduzido)
                 this.usuario.saldo -= totalRequeridoDeCreditos;
                 this.salvarEstadoUsuario();
 
                 this.bancoRotas = pacotesIdentificados;
                 this.salvarBancoRotas();
-                
-                // Dispara o algoritmo de otimização de sequência
                 this.processarAlgoritmoTSP();
                 
                 document.getElementById('tela-setup').style.display = 'none';
@@ -747,7 +872,7 @@
                 this.atualizarFluxoMapa();
                 this.sincronizarComponentesUIFinanceira();
                 
-                alert(`Sucesso! Foram processados e faturados ${totalRequeridoDeCreditos} pacotes da rota do arquivo. Débito de R$ ${(totalRequeridoDeCreditos * 0.02).toFixed(2)} efetuado.`);
+                alert(`Sucesso! Foram faturados ${totalRequeridoDeCreditos} pacotes. Débito de R$ ${(totalRequeridoDeCreditos * 0.02).toFixed(2)} efetuado.`);
             },
 
             calcularDistanciaHarvesine: function(lat1, lon1, lat2, lon2) {
@@ -762,17 +887,14 @@
             },
 
             processarAlgoritmoTSP: function() {
-                // Algoritmo do Vizinho Mais Próximo para resolução do Problema do Caixeiro Viajante (TSP)
                 let paradasPendentes = [...this.bancoRotas.filter(r => r.status === 'pendente')];
                 let paradasConcluidas = [...this.bancoRotas.filter(r => r.status !== 'pendente')];
                 
                 if (paradasPendentes.length <= 1) return;
 
                 let sequenciaOtimizada = [];
-                // Define o ponto de partida como o primeiro elemento encontrado
                 let pontoAtual = paradasPendentes.shift();
                 sequenciaOtimizada.push(pontoAtual);
-
                 let acumuladorDistanciaTotal = 0;
 
                 while (paradasPendentes.length > 0) {
@@ -800,18 +922,11 @@
 
                 this.bancoRotas = [...paradasConcluidas, ...sequenciaOtimizada];
                 this.salvarBancoRotas();
-
-                // Regra de Negócio: Velocidade média estabelecida em 30km/h
-                const tempoEstimadoHoras = acumuladorDistanciaTotal / 30;
-                const horasInteiras = Math.floor(tempoEstimadoHoras);
-                const minutosRestantes = Math.round((tempoEstimadoHoras - horasInteiras) * 60);
-
-                alert(`Métrica RotaFacil:\nDistância Total Calculada: ${acumuladorDistanciaTotal.toFixed(2)} km\nTempo de Deslocamento Estimado (Média 30km/h): ${horasInteiras}h e ${minutosRestantes}min.`);
             },
 
             forçarReotimizacaoTSP: function() {
                 if (!this.bancoRotas || this.bancoRotas.length === 0) {
-                    alert("Ação inválida: Não há dados carregados para otimização espacial.");
+                    alert("Não há dados carregados para otimização espacial.");
                     return;
                 }
                 this.processarAlgoritmoTSP();
@@ -825,13 +940,12 @@
                 boxLista.innerHTML = "";
 
                 if (this.bancoRotas.length === 0) {
-                    boxLista.innerHTML = `<div style='text-align:center; padding:30px; color:#94a3b8; font-weight:600; font-size:14px;'>Nenhuma entrega ativa no momento. Importe um arquivo de manifesto.</div>`;
+                    boxLista.innerHTML = `<div style='text-align:center; padding:30px; color:#94a3b8; font-weight:600; font-size:14px;'>Nenhuma entrega ativa no momento.</div>`;
                     return;
                 }
 
                 this.bancoRotas.forEach((item, index) => {
                     const cardElement = document.createElement('div');
-                    // Injeta classes de controle visual do card
                     cardElement.className = `item-lista ${item.status} ${index === this.indexAtivo ? 'ativo' : ''}`;
                     
                     cardElement.innerHTML = `
@@ -854,8 +968,6 @@
 
             selecionarParadaEspecifica: function(indexAlvo) {
                 this.indexAtivo = indexAlvo;
-                
-                // Atualiza o estado visual da lista de elementos do DOM sem recarregá-la inteira
                 const cards = document.querySelectorAll('.item-lista');
                 cards.forEach((c, idx) => {
                     if (idx === indexAlvo) c.classList.add('ativo');
@@ -864,7 +976,6 @@
 
                 this.atualizarFocoWidgetsFlutuantes();
 
-                // Move o centro geométrico do mapa com efeito suave até o marcador correspondente
                 const dadosPonto = this.bancoRotas[this.indexAtivo];
                 if (dadosPonto && this.mapaObjeto) {
                     this.mapaObjeto.panTo(new L.LatLng(dadosPonto.lat, dadosPonto.lon));
@@ -888,9 +999,7 @@
             atualizarFluxoMapa: function() {
                 if (!this.mapaObjeto || !this.camadaMarcadores) return;
 
-                // Limpa os elementos visuais anteriores para redesenho completo das camadas geográficas
                 this.camadaMarcadores.clearLayers();
-
                 let arrayCoordenadasLinha = [];
 
                 this.bancoRotas.forEach((ponto, idx) => {
@@ -898,7 +1007,6 @@
                     if (ponto.status === 'entregue') marcadorClasseExtra = "concluido";
                     if (ponto.status === 'falhou') marcadorClasseExtra = "erro";
 
-                    // Criação do pino vetorial CSS sem imagens externas pesadas
                     const iconeHtmlCustomizado = L.divIcon({
                         className: '',
                         html: `<div class="marker-pin-custom ${marcadorClasseExtra}"><span>${idx + 1}</span></div>`,
@@ -907,8 +1015,6 @@
                     });
 
                     const marcadorMapaInstancia = L.marker([ponto.lat, ponto.lon], { icon: iconeHtmlCustomizado });
-                    
-                    // Vincula balão de informação interno do mapa Leaflet
                     marcadorMapaInstancia.bindPopup(`<b>Entrega #${idx + 1}</b><br>${ponto.codigo}<br>${ponto.endereco}`);
                     this.camadaMarcadores.addLayer(marcadorMapaInstancia);
 
@@ -917,7 +1023,6 @@
                     }
                 });
 
-                // Desenha a linha de conexões geográficas (Trajeto da Rota)
                 if (arrayCoordenadasLinha.length > 1) {
                     const linhaTrajeto = L.polyline(arrayCoordenadasLinha, {
                         color: 'var(--cor-azul-rota)',
@@ -928,7 +1033,6 @@
                     this.camadaMarcadores.addLayer(linhaTrajeto);
                 }
 
-                // Ajusta o zoom automaticamente para enquadrar perfeitamente todas as entregas na tela
                 if (this.bancoRotas.length > 0) {
                     const grupoPontos = L.featureGroup(this.camadaMarcadores.getLayers());
                     this.mapaObjeto.fitBounds(grupoPontos.getBounds().pad(0.15));
@@ -937,7 +1041,7 @@
 
             atualizarStatusEntrega: function(novoStatus) {
                 if (this.indexAtivo === null || !this.bancoRotas[this.indexAtivo]) {
-                    alert("Aviso: Selecione uma entrega na lista abaixo antes de registrar a alteração de status.");
+                    alert("Selecione uma entrega na lista antes de alterar o status.");
                     return;
                 }
 
@@ -948,7 +1052,6 @@
                 this.atualizarFluxoMapa();
                 this.sincronizarComponentesUIFinanceira();
 
-                // Avança de forma automatizada para a próxima rota pendente do fluxo sequencial
                 let proximoIndiceEncontrado = null;
                 for (let k = 0; k < this.bancoRotas.length; k++) {
                     if (this.bancoRotas[k].status === 'pendente') {
@@ -963,37 +1066,31 @@
 
             abrirGpsExterno: function() {
                 if (this.indexAtivo === null || !this.bancoRotas[this.indexAtivo]) {
-                    alert("Por favor, escolha um destino ativo da listagem para traçar as coordenadas do GPS.");
+                    alert("Escolha um destino ativo para navegar.");
                     return;
                 }
-
                 const destinoString = encodeURIComponent(this.bancoRotas[this.indexAtivo].endereco);
-                
-                // Deep Linking inteligente: Abre prioritariamente em ambiente mobile nativo
                 const urlGoogleMaps = `https://www.google.com/maps/search/?api=1&query=${destinoString}`;
                 window.open(urlGoogleMaps, '_blank');
             },
 
             sincronizarComponentesUIFinanceira: function() {
                 const totalRestantesPendentes = this.bancoRotas.filter(r => r.status === 'pendente').length;
+                const saldoExibir = this.usuario ? this.usuario.saldo : 0;
                 
-                document.getElementById('saldo-atual').innerText = this.usuario.saldo;
-                document.getElementById('menu-saldo').innerText = this.usuario.saldo;
+                document.getElementById('saldo-atual').innerText = saldoExibir;
+                document.getElementById('menu-saldo').innerText = saldoExibir;
                 document.getElementById('contador-restantes').innerText = totalRestantesPendentes;
 
                 const labelSetup = document.getElementById('info-creditos-setup');
                 if (labelSetup) {
-                    labelSetup.innerText = `Créditos Disponíveis na Conta: ${this.usuario.saldo} pacotes`;
+                    labelSetup.innerText = `Créditos Disponíveis na Conta: ${saldoExibir} pacotes`;
                 }
             },
 
             alternarMenuOpcoes: function() {
                 const menuEstilo = document.getElementById('menu-opcoes');
-                if (menuEstilo.style.display === 'flex') {
-                    menuEstilo.style.display = 'none';
-                } else {
-                    menuEstilo.style.display = 'flex';
-                }
+                menuEstilo.style.display = (menuEstilo.style.display === 'flex') ? 'none' : 'flex';
             },
 
             ocultarMenuOpcoes: function() {
@@ -1001,7 +1098,16 @@
             },
 
             salvarEstadoUsuario: function() {
-                localStorage.setItem('rotafacil_user', JSON.stringify(this.usuario));
+                if (this.usuario) {
+                    localStorage.setItem('rotafacil_user', JSON.stringify(this.usuario));
+                    // Salva em cache estático persistente para não perder saldo ao deslogar
+                    localStorage.setItem('rotafacil_user_cache_' + btoa(this.usuario.email), JSON.stringify({
+                        nome: this.usuario.nome,
+                        email: this.usuario.email,
+                        saldo: this.usuario.saldo,
+                        senha: this.usuario.email === this.ADMIN_CREDENTIALS.email ? this.ADMIN_CREDENTIALS.senha : (JSON.parse(localStorage.getItem('rotafacil_user_cache_' + btoa(this.usuario.email)))?.senha || "")
+                    }));
+                }
             },
 
             salvarBancoRotas: function() {
@@ -1009,14 +1115,16 @@
             },
 
             limparSessaoGeral: function() {
-                if (confirm("Deseja realmente limpar todos os registros locais do RotaFacil e sair?")) {
-                    localStorage.clear();
+                if (confirm("Deseja realmente encerrar a sessão corrente? Seu saldo local de créditos permanecerá salvo na sua conta.")) {
+                    localStorage.removeItem('rotafacil_user');
+                    localStorage.removeItem('rotafacil_db_rotas');
+                    this.usuario = null;
+                    this.bancoRotas = [];
                     window.location.reload();
                 }
             }
         };
 
-        // Disparador de Inicialização Segura da Janela Global DOM
         window.addEventListener('DOMContentLoaded', () => {
             SistemaControle.inicializarInstancia();
         });
