@@ -428,6 +428,19 @@
             } catch (e) { console.log("Áudio indisponível."); }
         }
 
+        function falarTexto(texto) {
+            try {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel(); // Interrompe falas anteriores travadas
+                    const fala = new SpeechSynthesisUtterance(texto);
+                    fala.lang = 'pt-BR';
+                    fala.rate = 1.0;
+                    fala.pitch = 1.0;
+                    window.speechSynthesis.speak(fala);
+                }
+            } catch (e) { console.log("Síntese de voz indisponível."); }
+        }
+
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if(input.files.length === 0) return alert("Selecione um arquivo de rota primeiro.");
@@ -621,7 +634,7 @@
             window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`, '_blank');
         }
 
-        function executarOtimizacaoTSP() {
+        function ejecutarOtimizacaoTSP() {
             toggleMenu();
             if(bdRotas.length <= 2) return alert("Quantidade de paradas insuficiente.");
             
@@ -673,7 +686,11 @@
 
         function fecharScanner() {
             document.getElementById('modalScanner').style.display = 'none';
-            if (html5QrcodeScanner) html5QrcodeScanner.stop();
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner = null;
+                }).catch(err => console.log("Erro ao parar scanner:", err));
+            }
             processandoLeitura = false;
         }
 
@@ -688,10 +705,22 @@
             
             if (idx !== -1) {
                 emitirBip();
+                
+                // Extrai os 4 últimos dígitos do código para falar de forma clara e resumida
+                const ultimosDigitos = bdRotas[idx].codigo.slice(-4);
+                falarTexto(`Parada ${idx + 1}. Final ${ultimosDigitos.split('').join(' ')}`);
+                
                 feedback.innerText = `✅ Parada #${idx + 1} Localizada!`;
                 feedback.style.color = "var(--cor-verde)";
+                
                 ativarWidget(idx);
-                setTimeout(() => { fecharScanner(); }, 1000);
+                
+                // Reseta a trava do scanner após 2.5 segundos para permitir bipar o próximo sem fechar a câmera
+                setTimeout(() => { 
+                    feedback.innerText = "Aguardando leitura do próximo código...";
+                    feedback.style.color = "white";
+                    processandoLeitura = false; 
+                }, 2500);
             } else {
                 feedback.innerText = `❌ Código não listado nesta rota.`;
                 feedback.style.color = "var(--cor-vermelho)";
