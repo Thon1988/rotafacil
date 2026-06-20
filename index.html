@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg Rota Fácil</title>
+    <title>Rota Fácil</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -270,7 +270,7 @@
 <body>
 
     <div id="tela-setup">
-        <h1 style="color: #ea580c;">📦 AppEgg Rota Fácil</h1>
+        <h1 style="color: #ea580c;">📦 Rota Fácil</h1>
         <p style="color: #666; text-align: center;">Carregue sua lista de entregas (PDF, Excel, CSV ou TXT).</p>
         
         <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
@@ -431,7 +431,7 @@
         function falarTexto(texto) {
             try {
                 if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel(); // Interrompe falas anteriores travadas
+                    window.speechSynthesis.cancel();
                     const fala = new SpeechSynthesisUtterance(texto);
                     fala.lang = 'pt-BR';
                     fala.rate = 1.0;
@@ -520,7 +520,7 @@
             linhas.forEach((linha) => {
                 if (linha.trim().length < 5) return;
 
-                const match = linha.match(/(BR\d{11})/i);
+                const match = inline = linha.match(/(BR\d{11})/i);
                 if (!match) return;
 
                 let codigo = match[1].toUpperCase();
@@ -706,7 +706,6 @@
             if (idx !== -1) {
                 emitirBip();
                 
-                // Extrai os 4 últimos dígitos do código para falar de forma clara e resumida
                 const ultimosDigitos = bdRotas[idx].codigo.slice(-4);
                 falarTexto(`Parada ${idx + 1}. Final ${ultimosDigitos.split('').join(' ')}`);
                 
@@ -715,7 +714,6 @@
                 
                 ativarWidget(idx);
                 
-                // Reseta a trava do scanner após 2.5 segundos para permitir bipar o próximo sem fechar a câmera
                 setTimeout(() => { 
                     feedback.innerText = "Aguardando leitura do próximo código...";
                     feedback.style.color = "white";
@@ -755,7 +753,7 @@
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `AppEgg_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
+            link.download = `Rota_Facil_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
             link.click();
         }
 
