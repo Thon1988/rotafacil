@@ -604,8 +604,44 @@
                         const firstSheetName = workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[firstSheetName];
                         
-                        const jsonMatriz = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-                        analisarDadosPlanilhaUnificada(jsonMatriz);
+                        // MOTOR DE PARSING IRRESTRITO: Força leitura via matriz bi-dimensional crua (2D)
+                        // Impede que linhas em branco intermediárias quebrem a importação de mais de 1000 linhas
+                        const jsonMatriz = XLSX.utils.sheet_to_json(worksheet, { 
+                            header: 1, 
+                            blankrows: false, 
+                            defval: "" 
+                        });
+                        
+                        if (jsonMatriz.length === 0) {
+                            throw new Error("A planilha está vazia.");
+                        }
+
+                        // Converte a matriz crua de volta para objetos mapeados de forma flexível pelas colunas
+                        const cabecalho = jsonMatriz[0].map(item => String(item).trim().toLowerCase());
+                        let idxEndereco = cabecalho.findIndex(c => c.includes('address') || c.includes('endereço') || c.includes('endereco'));
+                        let idxId = cabecalho.findIndex(c => c.includes('id') || c.includes('notes') || c.includes('at id'));
+                        let idxLat = cabecalho.findIndex(c => c.includes('latitude') || c.includes('lat'));
+                        let idxLng = cabecalho.findIndex(c => c.includes('longitude') || c.includes('lng') || c.includes('long'));
+
+                        if (idxEndereco === -1) idxEndereco = 1; 
+                        if (idxId === -1) idxId = 3;       
+
+                        let listaObjetosMapeados = [];
+                        for (let i = 1; i < jsonMatriz.length; i++) {
+                            const linha = jsonMatriz[i];
+                            if (!linha || linha.length === 0) continue;
+
+                            let obj = {};
+                            // Injeta as propriedades esperadas pelo analisador unificado subsequente
+                            obj['address'] = linha[idxEndereco] ? String(linha[idxEndereco]).trim() : "";
+                            obj['notes'] = linha[idxId] ? String(linha[idxId]).trim() : "";
+                            obj['latitude'] = idxLat !== -1 && linha[idxLat] ? String(linha[idxLat]).trim() : "";
+                            obj['longitude'] = idxLng !== -1 && linha[idxLng] ? String(linha[idxLng]).trim() : "";
+                            
+                            listaObjetosMapeados.push(obj);
+                        }
+
+                        analisarDadosPlanilhaUnificada(listaObjetosMapeados);
                     } catch(err) {
                         alert("Erro ao ler arquivo Excel: " + err.message);
                         resetarBotaoUpload();
@@ -645,7 +681,7 @@
                 const leitor = new FileReader();
                 leitor.onload = async function() {
                     try {
-                        const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+                        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(this.result) }).promise;
                         let textoCompleto = "";
                         for (let i = 1; i <= pdf.numPages; i++) {
                             const page = await pdf.getPage(i);
@@ -792,10 +828,14 @@
                 let matchCEP = valoresBrutos.match(/(\d{5}-\d{3})/);
 
                 let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
-                let endereco = valoresBrutos.replace(/\s+/g, ' ').trim();
+                
+                // Extração inteligente de endereço das colunas comuns se o join cru trouxer redundâncias
+                let endereco = linha.address || linha.endereco || linha.endereço || valoresBrutos.replace(/\s+/g, ' ').trim();
+                endereco = String(endereco).replace(/\s+/g, ' ').trim();
 
-                let lat = baseLat + (idCounter * 0.0015);
-                let lon = baseLon + (idCounter * 0.0015);
+                // Atribuição de coordenadas geográficas reais se disponíveis na planilha
+                let lat = parseFloat(linha.latitude || linha.lat) || (baseLat + (idCounter * 0.0015));
+                let lon = parseFloat(linha.longitude || linha.lng || linha.long) || (baseLon + (idCounter * 0.0015));
 
                 if (endereco.length > 5) {
                     bdRotas.push({
@@ -805,7 +845,7 @@
                         codigoRastreio: matchBR ? matchBR[1].toUpperCase() : "",
                         codigoAT: matchAT ? matchAT[1].toUpperCase() : "",
                         cep: matchCEP ? matchCEP[1] : "",
-                        horario: "--:--",
+                        horario: linha.horario || linha.time || "--:--",
                         endereco: endereco,
                         status: 'pendente',
                         timestamp: null,
@@ -846,7 +886,6 @@
                 div.className = `item-lista ${e.status !== 'pendente' ? 'concluido' : ''}`;
                 div.onclick = () => activarDesdeMapa(idx);
                 
-                // Renderiza rótulos visuais legíveis exibindo metadados específicos
                 let exibirCodigo = e.codigoRastreio || e.codigoAT || e.codigo;
                 let infoAdicional = e.horario && e.horario !== "--:--" ? `• Chegada: ${e.horario}` : "";
                 if (e.cep) infoAdicional += ` • CEP: ${e.cep}`;
@@ -905,7 +944,6 @@
         function verificarEAtivarWidgetPorCodigo(token) {
             const limpo = token.trim().toUpperCase();
             
-            // Busca avançada por correspondência parcial cruzada nos dois tipos de código
             const idx = bdRotas.findIndex(i => 
                 (i.codigoRastreio && (limpo.includes(i.codigoRastreio) || i.codigoRastreio.includes(limpo))) ||
                 (i.codigoAT && (limpo.includes(i.codigoAT) || i.codigoAT.includes(limpo))) ||
@@ -922,6 +960,10 @@
 
         function abrirAbadeNavegacaoExterna(enderecoCompleto) {
             window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoCompleto)}`, '_blank');
+        }
+
+        function activarDesdeMapa(idx) {
+            ativarWidget(idx);
         }
 
         function activarDesdeMapa(idx) {
@@ -1002,7 +1044,7 @@
             executarOtimizacaoTSP(false);
         }
 
-        function ejecutarOtimizacaoTSP(silencioso = false) {
+        function executarOtimizacaoTSP(silencioso = false) {
             let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
             let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
             
@@ -1048,7 +1090,7 @@
             if(menu) menu.style.display = 'none';
             document.getElementById('modalScanner').style.display = 'flex';
             const feedback = document.getElementById('scannerFeedback');
-            feedback.innerText = "Aguardando leitura do código...";
+            feedback.innerText = "Aguardando leitura do código... ";
             feedback.style.color = "white";
             
             if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
