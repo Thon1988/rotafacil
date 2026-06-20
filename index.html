@@ -23,8 +23,7 @@
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             background-color: #f4f4f9;
             overflow: hidden;
         }
@@ -32,277 +31,106 @@
         #tela-setup {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: white;
-            z-index: 99999;
+            background: white; z-index: 99999;
             padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
         .btn-upload {
-            background: var(--cor-laranja);
-            color: white;
-            border: none;
-            padding: 16px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            width: 100%;
-            max-width: 400px;
-            cursor: pointer;
-            margin-top: 20px;
+            background: var(--cor-laranja); color: white; border: none;
+            padding: 16px; border-radius: 8px; font-size: 16px;
+            font-weight: bold; width: 100%; max-width: 400px;
+            cursor: pointer; margin-top: 20px;
         }
 
         #mapa-container {
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 50vh;
-            background: #e5e3df;
-            z-index: 1;
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 50vh; background: #e5e3df; z-index: 1;
         }
-        #mapa {
-            width: 100%;
-            height: 100%;
-        }
+        #mapa { width: 100%; height: 100%; }
 
         .marker-pin {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            border: 2px solid white;
-            color: white;
-            font-weight: bold;
-            font-size: 13px;
+            display: flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 50%;
+            border: 2px solid white; color: white; font-weight: bold; font-size: 13px;
             box-shadow: 0 3px 6px rgba(0,0,0,0.4);
         }
 
         .btn-menu {
-            position: absolute;
-            top: 20px; left: 20px;
-            width: 45px; height: 45px;
-            background: white;
-            border-radius: 50%;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            border: none;
-            cursor: pointer;
-            z-index: 2001;
-            color: #333;
+            position: absolute; top: 20px; left: 20px;
+            width: 45px; height: 45px; background: white; border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); display: flex;
+            align-items: center; justify-content: center; font-size: 24px;
+            border: none; cursor: pointer; z-index: 2001; color: #333;
         }
 
         #menu-opcoes {
-            display: none;
-            position: absolute;
-            top: 75px; left: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            z-index: 2000;
-            flex-direction: column;
-            width: 260px;
-            overflow: hidden;
+            display: none; position: absolute; top: 75px; left: 20px;
+            background: white; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 2000; flex-direction: column; width: 260px; overflow: hidden;
         }
         .menu-item {
-            padding: 16px 20px;
-            font-size: 15px;
-            font-weight: bold;
-            color: #333;
-            border-bottom: 1px solid #f0f0f0;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: none;
-            border-left: none; border-right: none; border-top: none;
-            text-align: left;
-            width: 100%;
+            padding: 16px 20px; font-size: 15px; font-weight: bold; color: #333;
+            border-bottom: 1px solid #f0f0f0; cursor: pointer; display: flex;
+            align-items: center; gap: 12px; background: none; border: none;
+            text-align: left; width: 100%;
         }
 
         #bottom-sheet {
-            position: absolute;
-            top: 40vh;
-            bottom: 165px;
-            left: 0; right: 0;
-            background: white;
-            border-radius: 20px 20px 0 0;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
-            padding: 20px 15px;
-            overflow-y: auto;
-            z-index: 10;
+            position: absolute; top: 40vh; bottom: 165px; left: 0; right: 0;
+            background: white; border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1); padding: 20px 15px;
+            overflow-y: auto; z-index: 10;
         }
-        .titulo-passo2 {
-            color: #d35400;
-            text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-            margin: 0 0 15px 0;
-        }
+        .titulo-passo2 { color: #d35400; text-align: center; font-size: 20px; font-weight: bold; margin: 0 0 15px 0; }
 
-        .item-lista {
-            border-bottom: 1px solid #eee;
-            padding: 12px 0;
-            cursor: pointer;
-        }
+        .item-lista { border-bottom: 1px solid #eee; padding: 12px 0; cursor: pointer; }
         .item-lista.concluido { opacity: 0.5; }
-        .item-topo {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: bold;
-            font-size: 15px;
-        }
+        .item-topo { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 15px; }
         .parada-titulo { color: #d35400; }
         .parada-codigo { color: #d35400; font-size: 14px; }
-        .parada-endereco {
-            color: #444;
-            font-size: 14px;
-            margin-top: 6px;
-        }
+        .parada-endereco { color: #444; font-size: 14px; margin-top: 6px; }
 
         #widget-escuro {
-            position: absolute;
-            bottom: 175px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 380px;
-            background: var(--bg-escuro);
-            color: white;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-            z-index: 20;
-            display: none;
-            box-sizing: border-box;
-            cursor: pointer;
-            transition: max-height 0.25s ease-out;
+            position: absolute; bottom: 175px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 380px; background: var(--bg-escuro); color: white;
+            border-radius: 12px; padding: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            z-index: 20; display: none; box-sizing: border-box; cursor: pointer;
         }
         
-        .w-topo { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-            font-size: 14px; 
-            color: #aaa; 
-            margin-bottom: 8px;
-        }
-        .w-esquerda {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .widget-controls { 
-            display: flex; 
-            gap: 16px; 
-            align-items: center;
-        }
-        .btn-ctrl { 
-            background: none; 
-            border: none; 
-            color: #aaa; 
-            cursor: pointer; 
-            font-size: 22px; 
-            font-weight: bold; 
-            padding: 4px 8px; 
-        }
+        .w-topo { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #aaa; margin-bottom: 8px; }
+        .w-esquerda { display: flex; align-items: center; gap: 10px; }
+        .widget-controls { display: flex; gap: 12px; align-items: center; }
+        .btn-ctrl { background: none; border: none; color: #aaa; cursor: pointer; font-size: 18px; font-weight: bold; padding: 4px; }
+        .btn-pip { background: #3b82f6; color: white; border: none; padding: 4px 8px; font-size: 11px; border-radius: 4px; font-weight: bold; cursor: pointer; }
         
-        .w-badge { 
-            background: var(--cor-azul-rota); 
-            color: white; 
-            width: 22px; 
-            height: 22px; 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: bold; 
-            font-size: 12px;
-        }
+        .w-badge { background: var(--cor-azul-rota); color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
         .w-rua { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; }
-        .w-sub { font-size: 13px; color: #888; margin: 0; transition: all 0.2s; }
+        .w-sub { font-size: 13px; color: #888; margin: 0; }
         .w-sub.minimizada { display: none; }
 
         #barra-acoes-inferior {
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 165px;
-            background: white;
-            padding: 10px 15px;
-            box-sizing: border-box;
-            z-index: 30;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            position: absolute; bottom: 0; left: 0; right: 0; height: 165px;
+            background: white; padding: 10px 15px; box-sizing: border-box; z-index: 30;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;
         }
 
-        .banner-laranja {
-            background: var(--cor-laranja);
-            color: white;
-            border-radius: 8px;
-            padding: 12px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
+        .banner-laranja { background: var(--cor-laranja); color: white; border-radius: 8px; padding: 12px; text-align: center; font-weight: bold; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .texto-status { text-align: center; color: var(--cor-verde); font-weight: bold; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 5px; }
 
-        .texto-status {
-            text-align: center;
-            color: var(--cor-verde);
-            font-weight: bold;
-            font-size: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-        }
-
-        .linha-3-botoes {
-            display: flex;
-            gap: 10px;
-            width: 100%;
-        }
+        .linha-3-botoes { display: flex; gap: 10px; width: 100%; }
         .btn-acao-dark {
-            flex: 1;
-            background: var(--bg-botoes);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 5px;
-            font-size: 12px;
-            font-weight: bold;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            cursor: pointer;
+            flex: 1; background: var(--bg-botoes); color: white; border: none; border-radius: 8px;
+            padding: 12px 5px; font-size: 12px; font-weight: bold; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 6px; cursor: pointer;
         }
         .btn-acao-dark svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; }
         .btn-acao-dark .icone-verde { stroke: var(--cor-verde); }
         .btn-acao-dark .icone-vermelho { stroke: var(--cor-vermelho); }
 
         #modalScanner {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.95);
-            z-index: 999999;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.95); z-index: 999999; flex-direction: column;
+            align-items: center; justify-content: center; padding: 20px;
         }
     </style>
 </head>
@@ -311,9 +139,7 @@
     <div id="tela-setup">
         <h1 style="color: #ea580c;">📦 Rota Fácil</h1>
         <p style="color: #666; text-align: center;">Carregue sua lista de entregas (Excel, CSV ou PDF).</p>
-        
         <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
-        
         <button class="btn-upload" onclick="processarArquivoFisico()">Processar Rota Ativa</button>
     </div>
 
@@ -342,6 +168,7 @@
                 <span class="w-badge" id="wg-badge">1</span>
             </div>
             <div class="widget-controls">
+                <button class="btn-pip" onclick="ativarWidgetFlutuanteSistema(event)">📱 Flutuar</button>
                 <button class="btn-ctrl" onclick="minimizarWidget(event)">−</button>
                 <button class="btn-ctrl" onclick="fecharWidget(event)">×</button>
             </div>
@@ -385,6 +212,7 @@
         let html5QrcodeScanner = null;
         let indexAtivo = null;
         let processandoLeitura = false;
+        let pipJanela = null;
         
         let map;
         let layerMarkers = [];
@@ -418,11 +246,7 @@
         function monitorarLocalizacaoDispositivo() {
             if ("geolocation" in navigator) {
                 navigator.geolocation.watchPosition((pos) => {
-                    minhaPosicao = {
-                        lat: pos.coords.latitude,
-                        lon: pos.coords.longitude
-                    };
-                    
+                    minhaPosicao = { lat: pos.coords.latitude, lon: pos.coords.longitude };
                     if (map) {
                         if (marcadorUsuario) {
                             marcadorUsuario.setLatLng([minhaPosicao.lat, minhaPosicao.lon]);
@@ -430,19 +254,12 @@
                             let iconeUser = L.divIcon({
                                 className: 'custom-user-wrapper',
                                 html: `<div class="marker-pin" style="background-color: #3b82f6; border-color: #fff; box-shadow: 0 0 10px #3b82f6;">🏠</div>`,
-                                iconSize: [28, 28],
-                                iconAnchor: [14, 14]
+                                iconSize: [28, 28], iconAnchor: [14, 14]
                             });
                             marcadorUsuario = L.marker([minhaPosicao.lat, minhaPosicao.lon], { icon: iconeUser }).addTo(map);
                         }
                     }
-                }, (err) => {
-                    console.log("Aguardando precisão do sinal GPS...");
-                }, {
-                    enableHighAccuracy: true,
-                    maximumAge: 10000,
-                    timeout: 15000
-                });
+                }, null, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
             }
         }
 
@@ -458,11 +275,9 @@
 
         function plotarNoMapa() {
             if (!map) return;
-            
             layerMarkers.forEach(m => map.removeLayer(m));
             layerMarkers = [];
             if (mapPolyline) map.removeLayer(mapPolyline);
-
             if (bdRotas.length === 0) return;
 
             let bounds = [];
@@ -474,55 +289,37 @@
 
             bdRotas.forEach((e, idx) => {
                 let cor = e.status === 'pendente' ? '#ea580c' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
-                
                 let customIcon = L.divIcon({
                     className: 'custom-pin-wrapper',
                     html: `<div class="marker-pin" style="background-color: ${cor};">${idx + 1}</div>`,
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
+                    iconSize: [28, 28], iconAnchor: [14, 14]
                 });
 
                 let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
                 marker.on('click', () => activarDesdeMapa(idx));
-                
                 layerMarkers.push(marker);
                 bounds.push([e.lat, e.lon]);
 
-                if(e.status === 'pendente') {
-                    latlngsLinha.push([e.lat, e.lon]);
-                }
+                if(e.status === 'pendente') latlngsLinha.push([e.lat, e.lon]);
             });
-
-            if (marcadorUsuario && minhaPosicao) {
-                bounds.push([minhaPosicao.lat, minhaPosicao.lon]);
-            }
 
             if(latlngsLinha.length > 1) {
                 mapPolyline = L.polyline(latlngsLinha, {color: '#ea580c', weight: 4, opacity: 0.8, dashArray: '5, 10'}).addTo(map);
             }
-
-            if (bounds.length > 0) {
-                map.fitBounds(bounds, { padding: [40, 40] });
-            }
+            if (bounds.length > 0) map.fitBounds(bounds, { padding: [40, 40] });
         }
 
-        function activarDesdeMapa(idx) {
-            ativarWidget(idx);
-        }
+        function activarDesdeMapa(idx) { ativarWidget(idx); }
 
         function emitirBip() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(950, ctx.currentTime);
+                const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(950, ctx.currentTime);
                 gain.gain.setValueAtTime(0.15, ctx.currentTime);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.12);
-            } catch (e) { console.log("Audio indisponivel."); }
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(); osc.stop(ctx.currentTime + 0.12);
+            } catch (e) {}
         }
 
         function falarTexto(texto) {
@@ -530,10 +327,9 @@
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
                     const fala = new SpeechSynthesisUtterance(texto);
-                    fala.lang = 'pt-BR';
-                    window.speechSynthesis.speak(fala);
+                    fala.lang = 'pt-BR'; window.speechSynthesis.speak(fala);
                 }
-            } catch (e) { console.log("Voz indisponivel."); }
+            } catch (e) {}
         }
 
         async function processarArquivoFisico() {
@@ -553,23 +349,21 @@
                         const firstSheetName = workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[firstSheetName];
                         
-                        const jsonMatriz = XLSX.utils.sheet_to_json(worksheet);
-                        extrairDadosDeObjetos(jsonMatriz);
+                        // Captura dados brutos para evitar quebras se o Excel concatenar campos errados
+                        const jsonMatriz = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                        analisarDadosPlanilhaUnificada(jsonMatriz);
                     } catch(err) {
                         alert("Erro ao ler arquivo Excel: " + err.message);
                         resetarBotaoUpload();
                     }
                 };
                 leitor.readAsArrayBuffer(arquivo);
-
             } else if (nomeArquivo.endsWith('.csv')) {
                 const leitor = new FileReader();
                 leitor.onload = function(e) {
                     try {
                         const texto = e.target.result;
                         const linhas = texto.split('\n');
-                        if(linhas.length < 2) return alert("Arquivo CSV vazio.");
-                        
                         let separador = linhas[0].includes(';') ? ';' : ',';
                         let cabecalhos = linhas[0].split(separador).map(c => c.replace(/"/g, '').trim().toLowerCase());
                         
@@ -578,178 +372,133 @@
                             if(linhas[i].trim() === '') continue;
                             let colunas = linhas[i].split(separador).map(c => c.replace(/"/g, '').trim());
                             let obj = {};
-                            cabecalhos.forEach((cab, idx) => {
-                                obj[cab] = colunas[idx] || "";
-                            });
+                            cabecalhos.forEach((cab, idx) => { obj[cab] = colunas[idx] || ""; });
                             listaObjetos.push(obj);
                         }
-                        extrairDadosDeObjetos(listaObjetos);
+                        analisarDadosPlanilhaUnificada(listaObjetos);
                     } catch(err) {
                         alert("Erro ao ler arquivo CSV: " + err.message);
                         resetarBotaoUpload();
                     }
                 };
                 leitor.readAsText(arquivo);
-            } else if (nomeArquivo.endsWith('.pdf')) {
-                const leitor = new FileReader();
-                leitor.onload = async function() {
-                    try {
-                        const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                        let textoCompleto = "";
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const page = await pdf.getPage(i);
-                            const content = await page.getTextContent();
-                            textoCompleto += content.items.map(item => item.str).join(" ") + "\n";
-                        }
-                        extrairDadosDeTextoBruto(textoCompleto);
-                    } catch(err) {
-                        alert("Erro ao ler PDF: " + err.message);
-                        resetarBotaoUpload();
-                    }
-                };
-                leitor.readAsArrayBuffer(arquivo);
             } else {
+                // PDFs ou Arquivos de texto corrido
                 const leitor = new FileReader();
                 leitor.onload = (e) => extrairDadosDeTextoBruto(e.target.result);
                 leitor.readAsText(arquivo);
             }
         }
 
-        function resetarBotaoUpload() {
-            document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
-        }
+        function resetarBotaoUpload() { document.querySelector('.btn-upload').innerText = "Processar Rota Ativa"; }
 
-        function extrairDadosDeObjetos(listaObjetos) {
+        // Corretor crítico para planilhas que vêm com strings gigantes/múltiplas linhas agrupadas
+        function analisarDadosPlanilhaUnificada(matriz) {
             bdRotas = [];
             let idCounter = 0;
-
             let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
             let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
 
-            listaObjetos.forEach((linha) => {
-                let chaves = Object.keys(linha);
+            matriz.forEach((linha) => {
+                let valores brutos = Object.values(linha).join(" ");
                 
-                let chaveCodigo = chaves.find(k => k.toLowerCase().includes('spx') || k.toLowerCase().includes('codigo') || k.toLowerCase().includes('at id') || k.toLowerCase().includes('tracking') || k.toLowerCase().includes('id'));
-                let chaveEnd = chaves.find(k => k.toLowerCase().includes('address') || k.toLowerCase().includes('endereco') || k.toLowerCase().includes('destinatario') || k.toLowerCase().includes('rua'));
-                let chaveLat = chaves.find(k => k.toLowerCase().includes('lat'));
-                let chaveLon = chaves.find(k => k.toLowerCase().includes('lon'));
-                let chaveBairro = chaves.find(k => k.toLowerCase().includes('bairro'));
+                // Regex aprimorada para fatiar strings caso o Excel tenha jogado tudo em uma célula só
+                let partesSeparadas = valoresBrutos.split(/(?=BR\d{11})|(?=AT202)/i);
 
-                let codigo = chaveCodigo ? String(linha[chaveCodigo]).trim() : "";
-                let endereco = chaveEnd ? String(linha[chaveEnd]).trim() : "";
-                let bairro = chaveBairro ? String(linha[chaveBairro]).trim() : "";
-                
-                let lat = chaveLat ? parseFloat(String(linha[chaveLat]).replace(',', '.')) : null;
-                let lon = chaveLon ? parseFloat(String(linha[chaveLon]).replace(',', '.')) : null;
+                partesSeparadas.forEach(bloco => {
+                    if (bloco.trim().length < 15) return;
 
-                if (!endereco || endereco.length < 3) return;
+                    let matchBR = bloco.match(/(BR\d{11})/i);
+                    let matchAT = bloco.match(/(AT202\d{9}[A-Z0-9]*)/i);
+                    let gpsMatches = bloco.match(/(-2\d\.\d+)[,\s]+(-4\d\.\d+)/) || bloco.match(/(-2\d\.\d+).+?(-4\d\.\d+)/);
 
-                if (!codigo || codigo.length < 5) {
-                    let matchBR = endereco.match(/(BR\d{11})/i);
-                    codigo = matchBR ? matchBR[1].toUpperCase() : `ID-${idCounter}`;
-                }
+                    let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
+                    
+                    // Limpa o endereço removendo metadados repetidos
+                    let endereco = bloco.replace(codigo, '');
+                    if (gpsMatches) { endereco = endereco.replace(gpsMatches[0], ''); }
+                    endereco = endereco.replace(/[\-\;\t]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-                if (bairro && !endereco.toLowerCase().includes(bairro.toLowerCase())) {
-                    endereco += `, ${bairro}`;
-                }
+                    let lat = gpsMatches ? parseFloat(gpsMatches[1]) : (baseLat + (Math.random() - 0.5) * 0.05);
+                    let lon = gpsMatches ? parseFloat(gpsMatches[2]) : (baseLon + (Math.random() - 0.5) * 0.05);
 
-                // Se não vier GPS nativo na planilha, aplica o espalhamento de segurança
-                if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
-                    lat = baseLat + (Math.random() - 0.5) * 0.09;
-                    lon = baseLon + (Math.random() - 0.5) * 0.09;
-                }
-
-                bdRotas.push({
-                    id: idCounter++,
-                    codigo: codigo.toUpperCase(),
-                    endereco: endereco,
-                    status: 'pendente',
-                    timestamp: null,
-                    lat: lat,
-                    lon: lon
+                    if (endereco.length > 5) {
+                        bdRotas.push({
+                            id: idCounter++,
+                            codigo: codigo,
+                            endereco: endereco,
+                            status: 'pendente',
+                            timestamp: null,
+                            lat: lat, lon: lon
+                        });
+                    }
                 });
             });
 
-            finalizarCarregamento(false); // Mantém a reordenação TSP padrão para listas em lote
+            finalizarCarregamento(false);
         }
 
         function extrairDadosDeTextoBruto(textoBruto) {
-            const linhas = textoBruto.split(/\r?\n/);
+            // Divide por quebras de linha ou divisores comuns de relatórios do Circuit
+            const blocos = textoBruto.split(/(?=BR\d{11})|(?=AT202)|\r?\n/i);
             bdRotas = [];
             let idCounter = 0;
-
             let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
             let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
             let possuiGpsReal = false;
 
-            linhas.forEach((linha) => {
-                if (linha.trim().length < 10) return;
+            blocos.forEach((bloco) => {
+                if (bloco.trim().length < 12) return;
 
-                // Captura coordenadas reais que o PDF do Circuit exporta nativamente
-                let gpsMatches = linha.match(/(-2\d\.\d+)[,\s]+(-4\d\.\d+)/) || linha.match(/(-2\d\.\d+).+?(-4\d\.\d+)/);
-                let matchBR = linha.match(/(BR\d{11})/i);
+                let gpsMatches = bloco.match(/(-2\d\.\d+)[,\s]+(-4\d\.\d+)/) || bloco.match(/(-2\d\.\d+).+?(-4\d\.\d+)/);
+                let matchBR = bloco.match(/(BR\d{11})/i);
+                let matchAT = bloco.match(/(AT202\d{9}[A-Z0-9]*)/i);
                 
                 let lat, lon;
                 if (gpsMatches) {
-                    lat = parseFloat(gpsMatches[1]);
-                    lon = parseFloat(gpsMatches[2]);
+                    lat = parseFloat(gpsMatches[1]); lon = parseFloat(gpsMatches[2]);
                     possuiGpsReal = true;
                 } else {
-                    lat = baseLat + (Math.random() - 0.5) * 0.09;
-                    lon = baseLon + (Math.random() - 0.5) * 0.09;
+                    lat = baseLat + (Math.random() - 0.5) * 0.06;
+                    lon = baseLon + (Math.random() - 0.5) * 0.06;
                 }
 
-                let codigo = matchBR ? matchBR[1].toUpperCase() : `ID-${idCounter}`;
-                let endereco = linha;
-                
-                if (gpsMatches) {
-                    endereco = endereco.replace(gpsMatches[0], '');
-                }
-                endereco = endereco.replace(codigo, '').trim();
+                let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
+                let endereco = bloco;
+                if (gpsMatches) { endereco = endereco.replace(gpsMatches[0], ''); }
+                endereco = endereco.replace(codigo, '').replace(/[\;\s\-\_]+/g, ' ').trim();
 
                 bdRotas.push({
                     id: idCounter++,
                     codigo: codigo,
-                    endereco: endereco || "Endereço registrado via PDF",
-                    status: 'pendente',
-                    timestamp: null,
-                    lat: lat,
-                    lon: lon
+                    endereco: endereco || "Endereço da Entrega",
+                    status: 'pendente', timestamp: null,
+                    lat: lat, lon: lon
                 });
             });
 
-            // Se for rota importada do Circuit (com GPS real preservado), mantemos a ordem fixa dele de forma silenciosa
             finalizarCarregamento(possuiGpsReal);
         }
 
         function finalizarCarregamento(manterOrdemOriginal = false) {
             if (bdRotas.length === 0) {
-                alert("Nenhum dado legível foi encontrado no arquivo carregado.");
-                resetarBotaoUpload();
-                return;
+                alert("Nenhum dado legível foi encontrado.");
+                resetarBotaoUpload(); return;
             }
-
-            if (!manterOrdemOriginal) {
-                executarOtimizacaoTSP(true);
-            }
+            if (!manterOrdemOriginal) executarOtimizacaoTSP(true);
             
             salvarBD();
             document.getElementById('tela-setup').style.display = 'none';
-            map.invalidateSize();
-            renderizarLista();
-            atualizarContador();
-            plotarNoMapa();
+            map.invalidateSize(); renderizarLista(); atualizarContador(); plotarNoMapa();
         }
 
         function renderizarLista() {
             const container = document.getElementById('container-lista');
             container.innerHTML = '';
-            
             bdRotas.forEach((e, idx) => {
                 const div = document.createElement('div');
                 div.className = `item-lista ${e.status !== 'pendente' ? 'concluido' : ''}`;
                 div.onclick = () => activarDesdeMapa(idx);
-                
                 div.innerHTML = `
                     <div class="item-topo">
                         <span class="parada-titulo">📌 Parada #${idx + 1}</span>
@@ -760,6 +509,7 @@
                 `;
                 container.appendChild(div);
             });
+            if (pipJanela) atualizarConteudoPip();
         }
 
         function atualizarContador() {
@@ -773,65 +523,134 @@
             menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
         }
 
-        function fecharWidget(event) { 
-            if (event) event.stopPropagation();
-            document.getElementById('widget-escuro').style.display = 'none'; 
-        }
-        
-        function minimizarWidget(event) {
-            if (event) event.stopPropagation();
-            const det = document.getElementById('wg-detalhe');
-            det.classList.add('minimizada');
+        function fecharWidget(event) { if (event) event.stopPropagation(); document.getElementById('widget-escuro').style.display = 'none'; }
+        function minimizarWidget(event) { if (event) event.stopPropagation(); document.getElementById('wg-detalhe').classList.toggle('minimizada'); }
+        function alternarExpansaoWidget(event) {
+            if (event.target.classList.contains('btn-ctrl') || event.target.classList.contains('btn-pip')) return;
+            document.getElementById('wg-detalhe').classList.toggle('minimizada');
         }
 
-        function alternarExpansaoWidget(event) {
-            if (event.target.classList.contains('btn-ctrl')) return;
-            
-            const det = document.getElementById('wg-detalhe');
-            if (det.classList.contains('minimizada')) {
-                det.classList.remove('minimizada');
-            } else {
-                det.classList.add('minimizada');
-            }
+        function falarProximaEntrega(idx) {
+            const e = bdRotas[idx];
+            const partes = e.endereco.split(',');
+            const rua = partes[0] || 'Próximo endereço';
+            const ultimosDigitos = e.codigo.slice(-4).split('').join(' ');
+            falarTexto(`Próxima entrega na: ${rua}. Final do código: ${ultimosDigitos}`);
         }
 
         function ativarWidget(idx) {
-            indexAtivo = idx;
-            const e = bdRotas[idx];
+            indexAtivo = idx; const e = bdRotas[idx];
             document.getElementById('wg-num').innerText = String(idx + 1).padStart(2, '0');
             document.getElementById('wg-badge').innerText = idx + 1;
             
             const partes = e.endereco.split(',');
             document.getElementById('wg-rua').innerText = partes[0] || 'Endereço GPS';
             document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim() || e.endereco}`;
-            
             document.getElementById('wg-detalhe').classList.remove('minimizada');
             document.getElementById('widget-escuro').style.display = 'block';
 
+            falarProximaEntrega(idx);
             map.flyTo([e.lat - 0.002, e.lon], 16, { animate: true, duration: 0.8 });
+            if (pipJanela) atualizarConteudoPip();
         }
 
         function registrarAcaoFinal(status) {
-            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
-            
+            if (indexAtivo === null) return alert("Selecione uma parada primeiro.");
             bdRotas[indexAtivo].status = status;
             bdRotas[indexAtivo].timestamp = new Date().toLocaleTimeString();
             
             if (status === 'entregue') emitirBip();
             
-            salvarBD();
-            renderizarLista();
-            atualizarContador();
-            plotarNoMapa();
-            
+            salvarBD(); renderizarLista(); atualizarContador(); plotarNoMapa();
             document.getElementById('widget-escuro').style.display = 'none';
             indexAtivo = null;
         }
 
         function navegarApp() {
-            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
+            if (indexAtivo === null) return alert("Selecione uma parada primeiro.");
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bdRotas[indexAtivo].endereco)}`, '_blank');
+        }
+
+        // --- SISTEMA DE WIDGET FLUTUANTE DO SISTEMA (DOCUMENT PICTURE-IN-PICTURE) ---
+        async function ativarWidgetFlutuanteSistema(event) {
+            if (event) event.stopPropagation();
+            if (indexAtivo === null) return alert("Ative uma parada primeiro para flutuar.");
+
+            if (!('documentPictureInPicture' in window)) {
+                alert("Seu navegador não suporta janelas flutuantes fora do app. Use o Google Chrome atualizado.");
+                return;
+            }
+
+            try {
+                if (pipJanela) pipJanela.close();
+
+                // Abre a janela flutuante nativa do sistema Android/Desktop
+                pipJanela = await window.documentPictureInPicture.requestWindow({ width: 360, height: 160 });
+                
+                // Copia os estilos para dentro da janela flutuante
+                [...document.styleSheets].forEach((styleSheet) => {
+                    try {
+                        const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
+                        const style = pipJanela.document.createElement('style');
+                        style.textContent = cssRules;
+                        pipJanela.document.head.appendChild(style);
+                    } catch (e) {}
+                });
+
+                pipJanela.document.body.style.background = "#1c1c1e";
+                pipJanela.document.body.style.margin = "0";
+                pipJanela.document.body.style.padding = "10px";
+                pipJanela.document.body.style.display = "flex";
+                pipJanela.document.body.style.flexDirection = "column";
+                pipJanela.document.body.style.justifyContent = "center";
+
+                const containerPip = pipJanela.document.createElement('div');
+                containerPip.id = "pip-root";
+                pipJanela.document.body.appendChild(containerPip);
+
+                atualizarConteudoPip();
+
+                pipJanela.addEventListener("pagehide", () => { pipJanela = null; });
+            } catch (err) {
+                console.error("Erro ao abrir Widget Flutuante:", err);
+            }
+        }
+
+        function atualizarConteudoPip() {
+            if (!pipJanela) return;
+            const root = pipJanela.document.getElementById("pip-root");
+            if (!root) return;
+
+            if (indexAtivo === null) {
+                root.innerHTML = `<div style="color:white; text-align:center; font-weight:bold;">Nenhuma rota ativa</div>`;
+                return;
+            }
+
             const e = bdRotas[indexAtivo];
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.endereco)}`, '_blank');
+            const partes = e.endereco.split(',');
+            const rua = partes[0] || 'Endereço';
+            const resto = partes.slice(1).join(',').trim() || '';
+
+            // Renderiza o design escuro idêntico dentro do overlay flutuante do sistema
+            root.innerHTML = `
+                <div style="color:#aaa; font-size:12px; display:flex; justify-content:between; margin-bottom:5px; font-family:sans-serif;">
+                    <span>📌 PARADA #${indexAtivo + 1}</span>
+                    <span style="background:#3b82f6; color:white; padding:1px 6px; border-radius:10px; font-size:10px; font-weight:bold; margin-left:auto;">${indexAtivo + 1}</span>
+                </div>
+                <div style="color:white; font-size:16px; font-weight:bold; font-family:sans-serif; margin-bottom:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${rua}</div>
+                <div style="color:#888; font-size:11px; font-family:sans-serif; margin-bottom:8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${e.codigo} - ${resto}</div>
+                <div style="display:flex; gap:6px;">
+                    <button id="btn-pip-nav" style="flex:1; background:#232733; color:white; border:none; padding:6px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">🗺️ Ir</button>
+                    <button id="btn-pip-ok" style="flex:1; background:#16a34a; color:white; border:none; padding:6px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">✓ OK</button>
+                </div>
+            `;
+
+            // Vincula os cliques de dentro do Widget flutuante de volta para a aplicação principal
+            pipJanela.document.getElementById("btn-pip-nav").onclick = () => navegarApp();
+            pipJanela.document.getElementById("btn-pip-ok").onclick = () => {
+                registrarAcaoFinal('entregue');
+                if (pipJanela) pipJanela.close();
+            };
         }
 
         function obterLocalizacaoEOTimizar() {
@@ -843,41 +662,28 @@
         function executarOtimizacaoTSP(silencioso = false) {
             let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
             let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
-            
             if(rascunho.length === 0) return;
             
             let otimizado = [];
             let pontoPartida = minhaPosicao ? { lat: minhaPosicao.lat, lon: minhaPosicao.lon } : rascunho.shift();
-            
-            if (!minhaPosicao && rascunho.length > 0) {
-                otimizado.push(pontoPartida);
-            }
+            if (!minhaPosicao && rascunho.length > 0) otimizado.push(pontoPartida);
             
             let atual = pontoPartida;
             while(rascunho.length > 0) {
-                let indexMaisProximo = 0;
-                let menorDist = Infinity;
-                
+                let indexMaisProximo = 0; let menorDist = Infinity;
                 for(let i=0; i<rascunho.length; i++) {
                     let d = Math.sqrt(Math.pow(atual.lat - rascunho[i].lat, 2) + Math.pow(atual.lon - rascunho[i].lon, 2));
-                    if(d < menorDist) { 
-                        menorDist = d; 
-                        indexMaisProximo = i; 
-                    }
+                    if(d < menorDist) { menorDist = d; indexMaisProximo = i; }
                 }
                 let proximaParada = rascunho.splice(indexMaisProximo, 1)[0];
-                otimizado.push(proximaParada);
-                atual = proximaParada;
+                otimizado.push(proximaParada); atual = proximaParada;
             }
             
             bdRotas = [...concluidos, ...otimizado];
             bdRotas.forEach((item, idx) => item.id = idx);
-            
             if(!silencioso) {
-                salvarBD();
-                renderizarLista();
-                plotarNoMapa();
-                alert("Rota reordenada com sucesso!");
+                salvarBD(); renderizarLista(); plotarNoMapa();
+                alert("Rota reordenada por proximidade real!");
             }
         }
 
@@ -885,102 +691,46 @@
             const menu = document.getElementById('menu-opcoes');
             if(menu) menu.style.display = 'none';
             document.getElementById('modalScanner').style.display = 'flex';
-            const feedback = document.getElementById('scannerFeedback');
-            feedback.innerText = "Aguardando leitura do código...";
-            feedback.style.color = "white";
-            
             if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
-            
-            html5QrcodeScanner.start(
-                { facingMode: "environment" }, 
-                { fps: 15, qrbox: { width: 280, height: 150 } }, 
-                processarLeituraDaCamera
-            ).catch(e => {
-                feedback.innerText = "Erro ao iniciar a câmera.";
-            });
+            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 280, height: 150 } }, processanLeituraDaCamera);
         }
 
         function fecharScanner() {
             document.getElementById('modalScanner').style.display = 'none';
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.stop().then(() => {
-                    html5QrcodeScanner = null;
-                }).catch(err => console.log(err));
-            }
+            if (html5QrcodeScanner) { html5QrcodeScanner.stop().then(() => { html5QrcodeScanner = null; }); }
             processandoLeitura = false;
         }
 
-        function processarLeituraDaCamera(textoLido) {
-            if (processandoLeitura) return;
-            processandoLeitura = true;
-            
+        function processanLeituraDaCamera(textoLido) {
+            if (processandoLeitura) return; processandoLeitura = true;
             const token = textoLido.trim().toUpperCase();
             const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
-            
-            const feedback = document.getElementById('scannerFeedback');
-            
             if (idx !== -1) {
-                emitirBip();
-                const ultimosDigitos = bdRotas[idx].codigo.slice(-4);
-                falarTexto(`Parada ${idx + 1}. Final ${customSplit(ultimosDigitos)}`);
-                
-                feedback.innerText = `✅ Parada #${idx + 1} Localizada!`;
-                feedback.style.color = "var(--cor-verde)";
-                
-                ativarWidget(idx);
+                emitirBip(); ativarWidget(idx);
                 setTimeout(() => { fecharScanner(); }, 1200);
             } else {
-                feedback.innerText = `❌ Código não listado nesta rota.`;
-                feedback.style.color = "var(--cor-vermelho)";
                 setTimeout(() => { processandoLeitura = false; }, 1500);
             }
         }
 
-        function customSplit(str) {
-            return str.split('').join(' ');
-        }
-
         function forcarBaixaManual() {
-            const menu = document.getElementById('menu-opcoes');
-            if(menu) menu.style.display = 'none';
-            const cod = prompt("Digite o código identificador da encomenda:");
+            const cod = prompt("Digite o código da encomenda:");
             if(cod && cod.trim() !== "") {
                 const idx = bdRotas.findIndex(i => i.codigo.toUpperCase().includes(cod.trim().toUpperCase()));
-                if(idx !== -1) {
-                    ativarWidget(idx);
-                } else {
-                    alert("Código não localizado.");
-                }
+                if(idx !== -1) ativarWidget(idx); else alert("Código não localizado.");
             }
         }
 
         function exportarRelatorioCSV() {
-            const menu = document.getElementById('menu-opcoes');
-            if(menu) menu.style.display = 'none';
-            if(bdRotas.length === 0) return alert("Sem dados.");
             let csv = "\uFEFFID,Codigo,Endereco,Status,Horario\n";
-            bdRotas.forEach(p => {
-                csv += `"${p.id + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}","${p.timestamp || 'N/A'}"\n`;
-            });
+            bdRotas.forEach(p => { csv += `"${p.id + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}","${p.timestamp || 'N/A'}"\n`; });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `Rota_Facil_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
-            link.click();
+            const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+            link.download = `Relatorio_Rota_${new Date().toISOString().slice(0,10)}.csv`; link.click();
         }
 
-        function limparSessao() {
-            const menu = document.getElementById('menu-opcoes');
-            if(menu) menu.style.display = 'none';
-            if(confirm("Deseja apagar a rota activa atual?")) {
-                localStorage.removeItem('rota_facil_db_oficial');
-                location.reload();
-            }
-        }
-
-        function salvarBD() {
-            localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
-        }
+        function limparSessao() { if(confirm("Apagar rota ativa atual?")) { localStorage.removeItem('rota_facil_db_oficial'); location.reload(); } }
+        function salvarBD() { localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas)); }
     </script>
 </body>
 </html>
