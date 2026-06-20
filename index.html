@@ -623,7 +623,6 @@
             bdRotas = [];
             let idCounter = 0;
 
-            // Ponto de partida base para espalhar as paradas caso não haja GPS real (Região de São Paulo)
             let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
             let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
 
@@ -643,7 +642,7 @@
                 let lat = chaveLat ? parseFloat(String(linha[chaveLat]).replace(',', '.')) : null;
                 let lon = chaveLon ? parseFloat(String(linha[chaveLon]).replace(',', '.')) : null;
 
-                if (!endereco || endereco.length < 3) return; // ignora linhas vazias
+                if (!endereco || endereco.length < 3) return;
 
                 if (!codigo || codigo.length < 5) {
                     let matchBR = endereco.match(/(BR\d{11})/i);
@@ -654,7 +653,7 @@
                     endereco += `, ${bairro}`;
                 }
 
-                // Fallback robusto se a planilha não contiver coordenadas nativas
+                // Se não vier GPS nativo na planilha, aplica o espalhamento de segurança
                 if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
                     lat = baseLat + (Math.random() - 0.5) * 0.09;
                     lon = baseLon + (Math.random() - 0.5) * 0.09;
@@ -671,7 +670,7 @@
                 });
             });
 
-            finalizarCarregamento();
+            finalizarCarregamento(false); // Mantém a reordenação TSP padrão para listas em lote
         }
 
         function extrairDadosDeTextoBruto(textoBruto) {
@@ -681,15 +680,25 @@
 
             let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
             let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
+            let possuiGpsReal = false;
 
             linhas.forEach((linha) => {
                 if (linha.trim().length < 10) return;
 
-                let gpsMatches = linha.match(/(-23\.\d+)[,\s]+(-46\.\d+)/) || linha.match(/(-23\.\d+).+?(-46\.\d+)/);
+                // Captura coordenadas reais que o PDF do Circuit exporta nativamente
+                let gpsMatches = linha.match(/(-2\d\.\d+)[,\s]+(-4\d\.\d+)/) || linha.match(/(-2\d\.\d+).+?(-4\d\.\d+)/);
                 let matchBR = linha.match(/(BR\d{11})/i);
                 
-                let lat = gpsMatches ? parseFloat(gpsMatches[1]) : (baseLat + (Math.random() - 0.5) * 0.09);
-                let lon = gpsMatches ? parseFloat(gpsMatches[2]) : (baseLon + (Math.random() - 0.5) * 0.09);
+                let lat, lon;
+                if (gpsMatches) {
+                    lat = parseFloat(gpsMatches[1]);
+                    lon = parseFloat(gpsMatches[2]);
+                    possuiGpsReal = true;
+                } else {
+                    lat = baseLat + (Math.random() - 0.5) * 0.09;
+                    lon = baseLon + (Math.random() - 0.5) * 0.09;
+                }
+
                 let codigo = matchBR ? matchBR[1].toUpperCase() : `ID-${idCounter}`;
                 let endereco = linha;
                 
@@ -701,7 +710,7 @@
                 bdRotas.push({
                     id: idCounter++,
                     codigo: codigo,
-                    endereco: endereco || "Endereço registrado via Lista",
+                    endereco: endereco || "Endereço registrado via PDF",
                     status: 'pendente',
                     timestamp: null,
                     lat: lat,
@@ -709,17 +718,21 @@
                 });
             });
 
-            finalizarCarregamento();
+            // Se for rota importada do Circuit (com GPS real preservado), mantemos a ordem fixa dele de forma silenciosa
+            finalizarCarregamento(possuiGpsReal);
         }
 
-        function finalizarCarregamento() {
+        function finalizarCarregamento(manterOrdemOriginal = false) {
             if (bdRotas.length === 0) {
-                alert("Nenhum dado legível foi encontrado no arquivo carregado. Verifique os cabeçalhos.");
+                alert("Nenhum dado legível foi encontrado no arquivo carregado.");
                 resetarBotaoUpload();
                 return;
             }
 
-            executarOtimizacaoTSP(true);
+            if (!manterOrdemOriginal) {
+                executarOtimizacaoTSP(true);
+            }
+            
             salvarBD();
             document.getElementById('tela-setup').style.display = 'none';
             map.invalidateSize();
@@ -772,7 +785,6 @@
         }
 
         function alternarExpansaoWidget(event) {
-            // Evita alternar se clicou nos botões de controle internos
             if (event.target.classList.contains('btn-ctrl')) return;
             
             const det = document.getElementById('wg-detalhe');
@@ -781,10 +793,6 @@
             } else {
                 det.classList.add('minimizada');
             }
-        }
-
-        function activarNav(idx) {
-            ativarWidget(idx);
         }
 
         function ativarWidget(idx) {
