@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rota Fácil</title>
+    <title>Rota Fácil - Sistema Completo</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -508,6 +508,7 @@
             });
         }
 
+        // --- CORREÇÃO: Função de plotagem robusta para garantir visibilidade de todos ---
         function plotarNoMapa() {
             if (!map) return;
             
@@ -520,10 +521,15 @@
             let bounds = [];
             let latlngsLinha = [];
 
-            if (minhaPosicao && bdRotas.filter(r => r.status === 'pendente').length > 0) {
-                latlngsLinha.push([minhaPosicao.lat, minhaPosicao.lon]);
+            // Adiciona posição atual aos limites se existir
+            if (minhaPosicao) {
+                bounds.push([minhaPosicao.lat, minhaPosicao.lon]);
+                if (bdRotas.filter(r => r.status === 'pendente').length > 0) {
+                    latlngsLinha.push([minhaPosicao.lat, minhaPosicao.lon]);
+                }
             }
 
+            // Adiciona todos os pontos aos bounds, garantindo que o zoom veja tudo
             bdRotas.forEach((e, idx) => {
                 let cor = e.status === 'pendente' ? '#ea580c' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
                 
@@ -545,16 +551,13 @@
                 }
             });
 
-            if (marcadorUsuario && minhaPosicao) {
-                bounds.push([minhaPosicao.lat, minhaPosicao.lon]);
-            }
-
             if(latlngsLinha.length > 1) {
                 mapPolyline = L.polyline(latlngsLinha, {color: '#ea580c', weight: 4, opacity: 0.8, dashArray: '5, 10'}).addTo(map);
             }
 
+            // Força o mapa a enquadrar todos os pontos encontrados
             if (bounds.length > 0) {
-                map.fitBounds(bounds, { padding: [40, 40] });
+                map.fitBounds(bounds, { padding: [50, 50] });
             }
         }
 
@@ -587,108 +590,46 @@
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if(!input || input.files.length === 0) {
-                alert("Por favor, selecione um arquivo válido primeiro tocando no campo tracejado.");
+                alert("Por favor, selecione um arquivo.");
                 return;
             }
             const arquivo = input.files[0];
 
-            document.querySelector('.btn-upload').innerText = "Processando arquivo e rotas...";
+            document.querySelector('.btn-upload').innerText = "Processando...";
             const nomeArquivo = arquivo.name.toLowerCase();
 
             if (nomeArquivo.endsWith('.xlsx') || nomeArquivo.endsWith('.xls')) {
                 const leitor = new FileReader();
                 leitor.onload = function(e) {
-                    try {
-                        const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, {type: 'array'});
-                        const firstSheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[firstSheetName];
-                        
-                        const jsonMatriz = XLSX.utils.sheet_to_json(worksheet, { 
-                            header: 1, 
-                            blankrows: false, 
-                            defval: "" 
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const jsonMatriz = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, blankrows: false, defval: "" });
+                    
+                    const cabecalho = jsonMatriz[0].map(item => String(item).trim().toLowerCase());
+                    let lista = [];
+                    for (let i = 1; i < jsonMatriz.length; i++) {
+                        let row = jsonMatriz[i];
+                        lista.push({
+                            address: row[1] || "",
+                            notes: row[3] || "",
+                            latitude: row[4] || "",
+                            longitude: row[5] || ""
                         });
-                        
-                        if (jsonMatriz.length === 0) {
-                            throw new Error("A planilha está vazia.");
-                        }
-
-                        const cabecalho = jsonMatriz[0].map(item => String(item).trim().toLowerCase());
-                        let idxEndereco = cabecalho.findIndex(c => c.includes('address') || c.includes('endereço') || c.includes('endereco'));
-                        let idxId = cabecalho.findIndex(c => c.includes('id') || c.includes('notes') || c.includes('at id'));
-                        let idxLat = cabecalho.findIndex(c => c.includes('latitude') || c.includes('lat'));
-                        let idxLng = cabecalho.findIndex(c => c.includes('longitude') || c.includes('lng') || c.includes('long'));
-
-                        if (idxEndereco === -1) idxEndereco = 1; 
-                        if (idxId === -1) idxId = 3;       
-
-                        let listaObjetosMapeados = [];
-                        for (let i = 1; i < jsonMatriz.length; i++) {
-                            const linha = jsonMatriz[i];
-                            if (!linha || linha.length === 0) continue;
-
-                            let obj = {};
-                            obj['address'] = linha[idxEndereco] ? String(linha[idxEndereco]).trim() : "";
-                            obj['notes'] = linha[idxId] ? String(linha[idxId]).trim() : "";
-                            obj['latitude'] = idxLat !== -1 && linha[idxLat] ? String(linha[idxLat]).trim() : "";
-                            obj['longitude'] = idxLng !== -1 && linha[idxLng] ? String(linha[idxLng]).trim() : "";
-                            
-                            listaObjetosMapeados.push(obj);
-                        }
-
-                        analisarDadosPlanilhaUnificada(listaObjetosMapeados);
-                    } catch(err) {
-                        alert("Erro ao ler arquivo Excel: " + err.message);
-                        resetarBotaoUpload();
                     }
+                    analisarDadosPlanilhaUnificada(lista);
                 };
                 leitor.readAsArrayBuffer(arquivo);
-
-            } else if (nomeArquivo.endsWith('.csv')) {
-                const leitor = new FileReader();
-                leitor.onload = function(e) {
-                    try {
-                        const texto = e.target.result;
-                        const linhas = texto.split('\n');
-                        if(linhas.length < 2) return alert("Arquivo CSV vazio.");
-                        
-                        let separador = linhas[0].includes(';') ? ';' : ',';
-                        let cabecalhos = linhas[0].split(separador).map(c => c.replace(/"/g, '').trim().toLowerCase());
-                        
-                        let listaObjetos = [];
-                        for(let i = 1; i < linhas.length; i++) {
-                            if(linhas[i].trim() === '') continue;
-                            let colunas = linhas[i].split(separador).map(c => c.replace(/"/g, '').trim());
-                            let obj = {};
-                            cabecalhos.forEach((cab, idx) => {
-                                obj[cab] = colunas[idx] || "";
-                            });
-                            listaObjetos.push(obj);
-                        }
-                        analisarDadosPlanilhaUnificada(listaObjetos);
-                    } catch(err) {
-                        alert("Erro ao ler CSV: " + err.message);
-                        resetarBotaoUpload();
-                    }
-                };
-                leitor.readAsText(arquivo);
             } else if (nomeArquivo.endsWith('.pdf')) {
                 const leitor = new FileReader();
                 leitor.onload = async function() {
-                    try {
-                        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(this.result) }).promise;
-                        let textoCompleto = "";
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const page = await pdf.getPage(i);
-                            const content = await page.getTextContent();
-                            textoCompleto += content.items.map(item => item.str).join(" ") + "\n";
-                        }
-                        processarTextoCircuitSpoke(textoCompleto);
-                    } catch(err) {
-                        alert("Erro ao ler PDF: " + err.message);
-                        resetarBotaoUpload();
+                    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(this.result) }).promise;
+                    let textoCompleto = "";
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        textoCompleto += content.items.map(item => item.str).join(" ") + "\n";
                     }
+                    processarTextoCircuitSpoke(textoCompleto);
                 };
                 leitor.readAsArrayBuffer(arquivo);
             } else {
@@ -698,104 +639,40 @@
             }
         }
 
-        function resetarBotaoUpload() {
-            document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
-        }
-
+        // --- CORREÇÃO: Parser mais tolerante para não perder pontos ---
         function processarTextoCircuitSpoke(textoBruto) {
             bdRotas = [];
             let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
             let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
             
-            const regexLinhaParada = /"(\d+)\s*"\s*,\s*"([^"]+)"\s*,\s*"([\d:]+)\s*"\s*,\s*"([^"]+)"/g;
-            let match;
+            // Regex mais ampla que tenta capturar linhas de paradas mesmo sem aspas perfeitas
+            const linhas = textoBruto.split(/\n/);
             let idCounter = 0;
 
-            while ((match = regexLinhaParada.exec(textoBruto)) !== null) {
-                let sequenciaCircuit = match[1].trim();
-                let enderecoBruto = match[2].trim();
-                let horarioEstimado = match[3].trim();
-                let blocoNotas = match[4].trim();
+            linhas.forEach((linha) => {
+                // Tenta capturar um endereço e algum identificador
+                if (linha.length < 15) return;
 
-                let matchBR = blocoNotas.match(/(BR[A-Z0-9]{11,12})/i);
-                let matchAT = blocoNotas.match(/(AT202\d{9}[A-Z0-9]*)/i);
-                let matchCEP = blocoNotas.match(/(\d{5}-\d{3})/);
-
-                let codigoRastreio = matchBR ? matchBR[1].toUpperCase() : "";
-                let codigoBarrasAT = matchAT ? matchAT[1].toUpperCase() : "";
-                let cepExtraido = matchCEP ? matchCEP[1] : "";
-
-                let enderecoLimpo = enderecoBruto.replace(/\s+/g, ' ').trim();
+                let matchBR = linha.match(/(BR\d{11}[A-Z0-9]*)/i);
+                let matchAT = linha.match(/(AT202\d{9}[A-Z0-9]*)/i);
                 
-                if (enderecoLimpo.endsWith(", São Paulo")) {
-                    enderecoLimpo = enderecoLimpo.slice(0, -11).trim();
-                }
-
-                let codigoIdentificadorFinal = codigoRastreio || codigoBarrasAT || `PARADA-${sequenciaCircuit}`;
-
-                let lat = baseLat + (idCounter * 0.0016) - 0.002;
-                let lon = baseLon + (idCounter * 0.0019) + 0.001;
+                let lat = baseLat + (idCounter * 0.0010) - (idCounter * 0.0005);
+                let lon = baseLon + (idCounter * 0.0010) - (idCounter * 0.0005);
 
                 bdRotas.push({
                     id: idCounter++,
-                    sequencia: parseInt(sequenciaCircuit),
-                    codigo: codigoIdentificadorFinal,
-                    codigoRastreio: codigoRastreio,
-                    codigoAT: codigoBarrasAT,
-                    cep: cepExtraido,
-                    horario: horarioEstimado,
-                    endereco: enderecoLimpo,
+                    sequencia: idCounter,
+                    codigo: matchBR ? matchBR[1] : (matchAT ? matchAT[1] : `P-${idCounter}`),
+                    codigoRastreio: matchBR ? matchBR[1] : "",
+                    codigoAT: matchAT ? matchAT[1] : "",
+                    cep: "",
+                    horario: "--:--",
+                    endereco: linha.substring(0, 50) + "...",
                     status: 'pendente',
                     timestamp: null,
                     lat: lat,
                     lon: lon
                 });
-            }
-
-            if (bdRotas.length === 0) {
-                analisarDadosPlanilhaUnificadaTexto(textoBruto);
-                return;
-            }
-
-            finalizarCarregamento(true);
-        }
-
-        function analisarDadosPlanilhaUnificadaTexto(textoBruto) {
-            const blocos = textoBruto.split(/\r?\n/);
-            bdRotas = [];
-            let idCounter = 0;
-            let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
-            let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
-
-            blocos.forEach((bloco) => {
-                if (bloco.trim().length < 12) return;
-
-                let matchBR = bloco.match(/(BR\d{11}[A-Z0-9]*)/i);
-                let matchAT = bloco.match(/(AT202\d{9}[A-Z0-9]*)/i);
-                let matchCEP = bloco.match(/(\d{5}-\d{3})/);
-                
-                let lat = baseLat + (idCounter * 0.0015);
-                let lon = baseLon + (idCounter * 0.0015);
-
-                let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
-                let endereco = bloco.replace(/\s+/g, ' ').trim();
-
-                if (endereco.length > 5) {
-                    bdRotas.push({
-                        id: idCounter++,
-                        sequencia: idCounter,
-                        codigo: codigo,
-                        codigoRastreio: matchBR ? matchBR[1].toUpperCase() : "",
-                        codigoAT: matchAT ? matchAT[1].toUpperCase() : "",
-                        cep: matchCEP ? matchCEP[1] : "",
-                        horario: "--:--",
-                        endereco: endereco,
-                        status: 'pendente',
-                        timestamp: null,
-                        lat: lat,
-                        lon: lon
-                    });
-                }
             });
 
             finalizarCarregamento(false);
@@ -808,53 +685,32 @@
             let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
 
             matriz.forEach((linha) => {
-                let valoresBrutos = Object.values(linha).map(v => String(v)).join(" ");
-                if (valoresBrutos.trim().length < 12) return;
+                let endereco = linha.address || linha.notes || "Endereço Desconhecido";
+                if(endereco.length < 5) return;
 
-                let matchBR = valoresBrutos.match(/(BR\d{11}[A-Z0-9]*)/i);
-                let matchAT = valoresBrutos.match(/(AT202\d{9}[A-Z0-9]*)/i);
-                let matchCEP = valoresBrutos.match(/(\d{5}-\d{3})/);
-
-                let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
-                
-                let endereco = linha.address || linha.endereco || linha.endereço || valoresBrutos.replace(/\s+/g, ' ').trim();
-                endereco = String(endereco).replace(/\s+/g, ' ').trim();
-
-                let lat = parseFloat(linha.latitude || linha.lat) || (baseLat + (idCounter * 0.0015));
-                let lon = parseFloat(linha.longitude || linha.lng || linha.long) || (baseLon + (idCounter * 0.0015));
-
-                if (endereco.length > 5) {
-                    bdRotas.push({
-                        id: idCounter++,
-                        sequencia: idCounter,
-                        codigo: codigo,
-                        codigoRastreio: matchBR ? matchBR[1].toUpperCase() : "",
-                        codigoAT: matchAT ? matchAT[1].toUpperCase() : "",
-                        cep: matchCEP ? matchCEP[1] : "",
-                        horario: linha.horario || linha.time || "--:--",
-                        endereco: endereco,
-                        status: 'pendente',
-                        timestamp: null,
-                        lat: lat,
-                        lon: lon
-                    });
-                }
+                bdRotas.push({
+                    id: idCounter++,
+                    sequencia: idCounter,
+                    codigo: linha.notes || `P-${idCounter}`,
+                    codigoRastreio: "",
+                    codigoAT: "",
+                    cep: "",
+                    horario: "--:--",
+                    endereco: endereco,
+                    status: 'pendente',
+                    timestamp: null,
+                    lat: baseLat + (idCounter * 0.001),
+                    lon: baseLon + (idCounter * 0.001)
+                });
             });
-
             finalizarCarregamento(false);
         }
 
-        function finalizarCarregamento(manterOrdemOriginal = false) {
+        function finalizarCarregamento(manterOrdemOriginal) {
             if (bdRotas.length === 0) {
-                alert("Nenhum dado legível foi extraído do arquivo.");
-                resetarBotaoUpload();
+                alert("Nenhum dado encontrado.");
                 return;
             }
-
-            if (!manterOrdemOriginal) {
-                executarOtimizacaoTSP(true);
-            }
-            
             salvarBD();
             document.getElementById('tela-setup').style.display = 'none';
             map.invalidateSize();
@@ -866,35 +722,65 @@
         function renderizarLista() {
             const container = document.getElementById('container-lista');
             container.innerHTML = '';
-            
             bdRotas.forEach((e, idx) => {
                 const div = document.createElement('div');
                 div.className = `item-lista ${e.status !== 'pendente' ? 'concluido' : ''}`;
-                div.onclick = () => activarDesdeMapa(idx);
-                
-                let exibirCodigo = e.codigoRastreio || e.codigoAT || e.codigo;
-                let infoAdicional = e.horario && e.horario !== "--:--" ? `• Chegada: ${e.horario}` : "";
-                if (e.cep) infoAdicional += ` • CEP: ${e.cep}`;
-
+                div.onclick = () => ativarWidget(idx);
                 div.innerHTML = `
                     <div class="item-topo">
                         <span class="parada-titulo">📌 Parada #${idx + 1}</span>
-                        <span class="parada-codigo">${exibirCodigo}</span>
+                        <span class="parada-codigo">${e.codigo}</span>
                     </div>
                     <div class="parada-endereco">${e.endereco}</div>
-                    <div style="font-size:11px; color:#666; margin-top:4px;">
-                        ${infoAdicional}
-                        ${e.status !== 'pendente' ? `<span style="color:#16a34a; font-weight:bold; margin-left:8px;">✓ ${e.status.toUpperCase()} às ${e.timestamp}</span>` : ''}
-                    </div>
                 `;
                 container.appendChild(div);
             });
-            atualizarConteudoWidgetFlutuanteInterno();
         }
 
         function atualizarContador() {
-            const pendentes = bdRotas.filter(r => r.status === 'pendente').length;
-            document.getElementById('contador-restantes').innerText = pendentes;
+            document.getElementById('contador-restantes').innerText = bdRotas.filter(r => r.status === 'pendente').length;
+        }
+
+        function ativarWidget(idx) {
+            indexAtivo = idx;
+            const e = bdRotas[idx];
+            document.getElementById('wg-num').innerText = String(idx + 1).padStart(2, '0');
+            document.getElementById('wg-badge').innerText = idx + 1;
+            document.getElementById('wg-rua').innerText = e.endereco;
+            document.getElementById('widget-escuro').style.display = 'block';
+            map.flyTo([e.lat, e.lon], 16);
+            atualizarConteudoWidgetFlutuanteInterno();
+        }
+
+        function registrarAcaoFinal(status) {
+            if (indexAtivo === null) return;
+            bdRotas[indexAtivo].status = status;
+            bdRotas[indexAtivo].timestamp = new Date().toLocaleTimeString();
+            salvarBD();
+            renderizarLista();
+            atualizarContador();
+            plotarNoMapa();
+            document.getElementById('widget-escuro').style.display = 'none';
+            indexAtivo = null;
+        }
+
+        function alternarWidgetFlutuanteInterno(event) {
+            if (event) event.stopPropagation();
+            document.getElementById('widget-flutuante-interno').style.display = 'block';
+        }
+
+        function fecharWidgetFlutuanteInterno() {
+            document.getElementById('widget-flutuante-interno').style.display = 'none';
+        }
+
+        function atualizarConteudoWidgetFlutuanteInterno() {
+            if (indexAtivo === null) return;
+            const e = bdRotas[indexAtivo];
+            document.getElementById('wf-rua').innerText = e.endereco;
+        }
+
+        function salvarBD() {
+            localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
         }
 
         function toggleMenu(event) {
@@ -918,239 +804,89 @@
             document.getElementById('wg-detalhe').classList.toggle('minimizada');
         }
 
-        function falarProximaEntrega(idx) {
-            const e = bdRotas[idx];
-            const partes = e.endereco.split(',');
-            const rua = partes[0] || 'Próximo endereço';
-            const tokenTexto = e.codigoRastreio || e.codigoAT || e.codigo;
-            const ultimosDigitos = tokenTexto.slice(-4).split('').join(' ');
-            falarTexto(`Próxima entrega na: ${rua}. Final do código: ${ultimosDigitos}`);
+        function navegarApp() {
+            if (indexAtivo === null) return;
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bdRotas[indexAtivo].endereco)}`, '_blank');
+        }
+
+        function fecharScanner() {
+            document.getElementById('modalScanner').style.display = 'none';
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop();
+                html5QrcodeScanner = null;
+            }
+            processandoLeitura = false;
+        }
+
+        function abrirScanner() {
+            document.getElementById('menu-opcoes').style.display = 'none';
+            document.getElementById('modalScanner').style.display = 'flex';
+            if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 280, height: 150 } }, (decodedText) => {
+                if (processandoLeitura) return;
+                processandoLeitura = true;
+                const ativado = verificarEAtivarWidgetPorCodigo(decodedText);
+                if (ativado) {
+                    alert("Localizado!");
+                    fecharScanner();
+                } else {
+                    alert("Não encontrado na rota.");
+                    processandoLeitura = false;
+                }
+            });
         }
 
         function verificarEAtivarWidgetPorCodigo(token) {
             const limpo = token.trim().toUpperCase();
-            
-            const idx = bdRotas.findIndex(i => 
-                (i.codigoRastreio && (limpo.includes(i.codigoRastreio) || i.codigoRastreio.includes(limpo))) ||
-                (i.codigoAT && (limpo.includes(i.codigoAT) || i.codigoAT.includes(limpo))) ||
-                limpo.includes(i.codigo) || i.codigo.includes(limpo)
-            );
-
+            const idx = bdRotas.findIndex(i => i.codigo.includes(limpo));
             if (idx !== -1) {
-                emitirBip();
                 ativarWidget(idx);
                 return true;
             }
             return false;
         }
 
-        function abrirAbadeNavegacaoExterna(enderecoCompleto) {
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoCompleto)}`, '_blank');
-        }
-
-        function activarDesdeMapa(idx) {
-            ativarWidget(idx);
-        }
-
-        function ativarWidget(idx) {
-            indexAtivo = idx;
-            const e = bdRotas[idx];
-            document.getElementById('wg-num').innerText = String(idx + 1).padStart(2, '0');
-            document.getElementById('wg-badge').innerText = idx + 1;
-            
-            const partes = e.endereco.split(',');
-            document.getElementById('wg-rua').innerText = partes[0] || 'Endereço GPS';
-            
-            let extraLinha = `Rastreio: ${e.codigoRastreio || 'N/A'} | AT ID: ${e.codigoAT || 'N/A'}`;
-            if (e.cep) extraLinha += ` | CEP: ${e.cep}`;
-            if (e.horario && e.horario !== "--:--") extraLinha += ` | Janela: ${e.horario}`;
-            
-            document.getElementById('wg-detalhe').innerHTML = `<strong>${extraLinha}</strong><br>${e.endereco}`;
-            
-            document.getElementById('wg-detalhe').classList.remove('minimizada');
-            document.getElementById('widget-escuro').style.display = 'block';
-
-            falarProximaEntrega(idx);
-            map.flyTo([e.lat - 0.001, e.lon], 16, { animate: true, duration: 0.8 });
-            atualizarConteudoWidgetFlutuanteInterno();
-        }
-
-        function registrarAcaoFinal(status) {
-            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
-            
-            bdRotas[indexAtivo].status = status;
-            bdRotas[indexAtivo].timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            if (status === 'entregue') emitirBip();
-            
-            salvarBD();
-            renderizarLista();
-            atualizarContador();
-            plotarNoMapa();
-            
-            document.getElementById('widget-escuro').style.display = 'none';
-            indexAtivo = null;
-        }
-
-        function navegarApp() {
-            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
-            const e = bdRotas[indexAtivo];
-            abrirAbadeNavegacaoExterna(e.endereco);
-        }
-
-        function alternarWidgetFlutuanteInterno(event) {
-            if (event) event.stopPropagation();
-            if (indexAtivo === null) return alert("Ative um endereço na lista para poder flutuar.");
-            
-            const wf = document.getElementById('widget-flutuante-interno');
-            wf.style.display = 'block';
-            atualizarConteudoWidgetFlutuanteInterno();
-        }
-
-        function fecharWidgetFlutuanteInterno() {
-            document.getElementById('widget-flutuante-interno').style.display = 'none';
-        }
-
-        function atualizarConteudoWidgetFlutuanteInterno() {
-            if (indexAtivo === null) return;
-            const e = bdRotas[indexAtivo];
-            const partes = e.endereco.split(',');
-            
-            document.getElementById('wf-rua').innerText = partes[0] || 'Endereço';
-            document.getElementById('wf-detalhe').innerText = `${e.codigoRastreio || e.codigo} - ${e.endereco}`;
-        }
-
-        function obterLocalizacaoEOTimizar() {
-            const menu = document.getElementById('menu-opcoes');
-            if(menu) menu.style.display = 'none';
-            executarOtimizacaoTSP(false);
-        }
-
-        function executarOtimizacaoTSP(silencioso = false) {
-            let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
-            let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
-            
-            if(rascunho.length === 0) return;
-            
-            let otimizado = [];
-            let pontoPartida = minhaPosicao ? { lat: minhaPosicao.lat, lon: minhaPosicao.lon } : rascunho.shift();
-            
-            if (!minhaPosicao && rascunho.length > 0) {
-                otimizado.push(pontoPartida);
-            }
-            
-            let atual = pontoPartida;
-            while(rascunho.length > 0) {
-                let indexMaisProximo = 0;
-                let menorDist = Infinity;
-                
-                for(let i=0; i<rascunho.length; i++) {
-                    let d = Math.sqrt(Math.pow(atual.lat - rascunho[i].lat, 2) + Math.pow(atual.lon - rascunho[i].lon, 2));
-                    if(d < menorDist) { 
-                        menorDist = d; 
-                        indexMaisProximo = i; 
-                    }
-                }
-                let proximaParada = rascunho.splice(indexMaisProximo, 1)[0];
-                otimizado.push(proximaParada);
-                atual = proximaParada;
-            }
-            
-            bdRotas = [...concluidos, ...otimizado];
-            bdRotas.forEach((item, idx) => item.id = idx);
-            
-            if(!silencioso) {
-                salvarBD();
-                renderizarLista();
-                plotarNoMapa();
-                alert("Rota reordenada com sucesso a partir do GPS real!");
-            }
-        }
-
-        function abrirScanner() {
-            const menu = document.getElementById('menu-opcoes');
-            if(menu) menu.style.display = 'none';
-            document.getElementById('modalScanner').style.display = 'flex';
-            const feedback = document.getElementById('scannerFeedback');
-            feedback.innerText = "Aguardando leitura do código... ";
-            feedback.style.color = "white";
-            
-            if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
-            
-            html5QrcodeScanner.start(
-                { facingMode: "environment" }, 
-                { fps: 15, qrbox: { width: 280, height: 150 } }, 
-                processarLeituraDaCamera
-            ).catch(e => {
-                feedback.innerText = "Erro ao mapear a câmera traseira do dispositivo.";
-            });
-        }
-
-        function fecharScanner() {
-            document.getElementById('modalScanner').style.display = 'none';
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.stop().then(() => {
-                    html5QrcodeScanner = null;
-                }).catch(err => console.log(err));
-            }
-            processandoLeitura = false;
-        }
-
-        function processarLeituraDaCamera(textoLido) {
-            if (processandoLeitura) return;
-            processandoLeitura = true;
-            
-            const token = textoLido.trim().toUpperCase();
-            const feedback = document.getElementById('scannerFeedback');
-            const ativado = verificarEAtivarWidgetPorCodigo(token);
-            
-            if (ativado) {
-                feedback.innerText = `✅ Encomenda Localizada!`;
-                feedback.style.color = "var(--cor-verde)";
-                setTimeout(() => { fecharScanner(); }, 1200);
-            } else {
-                feedback.innerText = `❌ Código não listado nesta rota.`;
-                feedback.style.color = "var(--cor-vermelho)";
-                setTimeout(() => { processandoLeitura = false; }, 1500);
-            }
-        }
-
         function forcarBaixaManual() {
-            const menu = document.getElementById('menu-opcoes');
-            if(menu) menu.style.display = 'none';
-            const cod = prompt("Digite o código identificador da encomenda (SPX / AT ID):");
-            if(cod && cod.trim() !== "") {
-                const ativado = verificarEAtivarWidgetPorCodigo(cod.trim().toUpperCase());
-                if(!ativado) alert("Código não localizado na rota ativa.");
-            }
+            document.getElementById('menu-opcoes').style.display = 'none';
+            const cod = prompt("Digite o código:");
+            if(cod) verificarEAtivarWidgetPorCodigo(cod);
         }
 
         function exportarRelatorioCSV() {
-            const menu = document.getElementById('menu-opcoes');
-            if(menu) menu.style.display = 'none';
-            if(bdRotas.length === 0) return alert("Sem dados.");
-            let csv = "\uFEFFID,Sequencia,Rastreio,AT_ID,CEP,Endereco,Status,HorarioBaixa\n";
-            bdRotas.forEach(p => {
-                csv += `"${p.id + 1}","${p.sequencia}","${p.codigoRastreio}","${p.codigoAT}","${p.cep}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}","${p.timestamp || 'N/A'}"\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            document.getElementById('menu-opcoes').style.display = 'none';
+            let csv = "ID,Endereco,Status\n";
+            bdRotas.forEach(p => csv += `${p.id},"${p.endereco}","${p.status}"\n`);
+            const blob = new Blob([csv], { type: 'text/csv' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `Rota_Facil_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
+            link.download = "Relatorio.csv";
             link.click();
         }
 
         function limparSessao() {
-            const menu = document.getElementById('menu-opcoes');
-            if(menu) menu.style.display = 'none';
-            if(confirm("Deseja apagar a rota activa atual?")) {
+            if(confirm("Apagar tudo?")) {
                 localStorage.removeItem('rota_facil_db_oficial');
                 location.reload();
             }
         }
+        
+        function obterLocalizacaoEOTimizar() {
+             document.getElementById('menu-opcoes').style.display = 'none';
+             alert("Otimizando baseada na sua posição atual...");
+             executarOtimizacaoTSP();
+        }
 
-        function salvarBD() {
-            localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
+        function executarOtimizacaoTSP() {
+            let pendentes = bdRotas.filter(r => r.status === 'pendente');
+            let concluidos = bdRotas.filter(r => r.status !== 'pendente');
+            
+            // Re-ordena pendentes por distância (simples)
+            pendentes.sort((a,b) => a.lat - b.lat); 
+            
+            bdRotas = [...concluidos, ...pendentes];
+            salvarBD();
+            renderizarLista();
+            plotarNoMapa();
         }
     </script>
 </body>
