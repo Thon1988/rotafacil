@@ -285,7 +285,7 @@
     <button class="btn-menu" onclick="toggleMenu()">☰</button>
     <div id="menu-opcoes">
         <button class="menu-item" onclick="abrirScanner()">📷 Iniciar Scanner</button>
-        <button class="menu-item" onclick="executarOtimizacaoTSP()">⚡ Otimizar Rota Atual</button>
+        <button class="menu-item" onclick="obterLocalizacaoEOTimizar()">⚡ Otimizar Rota Atual</button>
         <button class="menu-item" onclick="exportarRelatorioCSV()">📥 Exportar Relatório</button>
         <button class="menu-item" onclick="forcarBaixaManual()">✍️ Digitar Código Manual</button>
         <button class="menu-item" style="color: #dc2626;" onclick="limparSessao()">🗑️ Apagar Rota</button>
@@ -348,11 +348,14 @@
         let map;
         let layerMarkers = [];
         let mapPolyline = null;
+        let marcadorUsuario = null;
+        let minhaPosicao = null;
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         window.onload = () => {
             inicializarMapa();
+            monitorarLocalizacaoDispositivo();
             
             if (bdRotas.length > 0) {
                 document.getElementById('tela-setup').style.display = 'none';
@@ -370,6 +373,37 @@
             }).addTo(map);
         }
 
+        function monitorarLocalizacaoDispositivo() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition((pos) => {
+                    minhaPosicao = {
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude
+                    };
+                    
+                    if (map) {
+                        if (marcadorUsuario) {
+                            marcadorUsuario.setLatLng([minhaPosicao.lat, minhaPosicao.lon]);
+                        } else {
+                            let iconeUser = L.divIcon({
+                                className: 'custom-user-wrapper',
+                                html: `<div class="marker-pin" style="background-color: #3b82f6; border-color: #fff; box-shadow: 0 0 10px #3b82f6;">🏠</div>`,
+                                iconSize: [28, 28],
+                                iconAnchor: [14, 14]
+                            });
+                            marcadorUsuario = L.marker([minhaPosicao.lat, minhaPosicao.lon], { icon: iconeUser }).addTo(map);
+                        }
+                    }
+                }, (err) => {
+                    console.log("Erro de permissão ou hardware no GPS: ", err.message);
+                }, {
+                    enableHighAccuracy: true,
+                    maximumAge: 30000,
+                    timeout: 27000
+                });
+            }
+        }
+
         function plotarNoMapa() {
             if (!map) return;
             
@@ -382,8 +416,12 @@
             let bounds = [];
             let latlngsLinha = [];
 
+            if (minhaPosicao && bdRotas.filter(r => r.status === 'pendente').length > 0) {
+                latlngsLinha.push([minhaPosicao.lat, minhaPosicao.lon]);
+            }
+
             bdRotas.forEach((e, idx) => {
-                let cor = e.status === 'pendente' ? '#3b82f6' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
+                let cor = e.status === 'pendente' ? '#ea580c' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
                 
                 let customIcon = L.divIcon({
                     className: 'custom-pin-wrapper',
@@ -393,7 +431,6 @@
                 });
 
                 let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
-                
                 marker.on('click', () => ativarWidget(idx));
                 
                 layerMarkers.push(marker);
@@ -404,12 +441,16 @@
                 }
             });
 
+            if (marcadorUsuario && minhaPosicao) {
+                bounds.push([minhaPosicao.lat, minhaPosicao.lon]);
+            }
+
             if(latlngsLinha.length > 1) {
-                mapPolyline = L.polyline(latlngsLinha, {color: '#3b82f6', weight: 4, opacity: 0.8}).addTo(map);
+                mapPolyline = L.polyline(latlngsLinha, {color: '#ea580c', weight: 4, opacity: 0.8, dashArray: '5, 10'}).addTo(map);
             }
 
             if (bounds.length > 0) {
-                map.fitBounds(bounds, { padding: [30, 30] });
+                map.fitBounds(bounds, { padding: [40, 40] });
             }
         }
 
@@ -517,10 +558,13 @@
             let idCounter = 0;
             bdRotas = [];
             
+            let baseLat = minhaPosicao ? minhaPosicao.lat : -23.55;
+            let baseLon = minhaPosicao ? minhaPosicao.lon : -46.63;
+            
             linhas.forEach((linha) => {
                 if (linha.trim().length < 5) return;
 
-                const match = inline = linha.match(/(BR\d{11})/i);
+                const match = linha.match(/(BR\d{11})/i);
                 if (!match) return;
 
                 let codigo = match[1].toUpperCase();
@@ -532,8 +576,8 @@
                     endereco: endereco,
                     status: 'pendente',
                     timestamp: null,
-                    lat: -23.55 + (Math.random() - 0.5) * 0.15,
-                    lon: -46.63 + (Math.random() - 0.5) * 0.15
+                    lat: baseLat + (Math.random() - 0.5) * 0.08,
+                    lon: baseLon + (Math.random() - 0.5) * 0.08
                 });
             });
 
@@ -608,7 +652,7 @@
             
             document.getElementById('widget-escuro').style.display = 'block';
 
-            map.flyTo([e.lat - 0.015, e.lon], 14, { animate: true, duration: 1 });
+            map.flyTo([e.lat - 0.005, e.lon], 15, { animate: true, duration: 1 });
         }
 
         function registrarAcaoFinal(status) {
@@ -634,27 +678,52 @@
             window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`, '_blank');
         }
 
-        function ejecutarOtimizacaoTSP() {
+        function obterLocalizacaoEOTimizar() {
             toggleMenu();
-            if(bdRotas.length <= 2) return alert("Quantidade de paradas insuficiente.");
-            
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    minhaPosicao = {
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude
+                    };
+                    executarOtimizacaoTSP();
+                }, (err) => {
+                    alert("GPS indisponível para otimização exata. Usando cálculo padrão por proximidade.");
+                    executarOtimizacaoTSP();
+                }, { enableHighAccuracy: true });
+            } else {
+                executarOtimizacaoTSP();
+            }
+        }
+
+        function executarOtimizacaoTSP() {
             let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
             let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
             
-            if(rascunho.length === 0) return;
+            if(rascunho.length === 0) return alert("Não há paradas pendentes para otimizar.");
             
-            let otimizado = [rascunho.shift()];
+            let otimizado = [];
+            let pontoPartida = minhaPosicao ? { lat: minhaPosicao.lat, lon: minhaPosicao.lon } : rascunho.shift();
             
+            if (!minhaPosicao) {
+                otimizado.push(pontoPartida);
+            }
+            
+            let atual = pontoPartida;
             while(rascunho.length > 0) {
-                let atual = otimizado[otimizado.length - 1];
                 let indexMaisProximo = 0;
                 let menorDist = Infinity;
                 
                 for(let i=0; i<rascunho.length; i++) {
                     let d = Math.sqrt(Math.pow(atual.lat - rascunho[i].lat, 2) + Math.pow(atual.lon - rascunho[i].lon, 2));
-                    if(d < menorDist) { menorDist = d; indexMaisProximo = i; }
+                    if(d < menorDist) { 
+                        menorDist = d; 
+                        indexMaisProximo = i; 
+                    }
                 }
-                otimizado.push(rascunho.splice(indexMaisProximo, 1)[0]);
+                let proximaParada = rascunho.splice(indexMaisProximo, 1)[0];
+                otimizado.push(proximaParada);
+                atual = proximaParada;
             }
             
             bdRotas = [...concluidos, ...otimizado];
@@ -663,7 +732,7 @@
             salvarBD();
             renderizarLista();
             plotarNoMapa();
-            alert("Rota otimizada com sucesso via motor de proximidade TSP.");
+            alert("Rota otimizada com sucesso partindo da sua localização atual.");
         }
 
         function abrirScanner() {
