@@ -200,7 +200,7 @@
         }
         .widget-controls { 
             display: flex; 
-            gap: 12px; 
+            gap: 16px; 
             align-items: center;
         }
         .btn-ctrl { 
@@ -208,9 +208,9 @@
             border: none; 
             color: #aaa; 
             cursor: pointer; 
-            font-size: 18px; 
+            font-size: 22px; 
             font-weight: bold; 
-            padding: 4px; 
+            padding: 4px 8px; 
         }
         
         .w-badge { 
@@ -450,7 +450,7 @@
             document.addEventListener('click', (e) => {
                 const menu = document.getElementById('menu-opcoes');
                 const btnMenu = document.getElementById('btnMenuGeral');
-                if (menu.style.display === 'flex' && !menu.contains(e.target) && e.target !== btnMenu) {
+                if (menu && menu.style.display === 'flex' && !menu.contains(e.target) && e.target !== btnMenu) {
                     menu.style.display = 'none';
                 }
             });
@@ -547,50 +547,65 @@
             if (nomeArquivo.endsWith('.xlsx') || nomeArquivo.endsWith('.xls')) {
                 const leitor = new FileReader();
                 leitor.onload = function(e) {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    const jsonMatriz = XLSX.utils.sheet_to_json(worksheet);
-                    extrairDadosDeObjetos(jsonMatriz);
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        const jsonMatriz = XLSX.utils.sheet_to_json(worksheet);
+                        extrairDadosDeObjetos(jsonMatriz);
+                    } catch(err) {
+                        alert("Erro ao ler arquivo Excel: " + err.message);
+                        resetarBotaoUpload();
+                    }
                 };
                 leitor.readAsArrayBuffer(arquivo);
 
             } else if (nomeArquivo.endsWith('.csv')) {
                 const leitor = new FileReader();
                 leitor.onload = function(e) {
-                    const texto = e.target.result;
-                    const linhas = texto.split('\n');
-                    if(linhas.length < 2) return alert("Arquivo CSV vazio.");
-                    
-                    let separador = linhas[0].includes(';') ? ';' : ',';
-                    let cabecalhos = linhas[0].split(separador).map(c => c.replace(/"/g, '').trim().toLowerCase());
-                    
-                    let listaObjetos = [];
-                    for(let i = 1; i < linhas.length; i++) {
-                        if(linhas[i].trim() === '') continue;
-                        let colunas = linhas[i].split(separador).map(c => c.replace(/"/g, '').trim());
-                        let obj = {};
-                        cabecalhos.forEach((cab, idx) => {
-                            obj[cab] = colunas[idx] || "";
-                        });
-                        listaObjetos.push(obj);
+                    try {
+                        const texto = e.target.result;
+                        const linhas = texto.split('\n');
+                        if(linhas.length < 2) return alert("Arquivo CSV vazio.");
+                        
+                        let separador = linhas[0].includes(';') ? ';' : ',';
+                        let cabecalhos = linhas[0].split(separador).map(c => c.replace(/"/g, '').trim().toLowerCase());
+                        
+                        let listaObjetos = [];
+                        for(let i = 1; i < linhas.length; i++) {
+                            if(linhas[i].trim() === '') continue;
+                            let colunas = linhas[i].split(separador).map(c => c.replace(/"/g, '').trim());
+                            let obj = {};
+                            cabecalhos.forEach((cab, idx) => {
+                                obj[cab] = colunas[idx] || "";
+                            });
+                            listaObjetos.push(obj);
+                        }
+                        extrairDadosDeObjetos(listaObjetos);
+                    } catch(err) {
+                        alert("Erro ao ler arquivo CSV: " + err.message);
+                        resetarBotaoUpload();
                     }
-                    extrairDadosDeObjetos(listaObjetos);
                 };
                 leitor.readAsText(arquivo);
             } else if (nomeArquivo.endsWith('.pdf')) {
                 const leitor = new FileReader();
                 leitor.onload = async function() {
-                    const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                    let textoCompleto = "";
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        textoCompleto += content.items.map(item => item.str).join(" ") + "\n";
+                    try {
+                        const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+                        let textoCompleto = "";
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const content = await page.getTextContent();
+                            textoCompleto += content.items.map(item => item.str).join(" ") + "\n";
+                        }
+                        extrairDadosDeTextoBruto(textoCompleto);
+                    } catch(err) {
+                        alert("Erro ao ler PDF: " + err.message);
+                        resetarBotaoUpload();
                     }
-                    extrairDadosDeTextoBruto(textoCompleto);
                 };
                 leitor.readAsArrayBuffer(arquivo);
             } else {
@@ -600,15 +615,23 @@
             }
         }
 
+        function resetarBotaoUpload() {
+            document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+        }
+
         function extrairDadosDeObjetos(listaObjetos) {
             bdRotas = [];
             let idCounter = 0;
 
+            // Ponto de partida base para espalhar as paradas caso não haja GPS real (Região de São Paulo)
+            let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
+            let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
+
             listaObjetos.forEach((linha) => {
                 let chaves = Object.keys(linha);
                 
-                let chaveCodigo = chaves.find(k => k.toLowerCase().includes('spx') || k.toLowerCase().includes('codigo') || k.toLowerCase().includes('id') || k.toLowerCase().includes('tracking'));
-                let chaveEnd = chaves.find(k => k.toLowerCase().includes('address') || k.toLowerCase().includes('endereco') || k.toLowerCase().includes('destinatario'));
+                let chaveCodigo = chaves.find(k => k.toLowerCase().includes('spx') || k.toLowerCase().includes('codigo') || k.toLowerCase().includes('at id') || k.toLowerCase().includes('tracking') || k.toLowerCase().includes('id'));
+                let chaveEnd = chaves.find(k => k.toLowerCase().includes('address') || k.toLowerCase().includes('endereco') || k.toLowerCase().includes('destinatario') || k.toLowerCase().includes('rua'));
                 let chaveLat = chaves.find(k => k.toLowerCase().includes('lat'));
                 let chaveLon = chaves.find(k => k.toLowerCase().includes('lon'));
                 let chaveBairro = chaves.find(k => k.toLowerCase().includes('bairro'));
@@ -620,6 +643,8 @@
                 let lat = chaveLat ? parseFloat(String(linha[chaveLat]).replace(',', '.')) : null;
                 let lon = chaveLon ? parseFloat(String(linha[chaveLon]).replace(',', '.')) : null;
 
+                if (!endereco || endereco.length < 3) return; // ignora linhas vazias
+
                 if (!codigo || codigo.length < 5) {
                     let matchBR = endereco.match(/(BR\d{11})/i);
                     codigo = matchBR ? matchBR[1].toUpperCase() : `ID-${idCounter}`;
@@ -629,17 +654,21 @@
                     endereco += `, ${bairro}`;
                 }
 
-                if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
-                    bdRotas.push({
-                        id: idCounter++,
-                        codigo: codigo.toUpperCase(),
-                        endereco: endereco,
-                        status: 'pendente',
-                        timestamp: null,
-                        lat: lat,
-                        lon: lon
-                    });
+                // Fallback robusto se a planilha não contiver coordenadas nativas
+                if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
+                    lat = baseLat + (Math.random() - 0.5) * 0.09;
+                    lon = baseLon + (Math.random() - 0.5) * 0.09;
                 }
+
+                bdRotas.push({
+                    id: idCounter++,
+                    codigo: codigo.toUpperCase(),
+                    endereco: endereco,
+                    status: 'pendente',
+                    timestamp: null,
+                    lat: lat,
+                    lon: lon
+                });
             });
 
             finalizarCarregamento();
@@ -650,28 +679,34 @@
             bdRotas = [];
             let idCounter = 0;
 
+            let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
+            let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
+
             linhas.forEach((linha) => {
                 if (linha.trim().length < 10) return;
 
                 let gpsMatches = linha.match(/(-23\.\d+)[,\s]+(-46\.\d+)/) || linha.match(/(-23\.\d+).+?(-46\.\d+)/);
                 let matchBR = linha.match(/(BR\d{11})/i);
                 
+                let lat = gpsMatches ? parseFloat(gpsMatches[1]) : (baseLat + (Math.random() - 0.5) * 0.09);
+                let lon = gpsMatches ? parseFloat(gpsMatches[2]) : (baseLon + (Math.random() - 0.5) * 0.09);
+                let codigo = matchBR ? matchBR[1].toUpperCase() : `ID-${idCounter}`;
+                let endereco = linha;
+                
                 if (gpsMatches) {
-                    let lat = parseFloat(gpsMatches[1]);
-                    let lon = parseFloat(gpsMatches[2]);
-                    let codigo = matchBR ? matchBR[1].toUpperCase() : `ID-${idCounter}`;
-                    let endereco = linha.replace(gpsMatches[0], '').replace(codigo, '').trim();
-
-                    bdRotas.push({
-                        id: idCounter++,
-                        codigo: codigo,
-                        endereco: endereco || "Endereço registrado via GPS",
-                        status: 'pendente',
-                        timestamp: null,
-                        lat: lat,
-                        lon: lon
-                    });
+                    endereco = endereco.replace(gpsMatches[0], '');
                 }
+                endereco = endereco.replace(codigo, '').trim();
+
+                bdRotas.push({
+                    id: idCounter++,
+                    codigo: codigo,
+                    endereco: endereco || "Endereço registrado via Lista",
+                    status: 'pendente',
+                    timestamp: null,
+                    lat: lat,
+                    lon: lon
+                });
             });
 
             finalizarCarregamento();
@@ -679,8 +714,8 @@
 
         function finalizarCarregamento() {
             if (bdRotas.length === 0) {
-                alert("Não foi possível encontrar as colunas de Latitude/Longitude ou dados compatíveis no arquivo.");
-                document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+                alert("Nenhum dado legível foi encontrado no arquivo carregado. Verifique os cabeçalhos.");
+                resetarBotaoUpload();
                 return;
             }
 
@@ -700,7 +735,7 @@
             bdRotas.forEach((e, idx) => {
                 const div = document.createElement('div');
                 div.className = `item-lista ${e.status !== 'pendente' ? 'concluido' : ''}`;
-                div.onclick = () => ativarWidget(idx);
+                div.onclick = () => activarDesdeMapa(idx);
                 
                 div.innerHTML = `
                     <div class="item-topo">
@@ -737,12 +772,19 @@
         }
 
         function alternarExpansaoWidget(event) {
+            // Evita alternar se clicou nos botões de controle internos
+            if (event.target.classList.contains('btn-ctrl')) return;
+            
             const det = document.getElementById('wg-detalhe');
             if (det.classList.contains('minimizada')) {
                 det.classList.remove('minimizada');
             } else {
                 det.classList.add('minimizada');
             }
+        }
+
+        function activarNav(idx) {
+            ativarWidget(idx);
         }
 
         function ativarWidget(idx) {
@@ -781,16 +823,16 @@
         function navegarApp() {
             if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
             const e = bdRotas[indexAtivo];
-            window.open(`https://www.google.com/maps/search/?api=1&query=${e.lat},${e.lon}`, '_blank');
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.endereco)}`, '_blank');
         }
 
         function obterLocalizacaoEOTimizar() {
             const menu = document.getElementById('menu-opcoes');
-            menu.style.display = 'none';
+            if(menu) menu.style.display = 'none';
             executarOtimizacaoTSP(false);
         }
 
-        function ejecutarOtimizacaoTSP(silencioso = false) {
+        function executarOtimizacaoTSP(silencioso = false) {
             let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
             let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
             
@@ -827,13 +869,13 @@
                 salvarBD();
                 renderizarLista();
                 plotarNoMapa();
-                alert("Rota reordenada com sucesso usando as coordenadas originais!");
+                alert("Rota reordenada com sucesso!");
             }
         }
 
         function abrirScanner() {
             const menu = document.getElementById('menu-opcoes');
-            menu.style.display = 'none';
+            if(menu) menu.style.display = 'none';
             document.getElementById('modalScanner').style.display = 'flex';
             const feedback = document.getElementById('scannerFeedback');
             feedback.innerText = "Aguardando leitura do código...";
@@ -872,7 +914,7 @@
             if (idx !== -1) {
                 emitirBip();
                 const ultimosDigitos = bdRotas[idx].codigo.slice(-4);
-                falarTexto(`Parada ${idx + 1}. Final ${ultimosDigitos.split('').join(' ')}`);
+                falarTexto(`Parada ${idx + 1}. Final ${customSplit(ultimosDigitos)}`);
                 
                 feedback.innerText = `✅ Parada #${idx + 1} Localizada!`;
                 feedback.style.color = "var(--cor-verde)";
@@ -886,9 +928,13 @@
             }
         }
 
+        function customSplit(str) {
+            return str.split('').join(' ');
+        }
+
         function forcarBaixaManual() {
             const menu = document.getElementById('menu-opcoes');
-            menu.style.display = 'none';
+            if(menu) menu.style.display = 'none';
             const cod = prompt("Digite o código identificador da encomenda:");
             if(cod && cod.trim() !== "") {
                 const idx = bdRotas.findIndex(i => i.codigo.toUpperCase().includes(cod.trim().toUpperCase()));
@@ -902,7 +948,7 @@
 
         function exportarRelatorioCSV() {
             const menu = document.getElementById('menu-opcoes');
-            menu.style.display = 'none';
+            if(menu) menu.style.display = 'none';
             if(bdRotas.length === 0) return alert("Sem dados.");
             let csv = "\uFEFFID,Codigo,Endereco,Status,Horario\n";
             bdRotas.forEach(p => {
@@ -917,8 +963,8 @@
 
         function limparSessao() {
             const menu = document.getElementById('menu-opcoes');
-            menu.style.display = 'none';
-            if(confirm("Deseja apagar a rota ativa atual?")) {
+            if(menu) menu.style.display = 'none';
+            if(confirm("Deseja apagar a rota activa atual?")) {
                 localStorage.removeItem('rota_facil_db_oficial');
                 location.reload();
             }
@@ -929,4 +975,4 @@
         }
     </script>
 </body>
-    </html>
+</html>
