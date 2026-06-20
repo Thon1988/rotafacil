@@ -690,141 +690,51 @@
             let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
             let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
             
-            const regexLinhaParada = /"(\d+)\s*"\s*,\s*"([^"]+)"\s*,\s*"([\d:]+)\s*"\s*,\s*"([^"]+)"/g;
-            let match;
+            const linhas = textoBruto.split(/\r?\n/);
             let idCounter = 0;
 
-            while ((match = regexLinhaParada.exec(textoBruto)) !== null) {
-                let sequenciaCircuit = match[1].trim();
-                let enderecoBruto = match[2].trim();
-                let horarioEstimado = match[3].trim();
-                let blocoNotas = match[4].trim();
-
-                let matchBR = blocoNotas.match(/(BR[A-Z0-9]{11,12})/i);
-                let matchAT = blocoNotas.match(/(AT202\d{9}[A-Z0-9]*)/i);
-                let matchCEP = blocoNotas.match(/(\d{5}-\d{3})/);
-
-                let codigoRastreio = matchBR ? matchBR[1].toUpperCase() : "";
-                let codigoBarrasAT = matchAT ? matchAT[1].toUpperCase() : "";
-                let cepExtraido = matchCEP ? matchCEP[1] : "";
-
-                let enderecoLimpo = enderecoBruto.replace(/\s+/g, ' ').trim();
+            linhas.forEach((linha) => {
+                // Regex para capturar códigos (BR/AT) e ignorar lixo
+                let matchBR = linha.match(/(BR\s?[A-Z0-9]{11,12})/i);
+                let matchAT = linha.match(/(AT202\d{9}[A-Z0-9]*)/i);
                 
-                if (enderecoLimpo.endsWith(", São Paulo")) {
-                    enderecoLimpo = enderecoLimpo.slice(0, -11).trim();
-                }
+                if (!matchBR && !matchAT) return; // Filtra linhas inúteis
 
-                let codigoIdentificadorFinal = codigoRastreio || codigoBarrasAT || `PARADA-${sequenciaCircuit}`;
+                let codigoRastreio = matchBR ? matchBR[1].replace(/\s/g, '').toUpperCase() : "";
+                let codigoBarrasAT = matchAT ? matchAT[1].replace(/\s/g, '').toUpperCase() : "";
+                
+                let enderecoLimpo = linha.replace(matchBR ? matchBR[0] : "", "").replace(matchAT ? matchAT[0] : "", "").replace(/[;\t\|]+/g, ' ').trim();
+                
+                if (enderecoLimpo.length < 5) return; // Filtra endereços curtos demais
+
+                let codigoIdentificadorFinal = codigoRastreio || codigoBarrasAT;
 
                 let lat = baseLat + (idCounter * 0.0016) - 0.002;
                 let lon = baseLon + (idCounter * 0.0019) + 0.001;
 
                 bdRotas.push({
-                    id: idCounter++,
-                    sequencia: parseInt(sequenciaCircuit),
+                    id: idCounter,
+                    sequencia: idCounter + 1,
                     codigo: codigoIdentificadorFinal,
                     codigoRastreio: codigoRastreio,
                     codigoAT: codigoBarrasAT,
-                    cep: cepExtraido,
-                    horario: horarioEstimado,
+                    cep: "", 
+                    horario: "--:--",
                     endereco: enderecoLimpo,
                     status: 'pendente',
                     timestamp: null,
                     lat: lat,
                     lon: lon
                 });
-            }
+                idCounter++;
+            });
 
             if (bdRotas.length === 0) {
-                analisarDadosPlanilhaUnificadaTexto(textoBruto);
+                alert("Erro: Não foi possível identificar as paradas no arquivo.");
                 return;
             }
 
             finalizarCarregamento(true);
-        }
-
-        function analisarDadosPlanilhaUnificadaTexto(textoBruto) {
-            bdRotas = [];
-            let idCounter = 0;
-            let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
-            let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
-
-            let blocos = textoBruto.split(/(?=BR\d{10,}|AT\d{10,})/gi);
-
-            if (blocos.length > 1) {
-                blocos.forEach(bloco => {
-                    let limpa = bloco.trim().replace(/\s+/g, ' ');
-                    if (limpa.length < 10) return;
-
-                    let matchBR = limpa.match(/(BR\d{11}[A-Z0-9]*)/i);
-                    let matchAT = limpa.match(/(AT202\d{9}[A-Z0-9]*)/i);
-                    let matchCEP = limpa.match(/(\d{5}-\d{3})/);
-
-                    let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
-                    
-                    let endereco = limpa;
-                    if (matchBR) endereco = endereco.replace(matchBR[0], '');
-                    if (matchAT) endereco = endereco.replace(matchAT[0], '');
-                    endereco = endereco.trim();
-
-                    let lat = baseLat + (idCounter * 0.0015);
-                    let lon = baseLon + (idCounter * 0.0015);
-
-                    bdRotas.push({
-                        id: idCounter,
-                        sequencia: idCounter + 1,
-                        codigo: codigo,
-                        codigoRastreio: matchBR ? matchBR[1].toUpperCase() : "",
-                        codigoAT: matchAT ? matchAT[1].toUpperCase() : "",
-                        cep: matchCEP ? matchCEP[1] : "",
-                        horario: "--:--",
-                        endereco: endereco || "Detalhes não identificados",
-                        status: 'pendente',
-                        timestamp: null,
-                        lat: lat,
-                        lon: lon
-                    });
-                    idCounter++;
-                });
-            } else {
-                const linhas = textoBruto.split(/\r?\n/);
-                linhas.forEach((linha) => {
-                    let limpa = linha.trim().replace(/\s+/g, ' ');
-                    if (limpa.length < 12) return;
-
-                    let matchBR = limpa.match(/(BR\d{11}[A-Z0-9]*)/i);
-                    let matchAT = limpa.match(/(AT202\d{9}[A-Z0-9]*)/i);
-                    let matchCEP = limpa.match(/(\d{5}-\d{3})/);
-                    
-                    let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
-                    
-                    let endereco = limpa;
-                    if (matchBR) endereco = endereco.replace(matchBR[0], '');
-                    if (matchAT) endereco = endereco.replace(matchAT[0], '');
-                    endereco = endereco.trim();
-
-                    let lat = baseLat + (idCounter * 0.0015);
-                    let lon = baseLon + (idCounter * 0.0015);
-
-                    bdRotas.push({
-                        id: idCounter,
-                        sequencia: idCounter + 1,
-                        codigo: codigo,
-                        codigoRastreio: matchBR ? matchBR[1].toUpperCase() : "",
-                        codigoAT: matchAT ? matchAT[1].toUpperCase() : "",
-                        cep: matchCEP ? matchCEP[1] : "",
-                        horario: "--:--",
-                        endereco: endereco || "Detalhes não identificados",
-                        status: 'pendente',
-                        timestamp: null,
-                        lat: lat,
-                        lon: lon
-                    });
-                    idCounter++;
-                });
-            }
-
-            finalizarCarregamento(false);
         }
 
         function analisarDadosPlanilhaUnificada(matriz) {
@@ -835,33 +745,31 @@
 
             matriz.forEach((linha) => {
                 let valoresBrutos = Object.values(linha).map(v => String(v)).join(" ");
-                if (valoresBrutos.trim().length < 12) return;
-
-                let matchBR = valoresBrutos.match(/(BR\d{11}[A-Z0-9]*)/i);
+                
+                let matchBR = valoresBrutos.match(/(BR\s?[A-Z0-9]{11,12})/i);
                 let matchAT = valoresBrutos.match(/(AT202\d{9}[A-Z0-9]*)/i);
-                let matchCEP = valoresBrutos.match(/(\d{5}-\d{3})/);
+                
+                if (!matchBR && !matchAT) return; // Ignora linhas sem código válido
 
-                let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
-                let endereco = valoresBrutos.replace(/\s+/g, ' ').trim();
-
-                let lat = baseLat + (idCounter * 0.0015);
-                let lon = baseLon + (idCounter * 0.0015);
+                let codigo = matchBR ? matchBR[1].replace(/\s/g, '').toUpperCase() : (matchAT ? matchAT[1].replace(/\s/g, '').toUpperCase() : "");
+                let endereco = valoresBrutos.replace(matchBR ? matchBR[0] : "", "").replace(matchAT ? matchAT[0] : "", "").trim();
 
                 if (endereco.length > 5) {
                     bdRotas.push({
-                        id: idCounter++,
-                        sequencia: idCounter,
+                        id: idCounter,
+                        sequencia: idCounter + 1,
                         codigo: codigo,
-                        codigoRastreio: matchBR ? matchBR[1].toUpperCase() : "",
-                        codigoAT: matchAT ? matchAT[1].toUpperCase() : "",
-                        cep: matchCEP ? matchCEP[1] : "",
+                        codigoRastreio: matchBR ? codigo : "",
+                        codigoAT: matchAT ? codigo : "",
+                        cep: "",
                         horario: "--:--",
                         endereco: endereco,
                         status: 'pendente',
                         timestamp: null,
-                        lat: lat,
-                        lon: lon
+                        lat: baseLat + (idCounter * 0.0015),
+                        lon: baseLon + (idCounter * 0.0015)
                     });
+                    idCounter++;
                 }
             });
 
@@ -1050,16 +958,12 @@
             executarOtimizacaoTSP(false);
         }
 
-        /**
-         * Lógica de Otimização aprimorada com 2-Opt para evitar cruzamento de rotas.
-         */
-        function ejecutarOtimizacaoTSP(silencioso = false) {
+        function executarOtimizacaoTSP(silencioso = false) {
             let pendentes = bdRotas.filter(r => r.status === 'pendente');
             let concluidos = bdRotas.filter(r => r.status !== 'pendente');
             
             if(pendentes.length === 0) return;
             
-            // 1. Início: Vizinho Mais Próximo (Heurística Inicial)
             let otimizado = [];
             let atual = minhaPosicao ? { lat: minhaPosicao.lat, lon: minhaPosicao.lon } : pendentes.shift();
             
@@ -1082,7 +986,6 @@
                 otimizado.push(atual);
             }
 
-            // 2. Otimização: Algoritmo 2-Opt (Remove cruzamentos)
             let rota = otimizado;
             let melhorou = true;
             let iteracoes = 0;
@@ -1091,12 +994,10 @@
                 melhorou = false;
                 for (let i = 1; i < rota.length - 2; i++) {
                     for (let k = i + 1; k < rota.length - 1; k++) {
-                        // Calcula distância atual vs distância se trocarmos as pontas
                         let d1 = dist(rota[i-1], rota[i]) + dist(rota[k], rota[k+1]);
                         let d2 = dist(rota[i-1], rota[k]) + dist(rota[i], rota[k+1]);
                         
                         if (d2 < d1) {
-                            // Inverte segmento
                             reverse(rota, i, k);
                             melhorou = true;
                         }
@@ -1112,11 +1013,10 @@
                 salvarBD();
                 renderizarLista();
                 plotarNoMapa();
-                alert("Rota otimizada com 2-Opt (cruzamentos corrigidos)!");
+                alert("Rota otimizada com 2-Opt!");
             }
         }
 
-        // Funções auxiliares para o 2-Opt
         function dist(p1, p2) {
             return Math.sqrt(Math.pow(p1.lat - p2.lat, 2) + Math.pow(p1.lon - p2.lon, 2));
         }
