@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg - Rota Inteligente</title>
+    <title>Rota Fácil - Otimização</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -65,7 +65,7 @@
 <body>
 
     <div id="tela-setup">
-        <h1 style="color: #ea580c;">📦 AppEgg</h1>
+        <h1 style="color: #ea580c;">📦 Rota Fácil</h1>
         <p style="color: #666; text-align: center;">Carregue o arquivo de rota.</p>
         <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
         <button class="btn-upload" onclick="processarArquivoFisico()">Processar Rota</button>
@@ -138,43 +138,73 @@
             
             const reader = new FileReader();
             reader.onload = async function() {
-                const typedarray = new Uint8Array(this.result);
-                const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                let texto = "";
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const content = await page.getTextContent();
-                    texto += content.items.map(item => item.str).join(" ") + "\n";
+                try {
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    let textoCompleto = "";
+                    
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        textoCompleto += content.items.map(item => item.str).join(" ") + " ";
+                    }
+                    
+                    processarTextoBruto(textoCompleto);
+                } catch (e) {
+                    console.error("Erro no PDF:", e);
+                    alert("Erro ao ler PDF. Tentando processar texto...");
+                    processarTextoBruto(this.result);
                 }
-                processarTexto(texto);
             };
             reader.readAsArrayBuffer(input.files[0]);
         }
 
-        function processarTexto(texto) {
+        function processarTextoBruto(textoCompleto) {
             bdRotas = [];
-            const linhas = texto.split('\n');
             let contador = 0;
 
-            // Lógica melhorada: Não busca apenas por "BR", mas por qualquer linha que pareça um endereço (tenha mais de 10 caracteres e algum número)
-            linhas.forEach(linha => {
-                const limpa = linha.trim();
-                // Se a linha for muito curta ou for apenas um cabeçalho óbvio, ignora
-                if (limpa.length < 15) return; 
-                
-                // Extrai o que parece ser um código se existir, senão usa um genérico
-                const matchCod = limpa.match(/(BR\d+|AT\d+)/i);
-                
-                contador++;
-                bdRotas.push({
-                    id: contador,
-                    codigo: matchCod ? matchCod[0] : `P-${contador}`,
-                    endereco: limpa,
-                    status: 'pendente',
-                    lat: -23.5505 + (Math.random() * 0.05), // Fake coords para visualização, ajustar se tiver geocoding
-                    lon: -46.6333 + (Math.random() * 0.05)
+            let blocos = textoCompleto.split(/(?=BR\d{10,}|AT\d{10,})/g);
+
+            if (blocos.length > 1) {
+                blocos.forEach(bloco => {
+                    let limpa = bloco.trim();
+                    if (limpa.length < 10) return; 
+                    
+                    let codMatch = limpa.match(/(BR\d{10,}|AT\d{10,})/);
+                    let codigo = codMatch ? codMatch[0] : `P-${contador+1}`;
+                    
+                    // Sem substring, sem cortes, preservando o texto inteiro
+                    let detalhes = limpa.replace(codigo, '').trim(); 
+                    
+                    contador++;
+                    bdRotas.push({
+                        id: contador,
+                        codigo: codigo,
+                        endereco: detalhes || "Detalhes não identificados",
+                        status: 'pendente',
+                        lat: -23.5505 + (Math.random() * 0.05),
+                        lon: -46.6333 + (Math.random() * 0.05)
+                    });
                 });
-            });
+            } else {
+                const linhas = textoCompleto.split('\n');
+                linhas.forEach(linha => {
+                    const limpa = linha.trim();
+                    if (limpa.length < 15) return; 
+                    
+                    const matchCod = limpa.match(/(BR\d+|AT\d+)/i);
+                    
+                    contador++;
+                    bdRotas.push({
+                        id: contador,
+                        codigo: matchCod ? matchCod[0] : `P-${contador}`,
+                        endereco: limpa, // Sem cortes de caracteres aqui também
+                        status: 'pendente',
+                        lat: -23.5505 + (Math.random() * 0.05),
+                        lon: -46.6333 + (Math.random() * 0.05)
+                    });
+                });
+            }
 
             console.log("Total de paradas processadas:", bdRotas.length);
             localStorage.setItem('rota_facil_db', JSON.stringify(bdRotas));
@@ -197,7 +227,6 @@
         }
 
         function plotarNoMapa() {
-            // Remove antigos, plota novos
             bdRotas.forEach(e => {
                 L.marker([e.lat, e.lon]).addTo(map).bindPopup(e.endereco);
             });
