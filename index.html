@@ -159,7 +159,7 @@
             font-size: 15px;
         }
         .parada-titulo { color: #d35400; }
-        .parada-codigo { color: #d35400; font-size: 14px; }
+        .parada-codigo { color: #d35400; font-size: 13px; text-align: right; word-break: break-all; max-width: 60%; }
         .parada-endereco {
             color: #444;
             font-size: 14px;
@@ -235,7 +235,7 @@
             font-size: 12px;
         }
         .w-rua { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; }
-        .w-sub { font-size: 13px; color: #888; margin: 0; }
+        .w-sub { font-size: 13px; color: #aaa; margin: 0; line-height: 1.4; word-break: break-word; }
         .w-sub.minimizada { display: none; }
 
         #barra-acoes-inferior {
@@ -348,7 +348,7 @@
 
     <div id="tela-setup">
         <h1 style="color: #ea580c;">📦 Rota Fácil</h1>
-        <p style="color: #666; text-align: center;">Carregue sua lista de entregas (Excel, CSV ou PDF).</p>
+        <p style="color: #666; text-align: center;">Carregue sua lista de entregas (Excel, CSV ou PDF do Circuit/Spoke).</p>
         
         <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
         
@@ -395,7 +395,7 @@
             <button onclick="fecharWidgetFlutuanteInterno()" style="background:none; border:none; color:white; font-size:14px; cursor:pointer;">×</button>
         </div>
         <div id="wf-rua" style="font-size:15px; font-weight:bold; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Rua Exemplo</div>
-        <div id="wf-detalhe" style="font-size:11px; color:#bbb; line-height:13px; max-height:26px; overflow:hidden; margin-bottom:8px;">Código e complemento</div>
+        <div id="wf-detalhe" style="font-size:11px; color:#bbb; line-height:13px; max-height:36px; overflow:hidden; margin-bottom:8px;">Código e complemento</div>
         <div class="wf-botoes">
             <button class="wf-btn" style="background:#232733; color:white;" onclick="navegarApp()">🗺️ Rota</button>
             <button class="wf-btn" style="background:#16a34a; color:white;" onclick="registrarAcaoFinal('entregue'); fecharWidgetFlutuanteInterno();">✓ OK</button>
@@ -558,10 +558,6 @@
             }
         }
 
-        function activarDesdeMapa(idx) {
-            ativarWidget(idx);
-        }
-
         function emitirBip() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -596,7 +592,7 @@
             }
             const arquivo = input.files[0];
 
-            document.querySelector('.btn-upload').innerText = "Processando coordenadas...";
+            document.querySelector('.btn-upload').innerText = "Processando arquivo e rotas...";
             const nomeArquivo = arquivo.name.toLowerCase();
 
             if (nomeArquivo.endsWith('.xlsx') || nomeArquivo.endsWith('.xls')) {
@@ -656,7 +652,7 @@
                             const content = await page.getTextContent();
                             textoCompleto += content.items.map(item => item.str).join(" ") + "\n";
                         }
-                        extrairDadosDeTextoBruto(textoCompleto);
+                        processarTextoCircuitSpoke(textoCompleto);
                     } catch(err) {
                         alert("Erro ao ler PDF: " + err.message);
                         resetarBotaoUpload();
@@ -665,7 +661,7 @@
                 leitor.readAsArrayBuffer(arquivo);
             } else {
                 const leitor = new FileReader();
-                leitor.onload = (e) => extrairDadosDeTextoBruto(e.target.result);
+                leitor.onload = (e) => processarTextoCircuitSpoke(e.target.result);
                 leitor.readAsText(arquivo);
             }
         }
@@ -674,38 +670,101 @@
             document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
         }
 
-        function analisarDadosPlanilhaUnificada(matriz) {
+        // Parser dedicado para decodificar e ler o formato estruturado do Circuit/Spoke
+        function processarTextoCircuitSpoke(textoBruto) {
+            bdRotas = [];
+            let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
+            let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
+            
+            // Expressão regular para isolar as linhas contidas entre aspas de cada parada do Circuit
+            const regexLinhaParada = /"(\d+)\s*"\s*,\s*"([^"]+)"\s*,\s*"([\d:]+)\s*"\s*,\s*"([^"]+)"/g;
+            let match;
+            let idCounter = 0;
+
+            while ((match = regexLinhaParada.exec(textoBruto)) !== null) {
+                let sequenciaCircuit = match[1].trim();
+                let enderecoBruto = match[2].trim();
+                let horarioEstimado = match[3].trim();
+                let blocoNotas = match[4].trim();
+
+                // Extrai metadados do bloco de notas interno (Ex: AT2026061969UZ6 e BR2693455278458)
+                let matchBR = blocoNotas.match(/(BR[A-Z0-9]{11,12})/i);
+                let matchAT = blocoNotas.match(/(AT202\d{9}[A-Z0-9]*)/i);
+                let matchCEP = blocoNotas.match(/(\d{5}-\d{3})/);
+
+                let codigoRastreio = matchBR ? matchBR[1].toUpperCase() : "";
+                let codigoBarrasAT = matchAT ? matchAT[1].toUpperCase() : "";
+                let cepExtraido = matchCEP ? matchCEP[1] : "";
+
+                // Limpa quebras de linha que o PDF joga no meio do endereço
+                let enderecoLimpo = enderecoBruto.replace(/\s+/g, ' ').trim();
+                
+                // Remove redundâncias estruturais no final da string do endereço
+                if (enderecoLimpo.endsWith(", São Paulo")) {
+                    enderecoLimpo = enderecoLimpo.slice(0, -11).trim();
+                }
+
+                // Identificador principal prioritário para o Scanner de câmera
+                let codigoIdentificadorFinal = codigoRastreio || codigoBarrasAT || `PARADA-${sequenciaCircuit}`;
+
+                // Simulação controlada de dispersão de coordenadas com base na geolocalização atual
+                let lat = baseLat + (idCounter * 0.0016) - 0.002;
+                let lon = baseLon + (idCounter * 0.0019) + 0.001;
+
+                bdRotas.push({
+                    id: idCounter++,
+                    sequencia: parseInt(sequenciaCircuit),
+                    codigo: codigoIdentificadorFinal,
+                    codigoRastreio: codigoRastreio,
+                    codigoAT: codigoBarrasAT,
+                    cep: cepExtraido,
+                    horario: horarioEstimado,
+                    endereco: enderecoLimpo,
+                    status: 'pendente',
+                    timestamp: null,
+                    lat: lat,
+                    lon: lon
+                });
+            }
+
+            // Fallback caso o PDF lido seja um dump de texto genérico sem aspas estruturadas
+            if (bdRotas.length === 0) {
+                analisarDadosPlanilhaUnificadaTexto(textoBruto);
+                return;
+            }
+
+            finalizarCarregamento(true); // Mantém a ordem perfeita de entrega já calculada pelo Circuit
+        }
+
+        function analisarDadosPlanilhaUnificadaTexto(textoBruto) {
+            const blocos = textoBruto.split(/\r?\n/);
             bdRotas = [];
             let idCounter = 0;
             let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
             let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
-            let possuiGpsReal = false;
 
-            matriz.forEach((linha) => {
-                let valoresBrutos = Object.values(linha).map(v => String(v)).join(" ");
-                if (valoresBrutos.trim().length < 12) return;
+            blocos.forEach((bloco) => {
+                if (bloco.trim().length < 12) return;
 
-                let matchBR = valoresBrutos.match(/(BR\d{11})/i);
-                let matchAT = valoresBrutos.match(/(AT202\d{9}[A-Z0-9]*)/i);
-                let gpsMatches = valoresBrutos.match(/(-2\d\.\d+)[,\s]+(-4\d\.\d+)/) || valoresBrutos.match(/(-2\d\.\d+).+?(-4\d\.\d+)/);
+                let matchBR = bloco.match(/(BR\d{11}[A-Z0-9]*)/i);
+                let matchAT = bloco.match(/(AT202\d{9}[A-Z0-9]*)/i);
+                let matchCEP = bloco.match(/(\d{5}-\d{3})/);
+                
+                let lat = baseLat + (idCounter * 0.0015);
+                let lon = baseLon + (idCounter * 0.0015);
 
                 let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
-                
-                let endereco = valoresBrutos.replace(codigo, '');
-                if (gpsMatches) { 
-                    endereco = endereco.replace(gpsMatches[0], ''); 
-                    possuiGpsReal = true;
-                }
-                
-                endereco = endereco.replace(/\s+/g, ' ').trim();
-
-                let lat = gpsMatches ? parseFloat(gpsMatches[1]) : (baseLat + (idCounter * 0.0015));
-                let lon = gpsMatches ? parseFloat(gpsMatches[2]) : (baseLon + (idCounter * 0.0015));
+                let endereco = bloco.replace(/\s+/g, ' ').trim();
 
                 if (endereco.length > 5) {
                     bdRotas.push({
                         id: idCounter++,
+                        sequencia: idCounter,
                         codigo: codigo,
+                        codigoRastreio: matchBR ? matchBR[1].toUpperCase() : "",
+                        codigoAT: matchAT ? matchAT[1].toUpperCase() : "",
+                        cep: matchCEP ? matchCEP[1] : "",
+                        horario: "--:--",
                         endereco: endereco,
                         status: 'pendente',
                         timestamp: null,
@@ -715,44 +774,39 @@
                 }
             });
 
-            finalizarCarregamento(possuiGpsReal);
+            finalizarCarregamento(false);
         }
 
-        function extrairDadosDeTextoBruto(textoBruto) {
-            const blocos = textoBruto.split(/\r?\n/);
+        function analisarDadosPlanilhaUnificada(matriz) {
             bdRotas = [];
             let idCounter = 0;
             let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
             let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
-            let possuiGpsReal = false;
 
-            blocos.forEach((bloco) => {
-                if (bloco.trim().length < 12) return;
+            matriz.forEach((linha) => {
+                let valoresBrutos = Object.values(linha).map(v => String(v)).join(" ");
+                if (valoresBrutos.trim().length < 12) return;
 
-                let gpsMatches = bloco.match(/(-2\d\.\d+)[,\s]+(-4\d\.\d+)/) || bloco.match(/(-2\d\.\d+).+?(-4\d\.\d+)/);
-                let matchBR = bloco.match(/(BR\d{11})/i);
-                let matchAT = bloco.match(/(AT202\d{9}[A-Z0-9]*)/i);
-                
-                let lat, lon;
-                if (gpsMatches) {
-                    lat = parseFloat(gpsMatches[1]);
-                    lon = parseFloat(gpsMatches[2]);
-                    possuiGpsReal = true;
-                } else {
-                    lat = baseLat + (idCounter * 0.0015);
-                    lon = baseLon + (idCounter * 0.0015);
-                }
+                let matchBR = valoresBrutos.match(/(BR\d{11}[A-Z0-9]*)/i);
+                let matchAT = valoresBrutos.match(/(AT202\d{9}[A-Z0-9]*)/i);
+                let matchCEP = valoresBrutos.match(/(\d{5}-\d{3})/);
 
                 let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
-                let endereco = bloco;
-                if (gpsMatches) { endereco = endereco.replace(gpsMatches[0], ''); }
-                endereco = endereco.replace(codigo, '').replace(/\s+/g, ' ').trim();
+                let endereco = valoresBrutos.replace(/\s+/g, ' ').trim();
 
-                if (endereco.length > 3) {
+                let lat = baseLat + (idCounter * 0.0015);
+                let lon = baseLon + (idCounter * 0.0015);
+
+                if (endereco.length > 5) {
                     bdRotas.push({
                         id: idCounter++,
+                        sequencia: idCounter,
                         codigo: codigo,
-                        endereco: endereco || "Endereço da Entrega",
+                        codigoRastreio: matchBR ? matchBR[1].toUpperCase() : "",
+                        codigoAT: matchAT ? matchAT[1].toUpperCase() : "",
+                        cep: matchCEP ? matchCEP[1] : "",
+                        horario: "--:--",
+                        endereco: endereco,
                         status: 'pendente',
                         timestamp: null,
                         lat: lat,
@@ -761,7 +815,7 @@
                 }
             });
 
-            finalizarCarregamento(possuiGpsReal);
+            finalizarCarregamento(false);
         }
 
         function finalizarCarregamento(manterOrdemOriginal = false) {
@@ -792,13 +846,21 @@
                 div.className = `item-lista ${e.status !== 'pendente' ? 'concluido' : ''}`;
                 div.onclick = () => activarDesdeMapa(idx);
                 
+                // Renderiza rótulos visuais legíveis exibindo metadados específicos
+                let exibirCodigo = e.codigoRastreio || e.codigoAT || e.codigo;
+                let infoAdicional = e.horario && e.horario !== "--:--" ? `• Chegada: ${e.horario}` : "";
+                if (e.cep) infoAdicional += ` • CEP: ${e.cep}`;
+
                 div.innerHTML = `
                     <div class="item-topo">
                         <span class="parada-titulo">📌 Parada #${idx + 1}</span>
-                        <span class="parada-codigo">${e.codigo}</span>
+                        <span class="parada-codigo">${exibirCodigo}</span>
                     </div>
                     <div class="parada-endereco">${e.endereco}</div>
-                    ${e.status !== 'pendente' ? `<div style="font-size:11px; color:#16a34a; font-weight:bold; margin-top:4px;">${e.status.toUpperCase()} às ${e.timestamp}</div>` : ''}
+                    <div style="font-size:11px; color:#666; margin-top:4px;">
+                        ${infoAdicional}
+                        ${e.status !== 'pendente' ? `<span style="color:#16a34a; font-weight:bold; margin-left:8px;">✓ ${e.status.toUpperCase()} às ${e.timestamp}</span>` : ''}
+                    </div>
                 `;
                 container.appendChild(div);
             });
@@ -835,12 +897,21 @@
             const e = bdRotas[idx];
             const partes = e.endereco.split(',');
             const rua = partes[0] || 'Próximo endereço';
-            const ultimosDigitos = e.codigo.slice(-4).split('').join(' ');
+            const tokenTexto = e.codigoRastreio || e.codigoAT || e.codigo;
+            const ultimosDigitos = tokenTexto.slice(-4).split('').join(' ');
             falarTexto(`Próxima entrega na: ${rua}. Final do código: ${ultimosDigitos}`);
         }
 
         function verificarEAtivarWidgetPorCodigo(token) {
-            const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
+            const limpo = token.trim().toUpperCase();
+            
+            // Busca avançada por correspondência parcial cruzada nos dois tipos de código
+            const idx = bdRotas.findIndex(i => 
+                (i.codigoRastreio && (limpo.includes(i.codigoRastreio) || i.codigoRastreio.includes(limpo))) ||
+                (i.codigoAT && (limpo.includes(i.codigoAT) || i.codigoAT.includes(limpo))) ||
+                limpo.includes(i.codigo) || i.codigo.includes(limpo)
+            );
+
             if (idx !== -1) {
                 emitirBip();
                 ativarWidget(idx);
@@ -851,10 +922,6 @@
 
         function abrirAbadeNavegacaoExterna(enderecoCompleto) {
             window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoCompleto)}`, '_blank');
-        }
-
-        function verificarDuplicidade(codigo) {
-            return bdRotas.some(r => r.codigo === codigo);
         }
 
         function activarDesdeMapa(idx) {
@@ -869,13 +936,18 @@
             
             const partes = e.endereco.split(',');
             document.getElementById('wg-rua').innerText = partes[0] || 'Endereço GPS';
-            document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim() || e.endereco}`;
+            
+            let extraLinha = `Rastreio: ${e.codigoRastreio || 'N/A'} | AT ID: ${e.codigoAT || 'N/A'}`;
+            if (e.cep) extraLinha += ` | CEP: ${e.cep}`;
+            if (e.horario && e.horario !== "--:--") extraLinha += ` | Janela: ${e.horario}`;
+            
+            document.getElementById('wg-detalhe').innerHTML = `<strong>${extraLinha}</strong><br>${e.endereco}`;
             
             document.getElementById('wg-detalhe').classList.remove('minimizada');
             document.getElementById('widget-escuro').style.display = 'block';
 
             falarProximaEntrega(idx);
-            map.flyTo([e.lat - 0.002, e.lon], 16, { animate: true, duration: 0.8 });
+            map.flyTo([e.lat - 0.001, e.lon], 16, { animate: true, duration: 0.8 });
             atualizarConteudoWidgetFlutuanteInterno();
         }
 
@@ -883,7 +955,7 @@
             if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
             
             bdRotas[indexAtivo].status = status;
-            bdRotas[indexAtivo].timestamp = new Date().toLocaleTimeString();
+            bdRotas[indexAtivo].timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
             if (status === 'entregue') emitirBip();
             
@@ -921,7 +993,7 @@
             const partes = e.endereco.split(',');
             
             document.getElementById('wf-rua').innerText = partes[0] || 'Endereço';
-            document.getElementById('wf-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim() || e.endereco}`;
+            document.getElementById('wf-detalhe').innerText = `${e.codigoRastreio || e.codigo} - ${e.endereco}`;
         }
 
         function obterLocalizacaoEOTimizar() {
@@ -930,7 +1002,7 @@
             executarOtimizacaoTSP(false);
         }
 
-        function executarOtimizacaoTSP(silencioso = false) {
+        function ejecutarOtimizacaoTSP(silencioso = false) {
             let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
             let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
             
@@ -967,7 +1039,7 @@
                 salvarBD();
                 renderizarLista();
                 plotarNoMapa();
-                alert("Rota reordenada com sucesso!");
+                alert("Rota reordenada com sucesso a partir do GPS real!");
             }
         }
 
@@ -1022,10 +1094,10 @@
         function forcarBaixaManual() {
             const menu = document.getElementById('menu-opcoes');
             if(menu) menu.style.display = 'none';
-            const cod = prompt("Digite o código identificador da encomenda:");
+            const cod = prompt("Digite o código identificador da encomenda (SPX / AT ID):");
             if(cod && cod.trim() !== "") {
                 const ativado = verificarEAtivarWidgetPorCodigo(cod.trim().toUpperCase());
-                if(!ativado) alert("Código não localizado.");
+                if(!ativado) alert("Código não localizado na rota ativa.");
             }
         }
 
@@ -1033,9 +1105,9 @@
             const menu = document.getElementById('menu-opcoes');
             if(menu) menu.style.display = 'none';
             if(bdRotas.length === 0) return alert("Sem dados.");
-            let csv = "\uFEFFID,Codigo,Endereco,Status,Horario\n";
+            let csv = "\uFEFFID,Sequencia,Rastreio,AT_ID,CEP,Endereco,Status,HorarioBaixa\n";
             bdRotas.forEach(p => {
-                csv += `"${p.id + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}","${p.timestamp || 'N/A'}"\n`;
+                csv += `"${p.id + 1}","${p.sequencia}","${p.codigoRastreio}","${p.codigoAT}","${p.cep}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}","${p.timestamp || 'N/A'}"\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
