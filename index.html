@@ -604,8 +604,6 @@
                         const firstSheetName = workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[firstSheetName];
                         
-                        // MOTOR DE PARSING IRRESTRITO: Força leitura via matriz bi-dimensional crua (2D)
-                        // Impede que linhas em branco intermediárias quebrem a importação de mais de 1000 linhas
                         const jsonMatriz = XLSX.utils.sheet_to_json(worksheet, { 
                             header: 1, 
                             blankrows: false, 
@@ -616,7 +614,6 @@
                             throw new Error("A planilha está vazia.");
                         }
 
-                        // Converte a matriz crua de volta para objetos mapeados de forma flexível pelas colunas
                         const cabecalho = jsonMatriz[0].map(item => String(item).trim().toLowerCase());
                         let idxEndereco = cabecalho.findIndex(c => c.includes('address') || c.includes('endereço') || c.includes('endereco'));
                         let idxId = cabecalho.findIndex(c => c.includes('id') || c.includes('notes') || c.includes('at id'));
@@ -632,7 +629,6 @@
                             if (!linha || linha.length === 0) continue;
 
                             let obj = {};
-                            // Injeta as propriedades esperadas pelo analisador unificado subsequente
                             obj['address'] = linha[idxEndereco] ? String(linha[idxEndereco]).trim() : "";
                             obj['notes'] = linha[idxId] ? String(linha[idxId]).trim() : "";
                             obj['latitude'] = idxLat !== -1 && linha[idxLat] ? String(linha[idxLat]).trim() : "";
@@ -672,7 +668,7 @@
                         }
                         analisarDadosPlanilhaUnificada(listaObjetos);
                     } catch(err) {
-                        alert("Erro ao ler arquivo CSV: " + err.message);
+                        alert("Erro ao ler CSV: " + err.message);
                         resetarBotaoUpload();
                     }
                 };
@@ -706,13 +702,11 @@
             document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
         }
 
-        // Parser dedicado para decodificar e ler o formato estruturado do Circuit/Spoke
         function processarTextoCircuitSpoke(textoBruto) {
             bdRotas = [];
             let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
             let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
             
-            // Expressão regular para isolar as linhas contidas entre aspas de cada parada do Circuit
             const regexLinhaParada = /"(\d+)\s*"\s*,\s*"([^"]+)"\s*,\s*"([\d:]+)\s*"\s*,\s*"([^"]+)"/g;
             let match;
             let idCounter = 0;
@@ -723,7 +717,6 @@
                 let horarioEstimado = match[3].trim();
                 let blocoNotas = match[4].trim();
 
-                // Extrai metadados do bloco de notas interno (Ex: AT2026061969UZ6 e BR2693455278458)
                 let matchBR = blocoNotas.match(/(BR[A-Z0-9]{11,12})/i);
                 let matchAT = blocoNotas.match(/(AT202\d{9}[A-Z0-9]*)/i);
                 let matchCEP = blocoNotas.match(/(\d{5}-\d{3})/);
@@ -732,18 +725,14 @@
                 let codigoBarrasAT = matchAT ? matchAT[1].toUpperCase() : "";
                 let cepExtraido = matchCEP ? matchCEP[1] : "";
 
-                // Limpa quebras de linha que o PDF joga no meio do endereço
                 let enderecoLimpo = enderecoBruto.replace(/\s+/g, ' ').trim();
                 
-                // Remove redundâncias estruturais no final da string do endereço
                 if (enderecoLimpo.endsWith(", São Paulo")) {
                     enderecoLimpo = enderecoLimpo.slice(0, -11).trim();
                 }
 
-                // Identificador principal prioritário para o Scanner de câmera
                 let codigoIdentificadorFinal = codigoRastreio || codigoBarrasAT || `PARADA-${sequenciaCircuit}`;
 
-                // Simulação controlada de dispersão de coordenadas com base na geolocalização atual
                 let lat = baseLat + (idCounter * 0.0016) - 0.002;
                 let lon = baseLon + (idCounter * 0.0019) + 0.001;
 
@@ -763,13 +752,12 @@
                 });
             }
 
-            // Fallback caso o PDF lido seja um dump de texto genérico sem aspas estruturadas
             if (bdRotas.length === 0) {
                 analisarDadosPlanilhaUnificadaTexto(textoBruto);
                 return;
             }
 
-            finalizarCarregamento(true); // Mantém a ordem perfeita de entrega já calculada pelo Circuit
+            finalizarCarregamento(true);
         }
 
         function analisarDadosPlanilhaUnificadaTexto(textoBruto) {
@@ -829,11 +817,9 @@
 
                 let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
                 
-                // Extração inteligente de endereço das colunas comuns se o join cru trouxer redundâncias
                 let endereco = linha.address || linha.endereco || linha.endereço || valoresBrutos.replace(/\s+/g, ' ').trim();
                 endereco = String(endereco).replace(/\s+/g, ' ').trim();
 
-                // Atribuição de coordenadas geográficas reais se disponíveis na planilha
                 let lat = parseFloat(linha.latitude || linha.lat) || (baseLat + (idCounter * 0.0015));
                 let lon = parseFloat(linha.longitude || linha.lng || linha.long) || (baseLon + (idCounter * 0.0015));
 
@@ -960,10 +946,6 @@
 
         function abrirAbadeNavegacaoExterna(enderecoCompleto) {
             window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoCompleto)}`, '_blank');
-        }
-
-        function activarDesdeMapa(idx) {
-            ativarWidget(idx);
         }
 
         function activarDesdeMapa(idx) {
