@@ -314,7 +314,6 @@
             padding: 20px;
         }
 
-        /* Widget Flutuante Simulado Interno (Evita dependência de suporte PiP do navegador mobile) */
         #widget-flutuante-interno {
             display: none;
             position: fixed;
@@ -591,7 +590,10 @@
 
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
-            if(input.files.length === 0) return alert("Selecione o arquivo da sua rota.");
+            if(!input || input.files.length === 0) {
+                alert("Por favor, selecione um arquivo válido primeiro tocando no campo tracejado.");
+                return;
+            }
             const arquivo = input.files[0];
 
             document.querySelector('.btn-upload').innerText = "Processando coordenadas...";
@@ -689,7 +691,6 @@
 
                 let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
                 
-                // Limpeza sem quebrar acentuação de caracteres nacionais
                 let endereco = valoresBrutos.replace(codigo, '');
                 if (gpsMatches) { 
                     endereco = endereco.replace(gpsMatches[0], ''); 
@@ -698,7 +699,6 @@
                 
                 endereco = endereco.replace(/\s+/g, ' ').trim();
 
-                // Mantém âncoras fixas e encadeadas em vez de gerar dispersões randômicas imprecisas
                 let lat = gpsMatches ? parseFloat(gpsMatches[1]) : (baseLat + (idCounter * 0.0015));
                 let lon = gpsMatches ? parseFloat(gpsMatches[2]) : (baseLon + (idCounter * 0.0015));
 
@@ -719,7 +719,6 @@
         }
 
         function extrairDadosDeTextoBruto(textoBruto) {
-            // Separação por quebra de linha rígida para evitar duplicar paradas no mesmo bloco
             const blocos = textoBruto.split(/\r?\n/);
             bdRotas = [];
             let idCounter = 0;
@@ -858,6 +857,10 @@
             return bdRotas.some(r => r.codigo === codigo);
         }
 
+        function activarDesdeMapa(idx) {
+            ativarWidget(idx);
+        }
+
         function ativarWidget(idx) {
             indexAtivo = idx;
             const e = bdRotas[idx];
@@ -899,7 +902,6 @@
             abrirAbadeNavegacaoExterna(e.endereco);
         }
 
-        // --- SISTEMA REFORMULADO: WIDGET FLUTUANTE INTERNO SIMULADO ---
         function alternarWidgetFlutuanteInterno(event) {
             if (event) event.stopPropagation();
             if (indexAtivo === null) return alert("Ative um endereço na lista para poder flutuar.");
@@ -928,7 +930,7 @@
             executarOtimizacaoTSP(false);
         }
 
-        function执行OtimizacaoTSP(silencioso = false) {
+        function executarOtimizacaoTSP(silencioso = false) {
             let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
             let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
             
@@ -1045,7 +1047,7 @@
         function limparSessao() {
             const menu = document.getElementById('menu-opcoes');
             if(menu) menu.style.display = 'none';
-            if(confirm("Deseja apagar a rota ativa atual?")) {
+            if(confirm("Deseja apagar a rota activa atual?")) {
                 localStorage.removeItem('rota_facil_db_oficial');
                 location.reload();
             }
