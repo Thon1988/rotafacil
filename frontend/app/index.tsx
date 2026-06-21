@@ -48,7 +48,8 @@ export default function Index() {
     useCallback(() => {
       let interval: any;
       if (state === "pending") {
-        interval = setInterval(() => checkSubscription(false), 8000);
+        // Poll every 30s (was 8s) to reduce backend load
+        interval = setInterval(() => checkSubscription(false), 30000);
       }
       const sub = AppState.addEventListener("change", (s) => {
         if (s === "active") checkSubscription(false);

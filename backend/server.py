@@ -30,7 +30,14 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+# Connection pool settings tuned for production (MongoDB Atlas)
+client = AsyncIOMotorClient(
+    mongo_url,
+    maxPoolSize=50,
+    minPoolSize=5,
+    serverSelectionTimeoutMS=5000,
+    connectTimeoutMS=5000,
+)
 db = client[os.environ['DB_NAME']]
 
 app = FastAPI()
@@ -593,6 +600,12 @@ async def count_failed_attempts(ip: str, minutes: int = 30) -> int:
 @api_router.get("/")
 async def root():
     return {"app": "Rota+Rápida App API", "version": "2.1.0"}
+
+
+@api_router.get("/health")
+async def health():
+    """Lightweight health check for K8s liveness probe — no DB calls."""
+    return {"status": "ok"}
 
 
 @api_router.get("/cep/{cep}")
