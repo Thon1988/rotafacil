@@ -174,6 +174,55 @@ class HistoryEntry(BaseModel):
 
 
 # =============== UTILS ===============
+STREET_PREFIX_RE = re.compile(
+    r"\b(?:Rua|R\.?|Avenida|Av\.?|Travessa|Tv\.?|Alameda|Al\.?|"
+    r"Praça|Praca|Pca\.?|Estrada|Estr\.?|Largo|Lgo\.?|Rodovia|Rod\.?|"
+    r"Viaduto|Vd\.?|Marginal|Caminho|Beco)\s+(?=[A-ZÀ-Ý])",
+    re.IGNORECASE,
+)
+
+# Common noise tokens to strip before geocoding
+NOISE_PATTERNS = [
+    r"AT\d{10}[A-Z]{2,4}\d*",       # Circuit route codes (AT2026061969UZ6)
+    r"\b\d{2}:\d{2}\b",              # timestamps like 13:23
+    r"\b\d{10,11}\b",                # phone numbers
+    r"\b(?:no fundo|casa|apto|apartamento|bloco|fundos|sala|loja)\s*\w*",
+    r"–{1,}|-{2,}",                  # dash separators
+    r"\bV\s+(?=Rua|Av|Travessa)",   # leading "V" before street
+]
+
+
+def clean_address(raw: str) -> str:
+    """Clean noisy address text from Circuit-style PDFs.
+    Strategy: the Circuit PDF row usually has the street name TWICE
+    (once near the start, once near the end with neighborhood).
+    The LAST occurrence is the canonical one with bairro/zona, so
+    we slice from there to capture more useful context for Nominatim."""
+    text = raw.strip()
+
+    # Find ALL street-prefix occurrences and use the LAST one
+    matches = list(STREET_PREFIX_RE.finditer(text))
+    if matches:
+        text = text[matches[-1].start():]
+
+    # Remove known noise tokens
+    for pat in NOISE_PATTERNS:
+        text = re.sub(pat, " ", text, flags=re.IGNORECASE)
+
+    # Normalize whitespace and punctuation
+    text = re.sub(r"\s+", " ", text).strip(" ,.-;")
+
+    # Truncate at clearly unrelated content
+    if len(text) > 160:
+        text = text[:160]
+
+    # Ensure city context if missing
+    if "são paulo" not in text.lower() and "sp" not in text.lower()[-12:]:
+        text = text + ", São Paulo, SP"
+
+    return text
+
+
 def extract_codes_and_addresses(text: str) -> List[dict]:
     lines = text.split("\n")
     stops = []
@@ -194,13 +243,16 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
                 break
         if not codigo or codigo in seen_codes:
             continue
-        endereco = re.sub(re.escape(codigo), "", line, flags=re.IGNORECASE)
-        endereco = re.sub(r"[;\t\|]+", " ", endereco).strip(" ,;-\t")
-        if len(endereco) < 5:
-            endereco = "Endereço não detectado"
+
+        raw = re.sub(re.escape(codigo), "", line, flags=re.IGNORECASE)
+        raw = re.sub(r"[;\t\|]+", " ", raw).strip(" ,;-\t")
+        cleaned = clean_address(raw)
+        if len(cleaned) < 5:
+            cleaned = "Endereço não detectado"
+
         seen_codes.add(codigo)
         stops.append({
-            "id": counter, "codigo": codigo, "endereco": endereco,
+            "id": counter, "codigo": codigo, "endereco": cleaned,
             "status": "pendente", "timestamp": None, "lat": None, "lon": None,
         })
         counter += 1
@@ -264,24 +316,114 @@ def generate_pix_brcode(pix_key: str, amount: float, merchant_name: str, merchan
     return payload + crc16.hexdigest().upper()
 
 
-async def geocode_nominatim(address: str) -> dict:
+async def geocode_photon(address: str) -> Optional[dict]:
+    """Photon (komoot.io) — free OSM-based geocoder. Bias results to São Paulo."""
     try:
-        url = "https://nominatim.openstreetmap.org/search"
-        params = {"q": address + ", Brasil", "format": "json", "limit": 1, "countrycodes": "br"}
-        headers = {"User-Agent": "RotaFacil/1.0 (delivery-app)"}
+        url = "https://photon.komoot.io/api/"
+        # Bias toward São Paulo, request 5 results to filter best match
+        params = {"q": address, "limit": 5, "lat": -23.55, "lon": -46.63}
+        headers = {"User-Agent": "RotaRapidaApp/1.0"}
         loop = asyncio.get_event_loop()
         resp = await loop.run_in_executor(
-            None,
-            lambda: requests.get(url, params=params, headers=headers, timeout=8)
+            None, lambda: requests.get(url, params=params, headers=headers, timeout=8)
         )
+        if resp.status_code != 200:
+            return None
         data = resp.json()
-        if data and len(data) > 0:
-            return {
-                "lat": float(data[0]["lat"]), "lon": float(data[0]["lon"]),
-                "display_name": data[0].get("display_name", ""), "found": True,
-            }
+        feats = data.get("features", [])
+        if not feats:
+            return None
+
+        # Prefer a feature in São Paulo state / city, in Brazil
+        def score(f):
+            props = f.get("properties", {})
+            s = 0
+            if props.get("countrycode") == "BR":
+                s += 10
+            if (props.get("state") or "").lower().startswith("são paulo"):
+                s += 5
+            if (props.get("city") or "").lower() == "são paulo":
+                s += 5
+            # Closer to SP center = better (rough)
+            try:
+                coords = f["geometry"]["coordinates"]
+                dlat = abs(coords[1] + 23.55)
+                dlon = abs(coords[0] + 46.63)
+                s -= (dlat + dlon)  # smaller distance is better
+            except Exception:
+                pass
+            return s
+
+        best = max(feats, key=score)
+        coords = best["geometry"]["coordinates"]  # [lon, lat]
+        props = best.get("properties", {})
+        # Reject if too far from São Paulo (more than ~2 degrees ≈ 220km)
+        if abs(coords[1] + 23.55) > 2 or abs(coords[0] + 46.63) > 2:
+            return None
+        name = ", ".join(filter(None, [
+            props.get("name"), props.get("city") or props.get("state"), props.get("country"),
+        ]))
+        return {"lat": coords[1], "lon": coords[0], "display_name": name, "found": True}
     except Exception as e:
-        logging.error(f"Geocode error for '{address}': {e}")
+        logging.warning(f"Photon failed for '{address[:60]}…': {e}")
+    return None
+
+
+async def geocode_nominatim(address: str) -> dict:
+    """Geocode via Nominatim first, fall back to Photon if blocked/no result."""
+    headers = {"User-Agent": "RotaRapidaApp/1.0 (delivery-app; contact@rotarapida.app)"}
+
+    async def try_nominatim(query: str) -> Optional[dict]:
+        try:
+            url = "https://nominatim.openstreetmap.org/search"
+            params = {"q": query, "format": "json", "limit": 1, "countrycodes": "br"}
+            loop = asyncio.get_event_loop()
+            resp = await loop.run_in_executor(
+                None, lambda: requests.get(url, params=params, headers=headers, timeout=10)
+            )
+            if resp.status_code != 200:
+                return None
+            try:
+                data = resp.json()
+            except Exception:
+                return None
+            if data and len(data) > 0:
+                return {
+                    "lat": float(data[0]["lat"]),
+                    "lon": float(data[0]["lon"]),
+                    "display_name": data[0].get("display_name", ""),
+                    "found": True,
+                }
+        except Exception:
+            return None
+        return None
+
+    # Attempt 1: Nominatim full address
+    r = await try_nominatim(address)
+    if r:
+        return r
+
+    # Attempt 2: Simplified Nominatim query (cut at first ", São Paulo")
+    simplified = address
+    sp_idx = simplified.lower().find("são paulo")
+    if sp_idx > 10:
+        simplified = simplified[:sp_idx].rstrip(", ") + ", São Paulo, SP"
+    await asyncio.sleep(0.3)
+    r = await try_nominatim(simplified)
+    if r:
+        return r
+
+    # Attempt 3: Photon (more permissive fallback)
+    r = await geocode_photon(address)
+    if r:
+        return r
+
+    # Attempt 4: Photon with simplified query
+    if simplified != address:
+        r = await geocode_photon(simplified)
+        if r:
+            return r
+
     return {"lat": None, "lon": None, "display_name": None, "found": False}
 
 
@@ -392,14 +534,20 @@ async def geocode(req: GeocodeRequest):
 
 @api_router.post("/geocode-batch")
 async def geocode_batch(payload: dict):
-    """Geocode multiple addresses in parallel with concurrency limit.
-    Nominatim public API tolerates a few concurrent requests for moderate volume."""
+    """Geocode multiple addresses with low concurrency + caching to avoid Nominatim rate limits."""
     addresses: List[str] = payload.get("addresses", [])
-    semaphore = asyncio.Semaphore(4)  # 4 in parallel
+    semaphore = asyncio.Semaphore(2)  # gentle on Nominatim
+    cache: dict = {}
 
     async def bounded(addr: str):
+        if addr in cache:
+            return cache[addr]
         async with semaphore:
-            return await geocode_nominatim(addr)
+            r = await geocode_nominatim(addr)
+            cache[addr] = r
+            # Brief pause between calls to be polite
+            await asyncio.sleep(0.4)
+            return r
 
     results = await asyncio.gather(*[bounded(a) for a in addresses])
     return {"results": results}
