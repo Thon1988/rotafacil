@@ -247,16 +247,52 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
 
         raw = re.sub(re.escape(codigo), "", line, flags=re.IGNORECASE)
         raw = re.sub(r"[;\t\|]+", " ", raw).strip(" ,;-\t")
+
+        # Detect Circuit row number (e.g., "20 R Siqueira Rendon..." → 20)
+        # The row number is a 1-3 digit value at the very start of the line
+        # AFTER removing the tracking code.
+        row_match = re.match(r"^\s*(\d{1,3})\b\s+(?=[A-ZÀ-Ýa-zà-ý])", raw)
+        circuit_order: Optional[int] = None
+        if row_match:
+            try:
+                num = int(row_match.group(1))
+                # Reasonable bounds for a Circuit row (1..999)
+                if 1 <= num <= 999:
+                    circuit_order = num
+                    # Strip the row number from raw so it doesn't pollute address
+                    raw = raw[row_match.end():]
+            except ValueError:
+                pass
+
         cleaned = clean_address(raw)
         if len(cleaned) < 5:
             cleaned = "Endereço não detectado"
 
         seen_codes.add(codigo)
         stops.append({
-            "id": counter, "codigo": codigo, "endereco": cleaned,
-            "status": "pendente", "timestamp": None, "lat": None, "lon": None,
+            "id": counter,
+            "codigo": codigo,
+            "endereco": cleaned,
+            "status": "pendente",
+            "timestamp": None,
+            "lat": None,
+            "lon": None,
+            "_circuit_order": circuit_order,
         })
         counter += 1
+
+    # If a majority of stops have a Circuit row number, sort by it to preserve PDF order
+    has_order = [s for s in stops if s.get("_circuit_order") is not None]
+    if len(has_order) >= max(2, len(stops) // 2):
+        stops.sort(key=lambda s: (s.get("_circuit_order") is None, s.get("_circuit_order") or 0))
+        # Reassign sequential ids
+        for i, s in enumerate(stops):
+            s["id"] = i
+
+    # Remove the internal field before returning
+    for s in stops:
+        s.pop("_circuit_order", None)
+
     return stops
 
 

@@ -75,21 +75,28 @@ export default function RouteScreen() {
       const addresses = indices.map((i) => current[i].endereco);
       const { results } = await geocodeBatch(addresses);
       const updated = [...current];
+      let foundCount = 0;
       results.forEach((r: any, k: number) => {
         const idx = indices[k];
         if (r?.found) {
           updated[idx] = { ...updated[idx], lat: r.lat, lon: r.lon };
-        } else {
-          // Fallback fake coords near São Paulo so map renders something
-          updated[idx] = {
-            ...updated[idx],
-            lat: -23.55 + (Math.random() - 0.5) * 0.1,
-            lon: -46.63 + (Math.random() - 0.5) * 0.1,
-          };
+          foundCount++;
         }
+        // If not found, leave lat/lon as null so user sees the warning
+        // and can fix it manually via the ✏️ icon. NO fake random coords.
       });
       setStops(updated);
       await saveRoute(updated);
+      const notFound = indices.length - foundCount;
+      if (notFound > 0) {
+        // Inform user that some stops need manual fix
+        setTimeout(() => {
+          Alert.alert(
+            "📍 Algumas paradas precisam atenção",
+            `${notFound} de ${indices.length} endereços não foram localizados automaticamente. Toque no ícone ✏️ na parada para corrigir o endereço ou usar GPS.`,
+          );
+        }, 500);
+      }
     } catch (e) {
       console.log("bg geocode error", e);
     } finally {
