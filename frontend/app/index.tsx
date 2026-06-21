@@ -74,7 +74,7 @@ export default function Index() {
         <View style={styles.logoCircle}>
           <Ionicons name="navigate" size={48} color="#fff" />
         </View>
-        <Text style={styles.title} testID="landing-title">Rota Fácil</Text>
+        <Text style={styles.title} testID="landing-title">Rota+Rápida App</Text>
         <Text style={styles.subtitle}>
           Roteirização inteligente para entregadores
         </Text>

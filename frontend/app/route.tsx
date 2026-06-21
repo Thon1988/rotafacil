@@ -186,7 +186,7 @@ export default function RouteScreen() {
       csv += `"${p.id + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}","${p.timestamp || "N/A"}"\n`;
     });
     try {
-      await Share.share({ message: csv, title: "Relatório Rota Fácil" });
+      await Share.share({ message: csv, title: "Relatório Rota+Rápida" });
     } catch {
       Alert.alert("Erro", "Falha ao exportar.");
     }

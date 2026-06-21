@@ -36,7 +36,7 @@ export default function SummaryScreen() {
     stops.forEach((s, i) => {
       csv += `"${i + 1}","${s.codigo}","${s.endereco.replace(/"/g, '""')}","${s.status.toUpperCase()}","${s.timestamp || ""}","${formatDuration(s.duration_seconds)}"\n`;
     });
-    await Share.share({ message: csv, title: "Resumo Rota Fácil" });
+    await Share.share({ message: csv, title: "Resumo Rota+Rápida" });
   };
 
   return (

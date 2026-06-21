@@ -37,8 +37,8 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # Constants
-PIX_KEY_CNPJ = "48223054000142"
-MERCHANT_NAME = "ROTA FACIL"
+PIX_KEY_CNPJ = "48223054000142"  # 48.223.054/0001-42 (digits only)
+MERCHANT_NAME = "ROTA RAPIDA APP"  # PIX (no special chars, max 25)
 MERCHANT_CITY = "SAO PAULO"
 SUBSCRIPTION_PRICE = 20.00
 SUBSCRIPTION_DAYS = 30
@@ -358,7 +358,7 @@ async def count_failed_attempts(ip: str, minutes: int = 30) -> int:
 # =============== PUBLIC ROUTES ===============
 @api_router.get("/")
 async def root():
-    return {"app": "Rota Fácil API", "version": "2.0.0"}
+    return {"app": "Rota+Rápida App API", "version": "2.1.0"}
 
 
 @api_router.post("/parse-file", response_model=ParsedFileResponse)
@@ -517,7 +517,7 @@ async def generate_pix(req: PixRequest):
 
     # WhatsApp pre-filled message — includes user_id so admin can match in panel
     msg = (
-        f"Olá! Acabei de pagar a assinatura do Rota Fácil 🚀%0A"
+        f"Olá! Acabei de pagar a assinatura do Rota+Rápida App 🚀%0A"
         f"%0A💰 Valor: R$ {SUBSCRIPTION_PRICE:.2f}"
         f"%0A🔑 Login (ID): {req.user_id}"
         f"%0A🧾 TXID: {txid}"
