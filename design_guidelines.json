@@ -1,0 +1,140 @@
+{
+  "theme_and_archetype": {
+    "theme": "Dark",
+    "archetype": "2 (Performance Pro)",
+    "reasoning": "This is a delivery route optimization app built for drivers in the field. Dark theme minimizes glare, saves battery, and ensures high visibility of critical data (stops, statuses) using a dark canvas with high-contrast accent colors like orange, green, and red."
+  },
+  "typography": {
+    "font_families": {
+      "headings": "Manrope",
+      "body": "IBM Plex Sans",
+      "mono": "JetBrains Mono"
+    },
+    "scales": {
+      "h1": "text-4xl tracking-tight leading-tight font-black",
+      "h2": "text-2xl tracking-tight leading-snug font-bold",
+      "h3": "text-xl font-bold",
+      "body_lg": "text-lg leading-relaxed",
+      "body": "text-base leading-relaxed",
+      "body_sm": "text-sm leading-normal",
+      "overline": "text-xs uppercase tracking-widest font-bold"
+    },
+    "rules": "Avoid Inter for headings. Use Manrope for its strong, utilitarian feel, perfectly suited for a driver dashboard. IBM Plex Sans provides excellent legibility for complex addresses and data."
+  },
+  "colors": {
+    "background": {
+      "base": "#0A0A0A",
+      "surface": "#171717",
+      "surface_elevated": "#262626"
+    },
+    "brand": {
+      "primary": "#ea580c",
+      "primary_hover": "#c2410c",
+      "route_line": "#3b82f6"
+    },
+    "status": {
+      "success": "#16a34a",
+      "success_bg": "rgba(22, 163, 74, 0.15)",
+      "error": "#dc2626",
+      "error_bg": "rgba(220, 38, 38, 0.15)",
+      "pending": "#f59e0b"
+    },
+    "text": {
+      "primary": "#F9FAFB",
+      "secondary": "#9CA3AF",
+      "tertiary": "#6B7280",
+      "inverse": "#0A0A0A"
+    },
+    "borders": {
+      "subtle": "#333333",
+      "strong": "#525252"
+    }
+  },
+  "spacing_and_layout": {
+    "general": "Mobile-first, gesture-driven. Focus on large touch targets for drivers using the app with one hand or mounted on a dashboard.",
+    "touch_targets": "Minimum 48x48px for all actionable items (buttons, list rows, map markers).",
+    "paddings": {
+      "screen": "p-4 or p-6",
+      "card": "p-4",
+      "bottom_action_bar": "pb-8 pt-4 px-4"
+    },
+    "radii": {
+      "small": "rounded-md",
+      "medium": "rounded-xl",
+      "large": "rounded-2xl",
+      "full": "rounded-full"
+    }
+  },
+  "components_strategy": {
+    "buttons": {
+      "primary": "Solid #ea580c background, bold white text, rounded-xl, no shadow to maintain flat performance look.",
+      "success": "Solid #16a34a background, white text, rounded-xl.",
+      "danger": "Solid #dc2626 background, white text, rounded-xl.",
+      "outline": "Transparent background, 1px solid border matching text color, rounded-xl."
+    },
+    "cards": {
+      "stop_widget": "Floating dark card over map. bg-[#171717], border border-[#333333], shadow-xl, rounded-2xl.",
+      "list_item": "bg-transparent, border-b border-[#333333], py-4. High contrast title (address), subtle subtitle (client info/code)."
+    },
+    "inputs": {
+      "text": "bg-[#171717], border border-[#333333], rounded-xl, px-4 py-3 text-white. Focus state: border border-[#ea580c]."
+    },
+    "bottom_action_bar": {
+      "description": "Fixed at the bottom of the active route screen. Contains stops counter and primary actions.",
+      "style": "bg-[#0A0A0A]/90 backdrop-blur-md border-t border-[#333333]."
+    }
+  },
+  "screens": {
+    "setup_upload": {
+      "layout": "Centered content. Huge 'Upload List' dropzone or button.",
+      "elements": "File type badges (PDF, Excel, CSV, TXT), Manual Entry text button, and Camera Scanner button. Emphasize the ease of starting."
+    },
+    "active_route": {
+      "layout": "Split screen: Map on top (flex-1), Draggable bottom sheet or Scrollable list for stops (flex-1).",
+      "map": "Dark mode map style. Polyline color: #3b82f6. Numbered markers (Orange for pending, Green for delivered, Red for failed).",
+      "list": "Swipeable rows or clear tap targets to open details. Status indicators on each row.",
+      "bottom_bar": "Fixed bar with 'X stops left', 'Navigate' (orange), 'Fail' (red), 'Deliver' (green)."
+    },
+    "stop_detail_widget": {
+      "layout": "Floating card overlaid on the map or expanded from the bottom sheet.",
+      "elements": "Full address, client name, package code (Shopee/Mercado Livre), large action buttons."
+    },
+    "scanner": {
+      "layout": "Full screen camera view with a dark semi-transparent overlay and a clear scanning frame in the center.",
+      "elements": "Flashlight toggle, close button, manual entry fallback button."
+    },
+    "paywall": {
+      "layout": "High impact conversion screen. Premium feel.",
+      "elements": "App logo/icon, value proposition ('Otimize suas rotas', 'Menos de R$1 por dia'). Big typography for 'R$20/mês'. Generate PIX QR code dynamically using 'react-native-qrcode-svg'. Provide 'Copiar Código PIX' button."
+    }
+  },
+  "media_and_icons": {
+    "icons_library": "lucide-react-native",
+    "images": {
+      "onboarding_bg": {
+        "url": "https://images.pexels.com/photos/9461234/pexels-photo-9461234.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "background",
+        "description": "Delivery driver checking phone, use with heavy dark overlay (bg-black/70) for onboarding or login screen."
+      }
+    }
+  },
+  "motion_and_interaction": {
+    "transitions": "Fast and snappy (0.2s duration). Delivery drivers do not have time for long animations.",
+    "haptics": "Provide haptic feedback on 'Delivered' and 'Failed' button presses (via React Native Haptics if possible)."
+  },
+  "accessibility_and_testing": {
+    "contrast": "Ensure text over map and buttons meets APCA minimums.",
+    "test_ids": "All interactive and key informational elements MUST include a `data-testid` attribute (e.g., `data-testid=\"mark-delivered-btn\"`, `data-testid=\"upload-file-btn\"`)."
+  },
+  "instructions_to_main_agent": [
+    "Use standard React Native / Expo components (View, Text, TouchableOpacity, ScrollView, etc.).",
+    "Do NOT use HTML tags (div, span) since this is a React Native app.",
+    "IMPORTANT: Write code using .js file extensions, not .tsx. You have .js files.",
+    "For routing, use expo-router or react-navigation.",
+    "For the map, use react-native-maps. Configure it with a dark mode JSON style. Ensure real geocoding via OpenStreetMap Nominatim API as requested.",
+    "For QR Code generation on the PIX screen, install and use 'react-native-qrcode-svg' with the provided CNPJ (48.223.054/0001-42).",
+    "For the barcode scanner, use 'expo-camera'.",
+    "Implement the UI text strictly in Portuguese (pt-BR).",
+    "Implement local storage of routes (AsyncStorage or equivalent)."
+  ]
+}
