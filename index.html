@@ -202,10 +202,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .pab-fail{background:#450a0a;color:#f87171;}
 .pab-aus{background:#451a03;color:#fbbf24;}
 .pa-nota-lbl{font-size:11px;color:#64748b;margin:12px 0 5px;}
-.pa-nota(
+.pa-nota{
   width:100%;padding:10px;background:#334155;border:none;border-radius:10px;
   color:white;font-size:13px;resize:none;height:56px;font-family:inherit;
-)
+}
 .pa-nota::placeholder{color:#475569;}
 
 /* ═══ MENU DRAWER ════════════════════════════════════════════ */
@@ -264,7 +264,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 </head>
 <body>
 
-<!-- ══ TELA SETUP ══════════════════════════════════════════ -->
 <div id="tela-setup">
   <div class="logo-wrap">
     <div class="logo-box">📦</div>
@@ -290,7 +289,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   <button class="btn-go" id="btn-go" onclick="processar()">🚀 Carregar Rota</button>
 </div>
 
-<!-- ══ APP ═════════════════════════════════════════════════ -->
 <div id="app">
   <div id="mapa-wrap">
     <div id="mapa"></div>
@@ -298,7 +296,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
     <button class="fab" id="fab-gps" onclick="irGPS()">📍</button>
     <button class="fab" id="fab-fit" onclick="fitAll()">⊞</button>
     <div id="prog-map"><div id="prog-map-inner"></div></div>
-    <!-- Overlay de geocodificação -->
     <div id="geo-overlay">
       <div class="geo-spinner"></div>
       <div class="geo-txt" id="geo-txt">Localizando endereços...</div>
@@ -318,7 +315,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   </div>
 </div>
 
-<!-- Painel de ação -->
 <div id="pa">
   <div class="pa-h"></div>
   <div class="pa-top">
@@ -338,7 +334,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   <textarea class="pa-nota" id="pa-nota" placeholder="Ex: Deixei na portaria, vizinho recebeu..."></textarea>
 </div>
 
-<!-- Menu drawer -->
 <div id="ov" onclick="fecharMenu()"></div>
 <div id="drawer">
   <div class="dh">
@@ -356,7 +351,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   </div>
 </div>
 
-<!-- Scanner -->
 <div id="scanner-modal">
   <div class="sm-hd">
     <div class="sm-title">📷 Scanner</div>
@@ -366,7 +360,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   <div id="scan-fb">Aguardando leitura do código...</div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
 <script>
@@ -841,7 +834,7 @@ function renderResumo(){
   const pct=total?Math.round((total-pend)/total*100):0;
   document.getElementById('body-r').innerHTML=`
     <div class="rg">
-      <div class="rc"><div class="rn" style="color:var(--azul)">${pen}</div><div class="rl">⏳ Pendentes</div></div>
+      <div class="rc"><div class="rn" style="color:var(--azul)">${pend}</div><div class="rl">⏳ Pendentes</div></div>
       <div class="rc"><div class="rn" style="color:var(--verde)">${ok}</div><div class="rl">✅ Entregues</div></div>
       <div class="rc"><div class="rn" style="color:var(--vermelho)">${fail}</div><div class="rl">❌ Não entregues</div></div>
       <div class="rc"><div class="rn" style="color:var(--amarelo)">${aus}</div><div class="rl">🚪 Ausentes</div></div>
@@ -881,7 +874,7 @@ function tab(t){
 // ──────────────────────────────────────────────────────────
 //  PAINEL DE AÇÃO
 // ──────────────────────────────────────────────────────────
-function ativar(i){
+function activar(i){
   idxAtivo=i;
   const e=bd[i];
   document.getElementById('pa-num').textContent=i+1;
@@ -919,7 +912,7 @@ function navegar(){
   if(idxAtivo===null) return;
   const e=bd[idxAtivo];
   const q=encodeURIComponent(e.endereco);
-  window.open(`https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=driving`,'_blank');
+  window.open(`https://www.google.com/maps/search/?api=1&query=${q}`,'_blank');
 }
 
 // ──────────────────────────────────────────────────────────
@@ -970,7 +963,7 @@ function digitarCodigo(){
   const c=prompt('Digite o código da encomenda:');
   if(!c||!c.trim()) return;
   const i=bd.findIndex(e=>e.codigo.includes(c.trim().toUpperCase()));
-  if(i!==-1) ativar(i); else toast('❌ Código não encontrado');
+  if(i!==-1) activar(i); else toast('❌ Código não encontrado');
 }
 
 function exportCSV(){
