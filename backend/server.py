@@ -603,12 +603,28 @@ async def get_stats(user_id: str):
     week_ago = (now - timedelta(days=7)).isoformat()
     month_ago = (now - timedelta(days=30)).isoformat()
 
-    all_routes = await db.route_history.find(
-        {"user_id": user_id}, {"_id": 0}
-    ).to_list(length=1000)
+    # Fetch week / month routes with DB-level filtering (bounded)
+    week_routes = await db.route_history.find(
+        {"user_id": user_id, "created_at": {"$gte": week_ago}},
+        {"_id": 0},
+    ).to_list(length=200)
 
-    week_routes = [r for r in all_routes if r.get("created_at", "") >= week_ago]
-    month_routes = [r for r in all_routes if r.get("created_at", "") >= month_ago]
+    month_routes = await db.route_history.find(
+        {"user_id": user_id, "created_at": {"$gte": month_ago}},
+        {"_id": 0},
+    ).to_list(length=500)
+
+    # All-time: aggregate at DB level instead of loading all docs
+    all_time_agg = await db.route_history.aggregate([
+        {"$match": {"user_id": user_id}},
+        {"$group": {
+            "_id": None,
+            "routes": {"$sum": 1},
+            "total_stops": {"$sum": "$total_stops"},
+            "delivered": {"$sum": "$delivered"},
+            "failed": {"$sum": "$failed"},
+        }},
+    ]).to_list(length=1)
 
     def aggregate(routes):
         total_stops = sum(r.get("total_stops", 0) for r in routes)
@@ -623,17 +639,34 @@ async def get_stats(user_id: str):
             "success_rate": round(success_rate, 1),
         }
 
-    # Best day (by delivered)
+    if all_time_agg:
+        a = all_time_agg[0]
+        total_stops = a.get("total_stops", 0)
+        delivered_total = a.get("delivered", 0)
+        all_time = {
+            "routes": a.get("routes", 0),
+            "total_stops": total_stops,
+            "delivered": delivered_total,
+            "failed": a.get("failed", 0),
+            "success_rate": round((delivered_total / total_stops * 100) if total_stops else 0, 1),
+        }
+    else:
+        all_time = {"routes": 0, "total_stops": 0, "delivered": 0, "failed": 0, "success_rate": 0}
+
+    # Best day (single doc) — query DB sorted by delivered desc
+    best_doc = await db.route_history.find_one(
+        {"user_id": user_id},
+        {"_id": 0, "delivered": 1, "created_at": 1},
+        sort=[("delivered", -1)],
+    )
     best_day = None
-    if all_routes:
-        sorted_routes = sorted(all_routes, key=lambda r: r.get("delivered", 0), reverse=True)
-        best = sorted_routes[0]
+    if best_doc:
         best_day = {
-            "date": best.get("created_at", "")[:10],
-            "delivered": best.get("delivered", 0),
+            "date": (best_doc.get("created_at") or "")[:10],
+            "delivered": best_doc.get("delivered", 0),
         }
 
-    # Badge
+    # Badge based on weekly delivered
     week_delivered = sum(r.get("delivered", 0) for r in week_routes)
     badge = "🌱 Novato"
     if week_delivered >= 200:
@@ -648,7 +681,7 @@ async def get_stats(user_id: str):
     return {
         "week": aggregate(week_routes),
         "month": aggregate(month_routes),
-        "all_time": aggregate(all_routes),
+        "all_time": all_time,
         "best_day": best_day,
         "badge": badge,
     }
@@ -832,6 +865,19 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Create DB indexes for query performance."""
+    try:
+        await db.route_history.create_index([("user_id", 1), ("created_at", -1)])
+        await db.pix_transactions.create_index([("status", 1), ("user_submitted_at", -1)])
+        await db.pix_transactions.create_index([("user_id", 1)])
+        await db.subscriptions.create_index([("user_id", 1)], unique=True)
+        await db.audit_logs.create_index([("ip", 1), ("timestamp", -1)])
+    except Exception as e:
+        logging.warning(f"Index creation skipped: {e}")
 
 
 @app.on_event("shutdown")
