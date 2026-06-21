@@ -6,7 +6,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -31,12 +30,6 @@ export default function UploadScreen() {
   const [loadingStep, setLoadingStep] = useState("");
   const [manualText, setManualText] = useState("");
   const [mode, setMode] = useState<"file" | "manual">("file");
-  const [circuitMode, setCircuitMode] = useState(false);
-
-  // Load saved circuit pref
-  useState(() => {
-    storage.getItem<string>(CIRCUIT_KEY, "").then((v) => setCircuitMode(v === "1"));
-  });
 
   const handlePickFile = async () => {
     try {
@@ -87,16 +80,16 @@ export default function UploadScreen() {
         return;
       }
 
-      // Save circuit preference
-      await storage.setItem(CIRCUIT_KEY, circuitMode ? "1" : "");
+      // Circuit mode is always-on after the pivot: preserve PDF order.
+      await storage.setItem(CIRCUIT_KEY, "1");
 
       // Save stops IMMEDIATELY without waiting for geocoding.
       // Background geocoding will fill in lat/lon on the route screen.
       const initial = stops.map((s) => ({ ...s, lat: null, lon: null }));
       await saveRoute(initial);
 
-      setLoadingStep("Abrindo rota...");
-      router.replace("/route");
+      setLoadingStep("Abrindo scanner...");
+      router.replace("/scanner");
     } catch (e) {
       console.log("Process error:", e);
       Alert.alert("Erro", "Não foi possível processar a rota.");
@@ -140,22 +133,16 @@ export default function UploadScreen() {
 
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: SPACING.xl * 2 }}>
-          {/* Circuit-mode toggle */}
+          {/* Pivot info card */}
           <View style={styles.circuitCard} testID="circuit-mode-card">
+            <Ionicons name="checkmark-circle" size={22} color={COLORS.primary} />
             <View style={styles.circuitTextWrap}>
-              <Text style={styles.circuitTitle}>🎯 Manter ordem original (Circuit)</Text>
+              <Text style={styles.circuitTitle}>🎯 Ordem do Circuit preservada</Text>
               <Text style={styles.circuitDesc}>
-                {circuitMode
-                  ? "Ativado — o app não vai reordenar as paradas, respeitando a ordem do PDF."
-                  : "Desativado — o app pode otimizar a ordem com TSP quando você clicar em \"Otimizar\"."}
+                O app mantém exatamente a sequência do PDF do Circuit. Ao bipar
+                um pacote, ele fala &quot;Parada N&quot; para você.
               </Text>
             </View>
-            <Switch
-              value={circuitMode}
-              onValueChange={setCircuitMode}
-              trackColor={{ false: COLORS.bgElevated, true: COLORS.primary }}
-              testID="circuit-mode-switch"
-            />
           </View>
 
           {mode === "file" ? (
@@ -210,11 +197,19 @@ export default function UploadScreen() {
           )}
 
           <View style={styles.helpCard}>
-            <Ionicons name="information-circle" size={20} color={COLORS.primary} />
+            <Ionicons name="scan" size={20} color={COLORS.primary} />
             <Text style={styles.helpText}>
-              Após processar o arquivo, a rota abre <Text style={{ fontWeight: "800" }}>imediatamente</Text>.
-              Os endereços são localizados no mapa em segundo plano. Se algum
-              ponto ficar errado, toque em &quot;Editar local&quot; na parada.
+              Após processar o PDF do Circuit, o <Text style={{ fontWeight: "800" }}>Scanner</Text> abre
+              automaticamente. Bipe cada pacote e o app vai falar o número da
+              parada (ex: &quot;Parada 10&quot;).
+            </Text>
+          </View>
+
+          <View style={[styles.helpCard, { borderColor: COLORS.primary }]}> 
+            <Ionicons name="lock-closed" size={20} color={COLORS.primary} />
+            <Text style={styles.helpText}>
+              <Text style={{ fontWeight: "800" }}>Mapa, otimização de rota e edição de local</Text> serão
+              liberados em breve. Por enquanto, foque em bipar e entregar.
             </Text>
           </View>
         </ScrollView>

@@ -53,21 +53,13 @@ export default function RouteScreen() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
+        // PIVOT: map/route screen is locked behind "Em breve". Send users
+        // directly to scanner when they have a route, or upload otherwise.
         const data = await loadRoute();
         if (data.length === 0) {
           router.replace("/upload");
-          return;
-        }
-        setStops(data);
-        const cm = await storage.getItem<string>("rota_circuit_mode", "");
-        setCircuitMode(cm === "1");
-
-        // Trigger background geocoding for any stop without coords
-        const missingIdx = data
-          .map((s, i) => ({ s, i }))
-          .filter(({ s }) => s.lat == null || s.lon == null);
-        if (missingIdx.length > 0) {
-          backgroundGeocode(data, missingIdx.map((m) => m.i));
+        } else {
+          router.replace("/scanner");
         }
       })();
     }, [router])
