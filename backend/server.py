@@ -79,10 +79,11 @@ def _ip_key(request):
 limiter = Limiter(key_func=_ip_key)
 
 # Code detection
+# BR codes can end with an optional uppercase letter (e.g., BR263252632674A)
 CODE_PATTERNS = [
-    r"BR\d{11,15}",
+    r"BR\d{11,15}[A-Z]?",
     r"[A-Z]{2}\d{9}[A-Z]{2}",
-    r"MLB\d{10,14}",
+    r"MLB\d{10,14}[A-Z]?",
     r"ML-\d{6,12}",
     r"\d{14,18}",
 ]
@@ -232,11 +233,90 @@ def clean_address(raw: str) -> str:
 
 
 def extract_codes_and_addresses(text: str) -> List[dict]:
-    lines = text.split("\n")
+    """Extract stops preserving Circuit PDF order.
+
+    Strategy:
+    1. Detect Circuit-style "row starts": lines beginning with `<N>  <Capital>`.
+       Circuit PDFs always have a row number before each address, but rows
+       can wrap across multiple lines, so the tracking code may end up on a
+       line that does NOT start with the row number. We therefore identify
+       row starts first and treat the text between consecutive row starts as
+       a single logical row.
+    2. For each logical row, extract the first matching code + clean address.
+    3. Sort by row number (always preserve PDF order).
+    4. Fall back to the original per-line scan when no row-starts are found
+       (non-Circuit files: pasted text, CSV-like, Shopee/ML lists, etc.).
+    """
+    seen_codes: set[str] = set()
+    stops: List[dict] = []
+
+    # --- Attempt Circuit row-based extraction first ---
+    row_re = re.compile(r"(?m)^[\t ]*(\d{1,3})[\t ]+(?=[A-Za-zÀ-Ý])")
+    row_matches = list(row_re.finditer(text))
+
+    if len(row_matches) >= 3:
+        for i, rm in enumerate(row_matches):
+            start = rm.end()
+            end = row_matches[i + 1].start() if i + 1 < len(row_matches) else len(text)
+            try:
+                row_num = int(rm.group(1))
+            except ValueError:
+                continue
+            if row_num < 1 or row_num > 999:
+                continue
+
+            block = text[start:end]
+
+            # Find first matching code inside this row block
+            codigo = None
+            for pattern in CODE_PATTERNS:
+                m = re.search(pattern, block, re.IGNORECASE)
+                if m:
+                    candidate = m.group(0).upper()
+                    if pattern == r"\d{14,18}" and (
+                        candidate.startswith("0000") or len(candidate) < 14
+                    ):
+                        continue
+                    codigo = candidate
+                    break
+            if not codigo or codigo in seen_codes:
+                continue
+
+            # Clean address: strip code, semicolons, then run normal cleaner
+            raw = re.sub(re.escape(codigo), "", block, flags=re.IGNORECASE)
+            # Remove the Circuit route header noise tokens early
+            raw = re.sub(r"AT\d{10}[A-Z]{2,4}\d*", " ", raw)
+            raw = re.sub(r"[;\t\|]+", " ", raw)
+            raw = re.sub(r"\s+", " ", raw).strip(" ,.-;")
+            cleaned = clean_address(raw)
+            if len(cleaned) < 5:
+                cleaned = "Endereço não detectado"
+
+            seen_codes.add(codigo)
+            stops.append({
+                "id": 0,  # reassigned after sort
+                "codigo": codigo,
+                "endereco": cleaned,
+                "status": "pendente",
+                "timestamp": None,
+                "lat": None,
+                "lon": None,
+                "_circuit_order": row_num,
+            })
+
+        if len(stops) >= 2:
+            # Sort by row number (PDF order), reassign ids, drop internal field
+            stops.sort(key=lambda s: s["_circuit_order"])
+            for i, s in enumerate(stops):
+                s["id"] = i
+                s.pop("_circuit_order", None)
+            return stops
+
+    # --- Fallback: original per-line scanner for non-Circuit text ---
+    seen_codes.clear()
     stops = []
-    seen_codes = set()
     counter = 0
-    for line in lines:
+    for line in text.split("\n"):
         line = line.strip()
         if len(line) < 5:
             continue
@@ -245,7 +325,9 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
             m = re.search(pattern, line, re.IGNORECASE)
             if m:
                 candidate = m.group(0).upper()
-                if pattern == r"\d{14,18}" and (candidate.startswith("0000") or len(candidate) < 14):
+                if pattern == r"\d{14,18}" and (
+                    candidate.startswith("0000") or len(candidate) < 14
+                ):
                     continue
                 codigo = candidate
                 break
@@ -255,18 +337,13 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
         raw = re.sub(re.escape(codigo), "", line, flags=re.IGNORECASE)
         raw = re.sub(r"[;\t\|]+", " ", raw).strip(" ,;-\t")
 
-        # Detect Circuit row number (e.g., "20 R Siqueira Rendon..." → 20)
-        # The row number is a 1-3 digit value at the very start of the line
-        # AFTER removing the tracking code.
         row_match = re.match(r"^\s*(\d{1,3})\b\s+(?=[A-ZÀ-Ýa-zà-ý])", raw)
         circuit_order: Optional[int] = None
         if row_match:
             try:
                 num = int(row_match.group(1))
-                # Reasonable bounds for a Circuit row (1..999)
                 if 1 <= num <= 999:
                     circuit_order = num
-                    # Strip the row number from raw so it doesn't pollute address
                     raw = raw[row_match.end():]
             except ValueError:
                 pass
@@ -288,15 +365,12 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
         })
         counter += 1
 
-    # If a majority of stops have a Circuit row number, sort by it to preserve PDF order
     has_order = [s for s in stops if s.get("_circuit_order") is not None]
     if len(has_order) >= max(2, len(stops) // 2):
         stops.sort(key=lambda s: (s.get("_circuit_order") is None, s.get("_circuit_order") or 0))
-        # Reassign sequential ids
         for i, s in enumerate(stops):
             s["id"] = i
 
-    # Remove the internal field before returning
     for s in stops:
         s.pop("_circuit_order", None)
 
