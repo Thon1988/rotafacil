@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Linking,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -45,6 +48,8 @@ export default function ScannerScreen() {
   } | null>(null);
   const lockRef = useRef(false);
   const recentRef = useRef<Map<string, number>>(new Map());
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualCode, setManualCode] = useState("");
 
   // Load stops on focus
   useFocusEffect(
@@ -102,20 +107,21 @@ export default function ScannerScreen() {
     }
   }, []);
 
-  const handleScanned = useCallback(
-    async ({ data }: { data: string }) => {
-      if (lockRef.current) return;
-      if (!data || data.length < 4) return;
+  const processCode = useCallback(
+    async (raw: string, source: "scan" | "manual" = "scan") => {
+      if (!raw) return;
+      const token = raw.trim().toUpperCase();
+      if (token.length < 3) return;
 
-      const token = data.trim().toUpperCase();
-
-      // Debounce identical codes for 4s
-      const now = Date.now();
-      const lastTime = recentRef.current.get(token);
-      if (lastTime && now - lastTime < 4000) return;
-      recentRef.current.set(token, now);
-
-      lockRef.current = true;
+      if (source === "scan") {
+        if (lockRef.current) return;
+        // Debounce identical codes for 4s (only for camera scans)
+        const now = Date.now();
+        const lastTime = recentRef.current.get(token);
+        if (lastTime && now - lastTime < 4000) return;
+        recentRef.current.set(token, now);
+        lockRef.current = true;
+      }
 
       // Match against route codes: bidirectional includes for robustness
       const idx = stops.findIndex((s) => {
@@ -129,7 +135,6 @@ export default function ScannerScreen() {
         const seq = idx + 1;
         const alreadyDelivered = stop.status === "entregue";
 
-        // Update status & persist
         if (!alreadyDelivered) {
           const updated = stops.map((s, i) =>
             i === idx
@@ -159,6 +164,7 @@ export default function ScannerScreen() {
           lockRef.current = false;
           setFeedback(null);
         }, 2200);
+        return true;
       } else {
         if (Platform.OS !== "web") {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -172,10 +178,30 @@ export default function ScannerScreen() {
           lockRef.current = false;
           setFeedback(null);
         }, 1800);
+        return false;
       }
     },
     [stops, speakStop]
   );
+
+  const handleScanned = useCallback(
+    async ({ data }: { data: string }) => {
+      if (!data || data.length < 4) return;
+      await processCode(data, "scan");
+    },
+    [processCode]
+  );
+
+  const submitManual = useCallback(async () => {
+    const code = manualCode.trim();
+    if (code.length < 3) return;
+    setManualOpen(false);
+    setManualCode("");
+    // small delay so the modal closes smoothly before haptic/feedback
+    setTimeout(() => {
+      processCode(code, "manual");
+    }, 150);
+  }, [manualCode, processCode]);
 
   const resetRoute = useCallback(async () => {
     Speech.stop();
@@ -311,17 +337,31 @@ export default function ScannerScreen() {
                 {counts.done} de {counts.total}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.iconBtn}
-              onPress={() => setTorch((t) => !t)}
-              testID="torch-toggle-button"
-            >
-              <Ionicons
-                name={torch ? "flashlight" : "flashlight-outline"}
-                size={22}
-                color="#fff"
-              />
-            </TouchableOpacity>
+            <View style={styles.topRightGroup}>
+              <TouchableOpacity
+                style={styles.iconBtn}
+                onPress={() => {
+                  Speech.stop();
+                  setManualCode("");
+                  setManualOpen(true);
+                }}
+                testID="manual-entry-button"
+                accessibilityLabel="Digitar código manualmente"
+              >
+                <Ionicons name="create-outline" size={22} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.iconBtn}
+                onPress={() => setTorch((t) => !t)}
+                testID="torch-toggle-button"
+              >
+                <Ionicons
+                  name={torch ? "flashlight" : "flashlight-outline"}
+                  size={22}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Framing area */}
@@ -397,6 +437,73 @@ export default function ScannerScreen() {
           </View>
         </SafeAreaView>
       </View>
+
+      {/* Manual code entry modal */}
+      <Modal
+        visible={manualOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setManualOpen(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalBackdrop}
+        >
+          <View style={styles.modalCard} testID="manual-modal">
+            <View style={styles.modalHeader}>
+              <Ionicons name="create" size={22} color={COLORS.primary} />
+              <Text style={styles.modalTitle}>Digitar código</Text>
+              <TouchableOpacity
+                onPress={() => setManualOpen(false)}
+                hitSlop={8}
+                testID="manual-close-button"
+              >
+                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalDesc}>
+              Digite o código de rastreio do pacote (BR…, MLB…, Correios).
+            </Text>
+
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Ex: BR123456789BR"
+              placeholderTextColor={COLORS.textTertiary}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              autoFocus
+              value={manualCode}
+              onChangeText={setManualCode}
+              onSubmitEditing={submitManual}
+              returnKeyType="done"
+              testID="manual-code-input"
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setManualOpen(false)}
+                testID="manual-cancel-button"
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalConfirm,
+                  manualCode.trim().length < 3 && styles.modalConfirmDisabled,
+                ]}
+                onPress={submitManual}
+                disabled={manualCode.trim().length < 3}
+                testID="manual-confirm-button"
+              >
+                <Ionicons name="checkmark" size={18} color="#fff" />
+                <Text style={styles.modalConfirmText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -434,8 +541,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
-  },
+    paddingTop: SPACING.sm,  },
   iconBtn: {
     width: 44,
     height: 44,
@@ -454,6 +560,11 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
   },
   counterPillText: { color: "#fff", fontWeight: "800", fontSize: 14 },
+  topRightGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
 
   framingArea: {
     flex: 1,
@@ -622,4 +733,74 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
   },
   btnSecondaryText: { color: COLORS.textPrimary, fontWeight: "700" },
+
+  // Manual entry modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    paddingHorizontal: SPACING.lg,
+  },
+  modalCard: {
+    backgroundColor: COLORS.bgSurface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: SPACING.md,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  modalTitle: {
+    flex: 1,
+    color: COLORS.textPrimary,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  modalDesc: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  modalInput: {
+    backgroundColor: COLORS.bgBase,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 14,
+    color: COLORS.textPrimary,
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 1,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    marginTop: SPACING.xs,
+  },
+  modalCancel: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.bgElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCancelText: { color: COLORS.textPrimary, fontWeight: "700", fontSize: 14 },
+  modalConfirm: {
+    flex: 1.4,
+    flexDirection: "row",
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalConfirmDisabled: { opacity: 0.45 },
+  modalConfirmText: { color: "#fff", fontWeight: "800", fontSize: 14 },
 });
