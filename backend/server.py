@@ -326,10 +326,13 @@ async def geocode_mapbox(address: str) -> Optional[dict]:
         import urllib.parse
         encoded = urllib.parse.quote(address)
         url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{encoded}.json"
+        # São Paulo metro bbox: minLon, minLat, maxLon, maxLat
         params = {
             "access_token": MAPBOX_ACCESS_TOKEN,
             "country": "br",
             "proximity": "-46.6333,-23.5505",
+            "bbox": "-47.20,-24.00,-46.30,-23.30",  # São Paulo metro region
+            "types": "address,place,locality,neighborhood",
             "limit": 1,
             "language": "pt",
         }
@@ -338,7 +341,6 @@ async def geocode_mapbox(address: str) -> Optional[dict]:
             None, lambda: requests.get(url, params=params, timeout=8)
         )
         if resp.status_code in (429, 401, 403):
-            # Rate limit / bad token — silently fall through
             return None
         if resp.status_code != 200:
             return None
@@ -347,12 +349,16 @@ async def geocode_mapbox(address: str) -> Optional[dict]:
         if not feats:
             return None
         f = feats[0]
-        center = f.get("center", [])  # [lon, lat]
+        center = f.get("center", [])
         if len(center) < 2:
             return None
+        # Verify the result is actually in/near São Paulo (under ~50km)
+        lat, lon = float(center[1]), float(center[0])
+        if abs(lat + 23.55) > 0.7 or abs(lon + 46.63) > 0.7:
+            return None
         return {
-            "lat": float(center[1]),
-            "lon": float(center[0]),
+            "lat": lat,
+            "lon": lon,
             "display_name": f.get("place_name", ""),
             "found": True,
         }
