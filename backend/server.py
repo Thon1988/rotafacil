@@ -50,6 +50,7 @@ ACCESS_TOKEN_EXPIRE_DAYS = 30
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH", "")
 WHATSAPP_NUMBER = os.environ.get("WHATSAPP_NUMBER", "5511983454007")
+MAPBOX_ACCESS_TOKEN = os.environ.get("MAPBOX_ACCESS_TOKEN", "")
 FAILED_ATTEMPTS_TO_TRIGGER_HONEYPOT = 3
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -316,6 +317,50 @@ def generate_pix_brcode(pix_key: str, amount: float, merchant_name: str, merchan
     return payload + crc16.hexdigest().upper()
 
 
+async def geocode_mapbox(address: str) -> Optional[dict]:
+    """Primary geocoder: Mapbox v5. 100k free requests/month.
+    Returns None if no token configured or if call fails — falls through to Nominatim/Photon."""
+    if not MAPBOX_ACCESS_TOKEN:
+        return None
+    try:
+        import urllib.parse
+        encoded = urllib.parse.quote(address)
+        url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{encoded}.json"
+        params = {
+            "access_token": MAPBOX_ACCESS_TOKEN,
+            "country": "br",
+            "proximity": "-46.6333,-23.5505",
+            "limit": 1,
+            "language": "pt",
+        }
+        loop = asyncio.get_event_loop()
+        resp = await loop.run_in_executor(
+            None, lambda: requests.get(url, params=params, timeout=8)
+        )
+        if resp.status_code in (429, 401, 403):
+            # Rate limit / bad token — silently fall through
+            return None
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        feats = data.get("features", [])
+        if not feats:
+            return None
+        f = feats[0]
+        center = f.get("center", [])  # [lon, lat]
+        if len(center) < 2:
+            return None
+        return {
+            "lat": float(center[1]),
+            "lon": float(center[0]),
+            "display_name": f.get("place_name", ""),
+            "found": True,
+        }
+    except Exception as e:
+        logging.warning(f"Mapbox geocode failed for '{address[:60]}…': {e}")
+        return None
+
+
 async def geocode_photon(address: str) -> Optional[dict]:
     """Photon (komoot.io) — free OSM-based geocoder. Bias results to São Paulo."""
     try:
@@ -370,7 +415,12 @@ async def geocode_photon(address: str) -> Optional[dict]:
 
 
 async def geocode_nominatim(address: str) -> dict:
-    """Geocode via Nominatim first, fall back to Photon if blocked/no result."""
+    """Geocode pipeline: Mapbox (primary, paid-tier-free) → Nominatim → Photon."""
+    # Attempt 0: Mapbox if token configured (best quality for BR addresses)
+    r = await geocode_mapbox(address)
+    if r:
+        return r
+
     headers = {"User-Agent": "RotaRapidaApp/1.0 (delivery-app; contact@rotarapida.app)"}
 
     async def try_nominatim(query: str) -> Optional[dict]:
