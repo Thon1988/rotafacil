@@ -595,6 +595,55 @@ async def root():
     return {"app": "Rota+Rápida App API", "version": "2.1.0"}
 
 
+@api_router.get("/cep/{cep}")
+async def lookup_cep(cep: str):
+    """Look up a Brazilian CEP via ViaCEP (free, no key)."""
+    digits = re.sub(r"\D", "", cep)
+    if len(digits) != 8:
+        raise HTTPException(400, "CEP deve ter 8 dígitos")
+    try:
+        loop = asyncio.get_event_loop()
+        resp = await loop.run_in_executor(
+            None,
+            lambda: requests.get(
+                f"https://viacep.com.br/ws/{digits}/json/",
+                timeout=6,
+                headers={"User-Agent": "RotaRapidaApp/1.0"},
+            ),
+        )
+        if resp.status_code != 200:
+            raise HTTPException(404, "CEP não encontrado")
+        data = resp.json()
+        if data.get("erro"):
+            raise HTTPException(404, "CEP não encontrado")
+        # Build address string for geocoding
+        parts = [
+            data.get("logradouro", ""),
+            data.get("bairro", ""),
+            data.get("localidade", ""),
+            data.get("uf", ""),
+        ]
+        addr = ", ".join(p for p in parts if p)
+        # Try to geocode it to get exact lat/lon
+        geo = await geocode_nominatim(addr) if addr else {"lat": None, "lon": None, "found": False}
+        return {
+            "cep": digits,
+            "logradouro": data.get("logradouro"),
+            "bairro": data.get("bairro"),
+            "cidade": data.get("localidade"),
+            "uf": data.get("uf"),
+            "address": addr,
+            "lat": geo.get("lat"),
+            "lon": geo.get("lon"),
+            "found": bool(geo.get("found")),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"CEP lookup error: {e}")
+        raise HTTPException(500, "Erro ao consultar CEP")
+
+
 @api_router.post("/parse-file", response_model=ParsedFileResponse)
 async def parse_file(file: UploadFile = File(...)):
     content = await file.read()

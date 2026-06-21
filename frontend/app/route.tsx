@@ -40,7 +40,11 @@ export default function RouteScreen() {
   const [metrics, setMetrics] = useState<RouteMetrics | null>(null);
   const [geoProgress, setGeoProgress] = useState<{ done: number; total: number } | null>(null);
   const [editLocationIdx, setEditLocationIdx] = useState<number | null>(null);
+  const [editMode, setEditMode] = useState<"cep" | "address" | "coords">("cep");
+  const [editCep, setEditCep] = useState("");
   const [editAddress, setEditAddress] = useState("");
+  const [editLat, setEditLat] = useState("");
+  const [editLon, setEditLon] = useState("");
   const [editLoading, setEditLoading] = useState(false);
   const [circuitMode, setCircuitMode] = useState(false);
   const lastStopTimeRef = useRef<number>(Date.now());
@@ -237,42 +241,58 @@ export default function RouteScreen() {
 
   const openEditLocation = (idx: number) => {
     setEditLocationIdx(idx);
+    setEditMode("cep");
+    setEditCep("");
     setEditAddress(stops[idx].endereco);
+    setEditLat(stops[idx].lat?.toString() || "");
+    setEditLon(stops[idx].lon?.toString() || "");
   };
 
-  const useCurrentLocationForStop = async () => {
+  const applyEditedStop = async (lat: number, lon: number, addressOverride?: string) => {
     if (editLocationIdx === null) return;
-    if (Platform.OS === "web") {
-      Alert.alert("Indisponível", "GPS só funciona no app mobile.");
+    const updated = [...stops];
+    updated[editLocationIdx] = {
+      ...updated[editLocationIdx],
+      endereco: addressOverride || updated[editLocationIdx].endereco,
+      lat,
+      lon,
+    };
+    setStops(updated);
+    await saveRoute(updated);
+    setEditLocationIdx(null);
+  };
+
+  const handleEditByCEP = async () => {
+    const digits = editCep.replace(/\D/g, "");
+    if (digits.length !== 8) {
+      Alert.alert("CEP inválido", "Digite 8 dígitos (somente números).");
       return;
     }
     setEditLoading(true);
     try {
-      const Location = await import("expo-location");
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permissão negada");
+      const res = await fetch(`${API}/cep/${digits}`);
+      if (!res.ok) {
+        Alert.alert("CEP não encontrado");
         return;
       }
-      const pos = await Location.getCurrentPositionAsync({});
-      const updated = [...stops];
-      updated[editLocationIdx] = {
-        ...updated[editLocationIdx],
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude,
-      };
-      setStops(updated);
-      await saveRoute(updated);
-      setEditLocationIdx(null);
+      const data = await res.json();
+      if (!data.found || data.lat == null) {
+        Alert.alert("CEP encontrado, mas sem localização precisa", "Tente buscar por nome da rua.");
+        return;
+      }
+      await applyEditedStop(data.lat, data.lon, data.address);
     } catch {
-      Alert.alert("Erro", "Falha ao obter localização.");
+      Alert.alert("Erro", "Falha ao consultar CEP.");
     } finally {
       setEditLoading(false);
     }
   };
 
-  const geocodeEdited = async () => {
-    if (editLocationIdx === null || !editAddress.trim()) return;
+  const handleEditByAddress = async () => {
+    if (!editAddress.trim()) {
+      Alert.alert("Atenção", "Digite o endereço (rua, número, cidade).");
+      return;
+    }
     setEditLoading(true);
     try {
       const res = await fetch(`${API}/geocode`, {
@@ -282,24 +302,29 @@ export default function RouteScreen() {
       });
       const data = await res.json();
       if (data.found) {
-        const updated = [...stops];
-        updated[editLocationIdx] = {
-          ...updated[editLocationIdx],
-          endereco: editAddress,
-          lat: data.lat,
-          lon: data.lon,
-        };
-        setStops(updated);
-        await saveRoute(updated);
-        setEditLocationIdx(null);
+        await applyEditedStop(data.lat, data.lon, editAddress);
       } else {
-        Alert.alert("Não encontrado", "Tente um endereço mais específico.");
+        Alert.alert("Não encontrado", "Tente um endereço mais específico ou use CEP.");
       }
     } catch {
       Alert.alert("Erro", "Falha ao buscar endereço.");
     } finally {
       setEditLoading(false);
     }
+  };
+
+  const handleEditByCoords = async () => {
+    const lat = parseFloat(editLat.replace(",", "."));
+    const lon = parseFloat(editLon.replace(",", "."));
+    if (Number.isNaN(lat) || Number.isNaN(lon)) {
+      Alert.alert("Coordenadas inválidas", "Use o formato decimal, ex: -23.5505 e -46.6333");
+      return;
+    }
+    if (lat < -34 || lat > 6 || lon < -74 || lon > -34) {
+      Alert.alert("Coordenadas fora do Brasil", "Confirme os valores de latitude e longitude.");
+      return;
+    }
+    await applyEditedStop(lat, lon);
   };
 
   const invertRoute = async () => {
@@ -715,35 +740,116 @@ export default function RouteScreen() {
           <View style={styles.manualCard} testID="edit-location-modal">
             <Text style={styles.manualCardTitle}>📍 Corrigir Localização</Text>
             <Text style={styles.manualCardDesc}>
-              Ajuste o endereço ou use sua localização atual como ponto desta parada.
+              Escolha como localizar essa parada:
             </Text>
-            <TextInput
-              value={editAddress}
-              onChangeText={setEditAddress}
-              placeholder="Endereço completo (rua, número, cidade)"
-              placeholderTextColor={COLORS.textTertiary}
-              style={styles.manualInput}
-              multiline
-              testID="edit-address-input"
-            />
-            <TouchableOpacity
-              style={[styles.modalBtn, styles.modalBtnPrimary, editLoading && { opacity: 0.6 }]}
-              onPress={geocodeEdited}
-              disabled={editLoading}
-              testID="geocode-edit-button"
-            >
-              {editLoading ? <ActivityIndicator color="#fff" /> : (
-                <Text style={styles.modalBtnText}>🔍 Buscar Endereço</Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalBtn, { backgroundColor: COLORS.bgElevated, marginTop: SPACING.sm }]}
-              onPress={useCurrentLocationForStop}
-              disabled={editLoading}
-              testID="use-gps-button"
-            >
-              <Text style={styles.modalBtnText}>📡 Usar Minha Localização Atual</Text>
-            </TouchableOpacity>
+
+            <View style={styles.editTabs}>
+              <TouchableOpacity
+                style={[styles.editTab, editMode === "cep" && styles.editTabActive]}
+                onPress={() => setEditMode("cep")}
+                testID="edit-tab-cep"
+              >
+                <Text style={[styles.editTabText, editMode === "cep" && styles.editTabTextActive]}>📮 CEP</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.editTab, editMode === "address" && styles.editTabActive]}
+                onPress={() => setEditMode("address")}
+                testID="edit-tab-address"
+              >
+                <Text style={[styles.editTabText, editMode === "address" && styles.editTabTextActive]}>🏠 Endereço</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.editTab, editMode === "coords" && styles.editTabActive]}
+                onPress={() => setEditMode("coords")}
+                testID="edit-tab-coords"
+              >
+                <Text style={[styles.editTabText, editMode === "coords" && styles.editTabTextActive]}>📐 Lat/Lon</Text>
+              </TouchableOpacity>
+            </View>
+
+            {editMode === "cep" && (
+              <>
+                <TextInput
+                  value={editCep}
+                  onChangeText={setEditCep}
+                  placeholder="Ex: 01310-200"
+                  placeholderTextColor={COLORS.textTertiary}
+                  style={styles.manualInput}
+                  keyboardType="number-pad"
+                  maxLength={9}
+                  testID="edit-cep-input"
+                />
+                <TouchableOpacity
+                  style={[styles.modalBtn, styles.modalBtnPrimary, editLoading && { opacity: 0.6 }]}
+                  onPress={handleEditByCEP}
+                  disabled={editLoading}
+                  testID="apply-cep-button"
+                >
+                  {editLoading ? <ActivityIndicator color="#fff" /> : (
+                    <Text style={styles.modalBtnText}>🔍 Buscar pelo CEP</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+
+            {editMode === "address" && (
+              <>
+                <TextInput
+                  value={editAddress}
+                  onChangeText={setEditAddress}
+                  placeholder="Ex: Rua das Flores, 100, Centro, São Paulo, SP"
+                  placeholderTextColor={COLORS.textTertiary}
+                  style={[styles.manualInput, { minHeight: 80 }]}
+                  multiline
+                  testID="edit-address-input"
+                />
+                <TouchableOpacity
+                  style={[styles.modalBtn, styles.modalBtnPrimary, editLoading && { opacity: 0.6 }]}
+                  onPress={handleEditByAddress}
+                  disabled={editLoading}
+                  testID="apply-address-button"
+                >
+                  {editLoading ? <ActivityIndicator color="#fff" /> : (
+                    <Text style={styles.modalBtnText}>🔍 Buscar Endereço</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+
+            {editMode === "coords" && (
+              <>
+                <Text style={styles.coordsHint}>Coordenadas decimais (negativas para Brasil)</Text>
+                <View style={styles.coordsRow}>
+                  <TextInput
+                    value={editLat}
+                    onChangeText={setEditLat}
+                    placeholder="-23.5505"
+                    placeholderTextColor={COLORS.textTertiary}
+                    style={[styles.manualInput, { flex: 1 }]}
+                    keyboardType="numbers-and-punctuation"
+                    testID="edit-lat-input"
+                  />
+                  <TextInput
+                    value={editLon}
+                    onChangeText={setEditLon}
+                    placeholder="-46.6333"
+                    placeholderTextColor={COLORS.textTertiary}
+                    style={[styles.manualInput, { flex: 1 }]}
+                    keyboardType="numbers-and-punctuation"
+                    testID="edit-lon-input"
+                  />
+                </View>
+                <Text style={styles.coordsHint}>Dica: copie do Google Maps clicando no local desejado</Text>
+                <TouchableOpacity
+                  style={[styles.modalBtn, styles.modalBtnPrimary]}
+                  onPress={handleEditByCoords}
+                  testID="apply-coords-button"
+                >
+                  <Text style={styles.modalBtnText}>📍 Aplicar Coordenadas</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
             <TouchableOpacity
               style={[styles.modalBtn, styles.modalBtnCancel, { marginTop: SPACING.sm }]}
               onPress={() => setEditLocationIdx(null)}
@@ -909,6 +1015,19 @@ const styles = StyleSheet.create({
     width: 32, height: 32, justifyContent: "center", alignItems: "center",
     borderRadius: RADIUS.full, backgroundColor: COLORS.bgElevated,
   },
+
+  editTabs: {
+    flexDirection: "row", gap: 4, marginBottom: SPACING.md,
+    backgroundColor: COLORS.bgBase, borderRadius: RADIUS.full, padding: 3,
+  },
+  editTab: {
+    flex: 1, paddingVertical: 8, borderRadius: RADIUS.full, alignItems: "center",
+  },
+  editTabActive: { backgroundColor: COLORS.primary },
+  editTabText: { color: COLORS.textSecondary, fontWeight: "700", fontSize: 12 },
+  editTabTextActive: { color: "#fff" },
+  coordsRow: { flexDirection: "row", gap: SPACING.sm },
+  coordsHint: { color: COLORS.textTertiary, fontSize: 11, marginBottom: SPACING.xs, textAlign: "center" },
 
   stopRow: {
     flexDirection: "row",
