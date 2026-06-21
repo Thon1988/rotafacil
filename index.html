@@ -44,14 +44,41 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .upload-nome{font-size:13px;color:var(--laranja);font-weight:600;margin-top:4px;}
 #fileInput{display:none;}
 
+.circuit-option{
+  margin: 14px 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: 420px;
+}
+.circuit-option label{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--texto);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+.circuit-option input{
+  width: 18px;
+  height: 18px;
+  accent-color: var(--laranja);
+  cursor: pointer;
+}
+
 .btn-go{
   width:100%;max-width:420px;padding:16px;border:none;border-radius:12px;
   background:linear-gradient(135deg,var(--laranja),var(--laranja2));color:white;
-  font-size:16px;font-weight:700;cursor:pointer;margin-top:16px;
+  font-size:16px;font-weight:700;cursor:pointer;margin-top:10px;
   box-shadow:0 4px 14px rgba(234,88,12,.4);transition:transform .1s;
 }
 .btn-go:active{transform:scale(.98);}
 .btn-go:disabled{opacity:.6;cursor:not-allowed;}
+
+
 
 /* ═══ APP LAYOUT ════════════════════════════════════════════ */
 #app{display:none;position:fixed;inset:0;flex-direction:column;}
@@ -98,6 +125,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 }
 .drag-h{width:40px;height:4px;background:var(--borda);border-radius:2px;margin:10px auto 0;}
 .abas{display:flex;padding:10px 16px 0;gap:6px;flex-shrink:0;}
+.abas{display:flex;padding:10px 16px 0;gap:6px;flex-shrink:0;}
 .aba{
   flex:1;padding:9px 4px;border:none;background:none;border-radius:10px 10px 0 0;
   font-size:13px;font-weight:700;color:var(--sub);cursor:pointer;
@@ -115,11 +143,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 }
 .sc:active{transform:scale(.98);}
 .sc.entregue{border-left-color:var(--verde);opacity:.65;}
-.sc.falhou Savil{border-left-color:var(--vermelho);opacity:.65;}
+.sc.falhou{border-left-color:var(--vermelho);opacity:.65;}
 .sc.ausente{border-left-color:var(--amarelo);opacity:.65;}
 .sc.sem-coord{border-left-color:#94a3b8;}
 .sc.ativo-card{box-shadow:0 4px 16px rgba(234,88,12,.3);border-left-color:var(--laranja);}
-
 .sn{
   min-width:30px;height:30px;border-radius:50%;background:var(--azul);color:white;
   display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;
@@ -129,17 +156,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .sc.ausente .sn{background:var(--amarelo);}
 .sc.sem-coord .sn{background:#94a3b8;}
 .sc.ativo-card .sn{background:var(--laranja);}
-
 .si{flex:1;min-width:0;}
 .sr{font-size:14px;font-weight:700;color:var(--escuro);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .se{font-size:12px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sc-cod{font-size:10px;color:var(--sub);margin-top:3px;font-family:monospace;}
 .badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-top:4px;}
-
-.b-pend{background:#e0f2fe;color:#0369a1;}
-.b-ok{background:#dcfce7;color:#15803d;}
-.b-fail{background:#fee2e2;color:#b91c1c;}
-.b-aus{background:#fef3c7;color:#b45309;}
+.b-pend{background:#dbeafe;color:#1d4ed8;}.b-ok{background:#dcfce7;color:#15803d;}
+.b-fail{background:#fee2e2;color:#b91c1c;}.b-aus{background:#fef3c7;color:#b45309;}
 .b-sem{background:#f1f5f9;color:#64748b;}
 .sc-hora{font-size:10px;color:var(--sub);margin-top:2px;}
 
@@ -259,6 +282,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
     <input type="file" id="fileInput" accept=".pdf,.txt,.csv,.xlsx,.xls">
   </div>
 
+  <div class="circuit-option">
+    <label for="chk-circuit">
+      <input type="checkbox" id="chk-circuit">
+      📋 Preservar ordem exata do PDF do Circuit
+    </label>
+  </div>
+
   <button class="btn-go" id="btn-go" onclick="processar()">🚀 Carregar Rota</button>
 </div>
 
@@ -345,8 +375,6 @@ let map, layers, posMarker;
 let scanInst = null, scanBusy = false;
 let abaAtual = 'p';
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
@@ -357,6 +385,7 @@ document.getElementById('fileInput').addEventListener('change', function(){
   if(this.files[0]) document.getElementById('fname').textContent = '📄 ' + this.files[0].name;
 });
 
+// Drag & drop
 const dz = document.getElementById('drop-zone');
 ['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('over'); }));
 ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, () => dz.classList.remove('over')));
@@ -389,6 +418,7 @@ function lerExcel(f){ return new Promise(res=>{
     const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
     if(!rows.length){ toast('⚠️ Planilha vazia'); return; }
 
+    // ── Detecta colunas pelo cabeçalho (padrão Shopee) ──
     const header = rows[0].map(c=>String(c).toLowerCase());
     const iCod  = header.findIndex(h=>h.includes('spx')||h.includes('tracking')||h.includes('tn'));
     const iEnd  = header.findIndex(h=>h.includes('destination')||h.includes('address')||h.includes('endereco')||h.includes('endereço'));
@@ -398,9 +428,11 @@ function lerExcel(f){ return new Promise(res=>{
     const iLat   = header.findIndex(h=>h.includes('lat'));
     const iLon   = header.findIndex(h=>h.includes('lon')||h.includes('lng'));
 
+    // Se encontrou colunas Shopee, usa modo estruturado
     if(iCod>=0 && iEnd>=0){
       estruturarExcel(rows.slice(1), {iCod,iEnd,iBairro,iCidade,iCEP,iLat,iLon});
     } else {
+      // Fallback: une colunas como texto e usa regex
       const linhas=rows.map(row=>row.map(c=>String(c).trim()).join(' ').trim()).filter(l=>l.length>3);
       estruturar(linhas.join('\n'));
     }
@@ -416,9 +448,11 @@ function estruturarExcel(rows, {iCod,iEnd,iBairro,iCidade,iCEP,iLat,iLon}){
   for(const row of rows){
     const cod = String(row[iCod]||'').trim().toUpperCase();
     if(!cod || codVistos.has(cod)) continue;
+    // Valida padrão de código (2 letras + dígitos)
     if(!/^[A-Z]{2}\d{9,15}/.test(cod)) continue;
     codVistos.add(cod);
 
+    // Monta endereço: Rua, Bairro, Cidade, CEP
     const partes=[
       String(row[iEnd]||'').trim(),
       iBairro>=0 ? String(row[iBairro]||'').trim() : '',
@@ -427,6 +461,7 @@ function estruturarExcel(rows, {iCod,iEnd,iBairro,iCidade,iCEP,iLat,iLon}){
     ].filter(p=>p.length>0);
     const end = partes.join(', ');
 
+    // Lat/Lon já existentes no arquivo
     const lat = iLat>=0 && row[iLat]!=='' ? parseFloat(row[iLat]) : null;
     const lon = iLon>=0 && row[iLon]!=='' ? parseFloat(row[iLon]) : null;
     const temCoord = lat!==null && lon!==null && !isNaN(lat) && !isNaN(lon);
@@ -447,7 +482,7 @@ function estruturarExcel(rows, {iCod,iEnd,iBairro,iCidade,iCEP,iLat,iLon}){
   if(novo.length===0) return toast('⚠️ Nenhum código Shopee localizado na planilha');
   bd=novo; salvar(); mostrarApp();
   const semC=novo.filter(e=>!e.lat).length;
-  toast(`✅ ${novo.length} paradas carregadas`);
+  toast(`✅ ${novo.length} paradas carregadas${semC>0?' · '+semC+' sem coord.':''}`);
   if(semC>0) setTimeout(()=>geocodificar(true),500);
 }
 
@@ -482,26 +517,41 @@ function lerTexto(f){ return new Promise(res=>{
 // ──────────────────────────────────────────────────────────
 function estruturar(texto){
   const linhas = texto.split(/\r?\n/);
-  const novo = [];
-  const codVistos = new Set();
+  let novo = [];
+  const codVistos = new Set(); // evita duplicatas
+  const isCircuit = document.getElementById('chk-circuit').checked;
 
   for(const linha of linhas){
     const l = linha.trim();
     if(l.length < 5) continue;
 
+    // Regex: código Shopee/Correios — 2 letras + 9-13 dígitos + até 2 letras opcionais
     const m = l.match(/\b([A-Z]{2}\d{9,13}[A-Z]{0,2})\b/i);
     if(!m) continue;
 
     const cod = m[1].toUpperCase();
-    if(codVistos.has(cod)) continue;
+    if(codVistos.has(cod)) continue; // DEDUPLICAÇÃO
     codVistos.add(cod);
 
+    // Se o modo Circuit estiver ativo, captura o número da parada no início da linha
+    let ordemCircuit = null;
+    const mNum = l.match(/^[^a-zA-Z0-9]*(\d+)\b/);
+    if(isCircuit && mNum){
+      ordemCircuit = parseInt(mNum[1], 10);
+    }
+
+    // Remove o código e limpa o endereço
     let end = l
       .replace(new RegExp('\\b'+cod+'\\b','i'), '')
       .replace(/[;\t|]+/g, ' ')
       .replace(/\s{2,}/g, ' ')
       .trim()
       .replace(/^[,\-\s]+|[,\-\s]+$/g, '');
+
+    // Se for Circuit, remove a numeração residual do início do endereço para não quebrar o geocodificador
+    if(isCircuit && mNum){
+      end = end.replace(/^[^a-zA-Z0-9]*\d+(?:[\s\.\-\:]\s*)*/, '').trim();
+    }
 
     if(!end || end.length < 4) end = 'Endereço não informado';
 
@@ -514,18 +564,40 @@ function estruturar(texto){
       nota: '',
       lat: null,
       lon: null,
-      geocodStatus: 'pendente'
+      geocodStatus: 'pendente', // 'ok' | 'erro' | 'pendente'
+      ordemCircuit: ordemCircuit
     });
   }
 
   if(novo.length === 0) return toast('⚠️ Nenhum código no padrão Shopee/Correios localizado');
 
+  // Se o modo Circuit estiver ativo, força a ordenação estrita baseada nos números das paradas extraídos
+  if(isCircuit){
+    novo.sort((a, b) => {
+      if(a.ordemCircuit !== null && b.ordemCircuit !== null) return a.ordemCircuit - b.ordemCircuit;
+      if(a.ordemCircuit !== null) return -1;
+      if(b.ordemCircuit !== null) return 1;
+      return a.id - b.id;
+    });
+    // Atualiza os ids de controle sequencial após a ordenação
+    novo.forEach((e, i) => e.id = i);
+  }
+
   bd = novo;
   salvar();
   mostrarApp();
-  toast(`✅ ${bd.length} paradas carregadas`);
+  
+  if(isCircuit){
+    toast(`✅ ${bd.length} paradas carregadas na ordem exata do Circuit`);
+  } else {
+    toast(`✅ ${bd.length} paradas carregadas`);
+  }
+  
+  // Geocodifica em background imediatamente
   setTimeout(()=>geocodificar(false), 300);
 }
+
+
 
 // ──────────────────────────────────────────────────────────
 //  INICIAR APP
@@ -542,6 +614,7 @@ function mostrarApp(){
 
 function criarMapa(){
   if(map) return;
+  // ── Carto Voyager — aparência idêntica ao Google Maps, sem API key ──
   map = L.map('mapa', { zoomControl:false, attributionControl:false });
   L.tileLayer(
     'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
@@ -609,17 +682,9 @@ function irGPS(){
 }
 
 // ──────────────────────────────────────────────────────────
-//  GEOCODIFICAÇÃO (MÉTODO COM ANTIBLOQUEIO E FILTRO INTELIGENTE)
+//  GEOCODIFICAÇÃO — PRECISÃO MÁXIMA
+//  Estratégia: 1º CEP via BrasilAPI → 2º Photon (sem rate limit)
 // ──────────────────────────────────────────────────────────
-function limparEnd(end) {
-  const regexL = /\b(rua|av|avenida|alameda|travessa|estrada|rodovia|praça|r\.)\b/i;
-  const match = end.match(regexL);
-  if (match) {
-    return end.substring(match.index).trim();
-  }
-  return end.replace(/^\d+[\s\-\.]*/, '').trim();
-}
-
 async function geocodificar(silencioso=false){
   const fila = bd.filter(e=>e.geocodStatus!=='ok');
   if(fila.length===0){
@@ -639,28 +704,19 @@ async function geocodificar(silencioso=false){
     gsub.textContent  = e.endereco.substring(0,50)+'...';
     gbar.style.width  = Math.round(ok/fila.length*100)+'%';
 
-    // 1. TENTATIVA POR CEP (BrasilAPI)
+    // — Tentativa 1: extrair CEP e usar BrasilAPI (mais preciso para BR) —
     const cep = extrairCEP(e.endereco);
     if(cep){
       const res = await geocodCEP(cep);
-      if(res){ 
-        e.lat=res.lat; e.lon=res.lon; e.geocodStatus='ok'; ok++; 
-        salvar(); plotar(); renderLista(); 
-        await sleep(800); // Evita rate limiting
-        continue; 
-      }
+      if(res){ e.lat=res.lat; e.lon=res.lon; e.geocodStatus='ok'; ok++; salvar(); plotar(); renderLista(); continue; }
     }
 
-    // 2. TENTATIVA COM ENDEREÇO FILTRADO (Photon)
+    // — Tentativa 2: Photon geocoder (OSM, sem limite de taxa) —
     const res2 = await geocodPhoton(e.endereco);
-    if(res2){ 
-      e.lat=res2.lat; e.lon=res2.lon; e.geocodStatus='ok'; ok++; 
-    } else { 
-      e.geocodStatus='erro'; 
-    }
+    if(res2){ e.lat=res2.lat; e.lon=res2.lon; e.geocodStatus='ok'; ok++; }
+    else { e.geocodStatus='erro'; }
 
     salvar(); plotar(); renderLista();
-    await sleep(800); // Throttling necessário de 800ms por endereço
   }
 
   ov.classList.remove('vis');
@@ -671,59 +727,46 @@ async function geocodificar(silencioso=false){
 }
 
 function regeocod(){
-  bd.forEach(e=>{ if(e.geocodStatus!=='ok' || e.status==='pendente'){ e.lat=null; e.lon=null; e.geocodStatus='pendente'; }});
+  bd.forEach(e=>{ if(e.geocodStatus!=='ok'){ e.lat=null; e.lon=null; e.geocodStatus='pendente'; }});
   geocodificar(false);
 }
 
 function extrairCEP(end){
-  const m = end.match(/\b(\d{5})\s?-?\s?(\d{3})\b/);
+  const m = end.match(/\b(\d{5})-?(\d{3})\b/);
   if(!m) return null;
   return m[1]+m[2];
 }
 
 async function geocodCEP(cep){
   try{
-    const r = await fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`,{signal:AbortSignal.timeout(4000)});
+    const r = await fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`,{signal:AbortSignal.timeout(5000)});
     if(!r.ok) return null;
     const d = await r.json();
     if(d.location?.coordinates?.latitude){
-      return {lat: parseFloat(d.location.coordinates.latitude), lon: parseFloat(d.location.coordinates.longitude)};
+      return {lat: d.location.coordinates.latitude, lon: d.location.coordinates.longitude};
     }
+    // Sem coordenadas: usa cidade/bairro para fallback
     return null;
   }catch(e){ return null; }
 }
 
 async function geocodPhoton(end){
   try{
-    const limpo = limparEnd(end);
-    const q = encodeURIComponent(limpo + ', Brasil');
-    const r = await fetch(`https://photon.komoot.io/api/?q=${q}&limit=1&lang=pt`,{signal:AbortSignal.timeout(6000)});
+    const q = encodeURIComponent(end.replace(/\s+/g,' ').trim()+', Brasil');
+    const r = await fetch(`https://photon.komoot.io/api/?q=${q}&limit=1&lang=pt`,{signal:AbortSignal.timeout(8000)});
     if(!r.ok) return null;
     const d = await r.json();
     const f = d.features?.[0];
-    if(!f) {
-      // Fallback secundário usando apenas o CEP no Photon se houver
-      const cep = extrairCEP(end);
-      if(cep) {
-        const r2 = await fetch(`https://photon.komoot.io/api/?q=${cep}&limit=1&lang=pt`,{signal:AbortSignal.timeout(4000)});
-        if(r2.ok) {
-          const d2 = await r2.json();
-          const f2 = d2.features?.[0];
-          if(f2) {
-            const [lon,lat] = f2.geometry.coordinates;
-            return {lat,lon};
-          }
-        }
-      }
-      return null;
-    }
+    if(!f) return null;
     const [lon,lat] = f.geometry.coordinates;
     return {lat,lon};
   }catch(e){ return null; }
 }
 
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
 // ──────────────────────────────────────────────────────────
-//  OTIMIZAÇÃO DE ROTA (TSP CIRCUIT)
+//  OTIMIZAÇÃO DE ROTA — Nearest Neighbor + 2-opt
 // ──────────────────────────────────────────────────────────
 function otimizar(){
   const pen = bd.filter(e=>e.status==='pendente'&&e.lat&&e.lon);
@@ -732,6 +775,7 @@ function otimizar(){
 
   if(pen.length<2) return toast('⚠️ Precisa de pelo menos 2 paradas com coordenadas');
 
+  // 1. Nearest Neighbor partindo da posição atual ou primeira parada
   let inicio = posMarker
     ? {lat:posMarker.getLatLng().lat, lon:posMarker.getLatLng().lng}
     : pen[0];
@@ -745,6 +789,7 @@ function otimizar(){
     atual=rota[rota.length-1];
   }
 
+  // 2. Melhoria 2-opt
   rota = doisOpt(rota);
 
   bd = [...conc, ...semCoord, ...rota];
@@ -772,7 +817,7 @@ function doisOpt(rota){
   return rota;
 }
 
-function geo(a,b){
+function geo(a,b){ // distância euclidiana em graus
   return Math.sqrt((a.lat-b.lat)**2+(a.lon-b.lon)**2);
 }
 
@@ -795,7 +840,7 @@ function renderLista(){
       <div class="si">
         <div class="sr">${p[0]||e.endereco}</div>
         <div class="se">${p.slice(1).join(',').trim()||''}</div>
-        <div class="sc-cod">${e.codigo} ${!e.lat?'<span style="color:#f97316">| ⚠ Sem mapa</span>':''}</div>
+        <div class="sc-cod">${e.codigo} ${!e.lat?'<span style="color:#f97316">⚠ sem coord.</span>':''}</div>
         ${badges[e.status]||''}
         ${e.timestamp?`<div class="sc-hora">⏱ ${e.timestamp}${e.nota?' · '+e.nota:''}</div>`:''}
       </div>`;
@@ -833,7 +878,7 @@ function renderResumo(){
       <div style="font-size:12px;color:var(--sub);margin-top:3px">das entregas finalizadas foram bem-sucedidas</div>
     </div>
     ${semC>0?`<div style="background:#fff7ed;border-radius:12px;padding:14px;border:1px solid #fdba74;font-size:13px;color:#c2410c">
-      ⚠️ <strong>${semC} endereço${semC>1?'s':''}</strong> sem localização. Clique em <strong>☰ -> Regeocodificar Endereços</strong> para rodar a limpeza profunda.
+      ⚠️ <strong>${semC} endereço${semC>1?'s':''}</strong> sem coordenadas. Use <strong>🗺️ Geocodificar</strong> no menu para localizá-los no mapa.
     </div>`:''}`;
   document.getElementById('prog-map-inner').style.width = pct+'%';
 }
@@ -868,13 +913,14 @@ function activar(i){
   renderLista(); plotar();
 }
 
-function ativar(i) { activar(i); }
-
 function fecharPA(){
   document.getElementById('pa').classList.remove('open');
   idxAtivo=null; renderLista(); plotar();
 }
 
+// ──────────────────────────────────────────────────────────
+//  REGISTRAR STATUS
+// ──────────────────────────────────────────────────────────
 function reg(status){
   if(idxAtivo===null) return;
   bd[idxAtivo].status=status;
@@ -890,9 +936,9 @@ function reg(status){
 function navegar(){
   if(idxAtivo===null) return;
   const e=bd[idxAtivo];
-  const limpo = limparEnd(e.endereco);
-  const q=encodeURIComponent(limpo);
-  window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, '_blank');
+  const q=encodeURIComponent(e.endereco);
+  // Google Maps com modo carro — deep link abre app nativo no celular
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=driving`,'_blank');
 }
 
 // ──────────────────────────────────────────────────────────
@@ -943,7 +989,7 @@ function digitarCodigo(){
   const c=prompt('Digite o código da encomenda:');
   if(!c||!c.trim()) return;
   const i=bd.findIndex(e=>e.codigo.includes(c.trim().toUpperCase()));
-  if(i!==-1) activar(i); else toast('❌ Código não encontrado');
+  if(i!==-1) ativar(i); else toast('❌ Código não encontrado');
 }
 
 function exportCSV(){
@@ -997,6 +1043,7 @@ window.onload = () => {
     mostrarApp();
     const p=bd.filter(e=>e.status==='pendente').length;
     toast(`📦 Rota retomada · ${p} pendentes`);
+    // Geocodifica os que ainda faltam
     const semCoord = bd.filter(e=>e.geocodStatus!=='ok').length;
     if(semCoord>0) setTimeout(()=>geocodificar(true),500);
   }
