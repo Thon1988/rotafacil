@@ -93,7 +93,7 @@
             font-size: 24px;
             border: none;
             cursor: pointer;
-            z-index: 2001;
+            z-index: 1000;
             color: #333;
         }
 
@@ -127,7 +127,7 @@
 
         #bottom-sheet {
             position: absolute;
-            top: 50vh;
+            top: 40vh;
             bottom: 165px;
             left: 0; right: 0;
             background: white;
@@ -181,62 +181,14 @@
             z-index: 20;
             display: none;
             box-sizing: border-box;
-            cursor: pointer;
         }
-        
-        .w-topo { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-            font-size: 14px; 
-            color: #aaa; 
-            margin-bottom: 8px;
-        }
-        .w-esquerda {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .widget-controls { 
-            display: flex; 
-            gap: 12px; 
-            align-items: center;
-        }
-        .btn-ctrl { 
-            background: none; 
-            border: none; 
-            color: #aaa; 
-            cursor: pointer; 
-            font-size: 18px; 
-            font-weight: bold; 
-            padding: 4px; 
-        }
-        .btn-pip {
-            background: var(--cor-azul-rota);
-            color: white;
-            border: none;
-            padding: 4px 8px;
-            font-size: 11px;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        
-        .w-badge { 
-            background: var(--cor-azul-rota); 
-            color: white; 
-            width: 22px; 
-            height: 22px; 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: bold; 
-            font-size: 12px;
-        }
+        .widget-controls { position: absolute; top: 5px; right: 10px; display: flex; gap: 10px; }
+        .btn-ctrl { background: none; border: none; color: #aaa; cursor: pointer; font-size: 16px; font-weight: bold; padding: 5px; }
+
+        .w-topo { display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-bottom: 8px;}
+        .w-badge { background: var(--cor-azul-rota); color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         .w-rua { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; }
-        .w-sub { font-size: 13px; color: #888; margin: 0; }
-        .w-sub.minimizada { display: none; }
+        .w-sub { font-size: 13px; color: #888; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         #barra-acoes-inferior {
             position: absolute;
@@ -313,35 +265,6 @@
             justify-content: center;
             padding: 20px;
         }
-
-        #widget-flutuante-interno {
-            display: none;
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 280px;
-            background: var(--bg-escuro);
-            color: white;
-            border-radius: 10px;
-            padding: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            z-index: 99999;
-            font-family: sans-serif;
-        }
-        .wf-botoes {
-            display: flex;
-            gap: 6px;
-            margin-top: 8px;
-        }
-        .wf-btn {
-            flex: 1;
-            border: none;
-            padding: 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 11px;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -359,7 +282,7 @@
         <div id="mapa"></div>
     </div>
 
-    <button class="btn-menu" id="btnMenuGeral" onclick="toggleMenu(event)">☰</button>
+    <button class="btn-menu" onclick="toggleMenu()">☰</button>
     <div id="menu-opcoes">
         <button class="menu-item" onclick="abrirScanner()">📷 Iniciar Scanner</button>
         <button class="menu-item" onclick="obterLocalizacaoEOTimizar()">⚡ Otimizar Rota Real</button>
@@ -373,33 +296,17 @@
         <div id="container-lista"></div>
     </div>
 
-    <div id="widget-escuro" onclick="alternarExpansaoWidget(event)">
+    <div id="widget-escuro">
+        <div class="widget-controls">
+            <button class="btn-ctrl" onclick="minimizarWidget()">−</button>
+            <button class="btn-ctrl" onclick="fecharWidget()">×</button>
+        </div>
         <div class="w-topo">
-            <div class="w-esquerda">
-                <span id="wg-num">01</span>
-                <span class="w-badge" id="wg-badge">1</span>
-            </div>
-            <div class="widget-controls">
-                <button class="btn-pip" onclick="alternarWidgetFlutuanteInterno(event)">📱 Flutuar</button>
-                <button class="btn-ctrl" onclick="minimizarWidget(event)">−</button>
-                <button class="btn-ctrl" onclick="fecharWidget(event)">×</button>
-            </div>
+            <span id="wg-num">01</span>
+            <span class="w-badge" id="wg-badge">1</span>
         </div>
         <h3 class="w-rua" id="wg-rua">Rua Selecionada, 00</h3>
         <p class="w-sub" id="wg-detalhe">Detalhes e código da encomenda</p>
-    </div>
-
-    <div id="widget-flutuante-interno">
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#aaa; font-weight:bold; margin-bottom:4px;">
-            <span>📌 ENTREGA FLUTUANTE</span>
-            <button onclick="fecharWidgetFlutuanteInterno()" style="background:none; border:none; color:white; font-size:14px; cursor:pointer;">×</button>
-        </div>
-        <div id="wf-rua" style="font-size:15px; font-weight:bold; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Rua Exemplo</div>
-        <div id="wf-detalhe" style="font-size:11px; color:#bbb; line-height:13px; max-height:26px; overflow:hidden; margin-bottom:8px;">Código e complemento</div>
-        <div class="wf-botoes">
-            <button class="wf-btn" style="background:#232733; color:white;" onclick="navegarApp()">🗺️ Rota</button>
-            <button class="wf-btn" style="background:#16a34a; color:white;" onclick="registrarAcaoFinal('entregue'); fecharWidgetFlutuanteInterno();">✓ OK</button>
-        </div>
     </div>
 
     <div id="barra-acoes-inferior">
@@ -449,7 +356,6 @@
         window.onload = () => {
             inicializarMapa();
             monitorarLocalizacaoDispositivo();
-            configurarFechamentoMenuDeFora();
             
             if (bdRotas.length > 0) {
                 document.getElementById('tela-setup').style.display = 'none';
@@ -489,23 +395,13 @@
                         }
                     }
                 }, (err) => {
-                    console.log("Sinal de GPS aguardando maior precisão...");
+                    console.log("Aguardando precisão do sinal GPS...");
                 }, {
                     enableHighAccuracy: true,
                     maximumAge: 10000,
                     timeout: 15000
                 });
             }
-        }
-
-        function configurarFechamentoMenuDeFora() {
-            document.addEventListener('click', (e) => {
-                const menu = document.getElementById('menu-opcoes');
-                const btnMenu = document.getElementById('btnMenuGeral');
-                if (menu && menu.style.display === 'flex' && !menu.contains(e.target) && e.target !== btnMenu) {
-                    menu.style.display = 'none';
-                }
-            });
         }
 
         function plotarNoMapa() {
@@ -535,7 +431,7 @@
                 });
 
                 let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
-                marker.on('click', () => activarDesdeMapa(idx));
+                marker.on('click', () => ativarWidget(idx));
                 
                 layerMarkers.push(marker);
                 bounds.push([e.lat, e.lon]);
@@ -558,10 +454,6 @@
             }
         }
 
-        function activarDesdeMapa(idx) {
-            ativarWidget(idx);
-        }
-
         function emitirBip() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -574,7 +466,7 @@
                 gain.connect(ctx.destination);
                 osc.start();
                 osc.stop(ctx.currentTime + 0.12);
-            } catch (e) { console.log("Áudio indisponível."); }
+            } catch (e) { console.log("Audio indisponivel."); }
         }
 
         function falarTexto(texto) {
@@ -585,15 +477,12 @@
                     fala.lang = 'pt-BR';
                     window.speechSynthesis.speak(fala);
                 }
-            } catch (e) { console.log("Síntese de voz indisponível."); }
+            } catch (e) { console.log("Voz indisponivel."); }
         }
 
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
-            if(!input || input.files.length === 0) {
-                alert("Por favor, selecione um arquivo válido primeiro tocando no campo tracejado.");
-                return;
-            }
+            if(input.files.length === 0) return alert("Selecione o arquivo da sua rota.");
             const arquivo = input.files[0];
 
             document.querySelector('.btn-upload').innerText = "Processando coordenadas...";
@@ -602,65 +491,53 @@
             if (nomeArquivo.endsWith('.xlsx') || nomeArquivo.endsWith('.xls')) {
                 const leitor = new FileReader();
                 leitor.onload = function(e) {
-                    try {
-                        const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, {type: 'array'});
-                        const firstSheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[firstSheetName];
-                        
-                        const jsonMatriz = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-                        analisarDadosPlanilhaUnificada(jsonMatriz);
-                    } catch(err) {
-                        alert("Erro ao ler arquivo Excel: " + err.message);
-                        resetarBotaoUpload();
-                    }
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Converte para JSON estruturado como matriz de objetos (com cabeçalhos)
+                    const jsonMatriz = XLSX.utils.sheet_to_json(worksheet);
+                    extrairDadosDeObjetos(jsonMatriz);
                 };
                 leitor.readAsArrayBuffer(arquivo);
 
             } else if (nomeArquivo.endsWith('.csv')) {
                 const leitor = new FileReader();
                 leitor.onload = function(e) {
-                    try {
-                        const texto = e.target.result;
-                        const linhas = texto.split('\n');
-                        if(linhas.length < 2) return alert("Arquivo CSV vazio.");
-                        
-                        let separador = linhas[0].includes(';') ? ';' : ',';
-                        let cabecalhos = linhas[0].split(separador).map(c => c.replace(/"/g, '').trim().toLowerCase());
-                        
-                        let listaObjetos = [];
-                        for(let i = 1; i < linhas.length; i++) {
-                            if(linhas[i].trim() === '') continue;
-                            let colunas = linhas[i].split(separador).map(c => c.replace(/"/g, '').trim());
-                            let obj = {};
-                            cabecalhos.forEach((cab, idx) => {
-                                obj[cab] = colunas[idx] || "";
-                            });
-                            listaObjetos.push(obj);
-                        }
-                        analisarDadosPlanilhaUnificada(listaObjetos);
-                    } catch(err) {
-                        alert("Erro ao ler arquivo CSV: " + err.message);
-                        resetarBotaoUpload();
+                    const texto = e.target.result;
+                    const linhas = texto.split('\n');
+                    if(linhas.length < 2) return alert("Arquivo CSV vazio.");
+                    
+                    // Tenta adivinhar o separador (, ou ;)
+                    let separador = linhas[0].includes(';') ? ';' : ',';
+                    let cabecalhos = linhas[0].split(separador).map(c => c.replace(/"/g, '').trim().toLowerCase());
+                    
+                    let listaObjetos = [];
+                    for(let i = 1; i < linhas.length; i++) {
+                        if(linhas[i].trim() === '') continue;
+                        let colunas = linhas[i].split(separador).map(c => c.replace(/"/g, '').trim());
+                        let obj = {};
+                        cabecalhos.forEach((cab, idx) => {
+                            obj[cab] = colunas[idx] || "";
+                        });
+                        listaObjetos.push(obj);
                     }
+                    extrairDadosDeObjetos(listaObjetos);
                 };
                 leitor.readAsText(arquivo);
             } else if (nomeArquivo.endsWith('.pdf')) {
+                // Caso seja PDF, tentamos ler o texto bruto procurando padrões numéricos de GPS
                 const leitor = new FileReader();
                 leitor.onload = async function() {
-                    try {
-                        const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                        let textoCompleto = "";
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const page = await pdf.getPage(i);
-                            const content = await page.getTextContent();
-                            textoCompleto += content.items.map(item => item.str).join(" ") + "\n";
-                        }
-                        extrairDadosDeTextoBruto(textoCompleto);
-                    } catch(err) {
-                        alert("Erro ao ler PDF: " + err.message);
-                        resetarBotaoUpload();
+                    const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+                    let textoCompleto = "";
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        textoCompleto += content.items.map(item => item.str).join(" ") + "\n";
                     }
+                    extrairDadosDeTextoBruto(textoCompleto);
                 };
                 leitor.readAsArrayBuffer(arquivo);
             } else {
@@ -670,42 +547,44 @@
             }
         }
 
-        function resetarBotaoUpload() {
-            document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
-        }
-
-        function analisarDadosPlanilhaUnificada(matriz) {
+        // Mapeia as colunas dinamicamente baseado nos dados reais do seu print
+        function extrairDadosDeObjetos(listaObjetos) {
             bdRotas = [];
             let idCounter = 0;
-            let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
-            let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
-            let possuiGpsReal = false;
 
-            matriz.forEach((linha) => {
-                let valoresBrutos = Object.values(linha).map(v => String(v)).join(" ");
-                if (valoresBrutos.trim().length < 12) return;
-
-                let matchBR = valoresBrutos.match(/(BR\d{11})/i);
-                let matchAT = valoresBrutos.match(/(AT202\d{9}[A-Z0-9]*)/i);
-                let gpsMatches = valoresBrutos.match(/(-2\d\.\d+)[,\s]+(-4\d\.\d+)/) || valoresBrutos.match(/(-2\d\.\d+).+?(-4\d\.\d+)/);
-
-                let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
+            listaObjetos.forEach((linha) => {
+                // Procura chaves independente de maiúsculo/minúsculo
+                let chaves = Object.keys(linha);
                 
-                let endereco = valoresBrutos.replace(codigo, '');
-                if (gpsMatches) { 
-                    endereco = endereco.replace(gpsMatches[0], ''); 
-                    possuiGpsReal = true;
+                let chaveCodigo = chaves.find(k => k.toLowerCase().includes('spx') || k.toLowerCase().includes('codigo') || k.toLowerCase().includes('id') || k.toLowerCase().includes('tracking'));
+                let chaveEnd = chaves.find(k => k.toLowerCase().includes('address') || k.toLowerCase().includes('endereco') || k.toLowerCase().includes('destinatario'));
+                let chaveLat = chaves.find(k => k.toLowerCase().includes('lat'));
+                let chaveLon = chaves.find(k => k.toLowerCase().includes('lon'));
+                let chaveBairro = chaves.find(k => k.toLowerCase().includes('bairro'));
+
+                let codigo = chaveCodigo ? String(linha[chaveCodigo]).trim() : "";
+                let endereco = chaveEnd ? String(linha[chaveEnd]).trim() : "";
+                let bairro = chaveBairro ? String(linha[chaveBairro]).trim() : "";
+                
+                // Força a captura da latitude e longitude como números decimais válidos
+                let lat = chaveLat ? parseFloat(String(linha[chaveLat]).replace(',', '.')) : null;
+                let lon = chaveLon ? parseFloat(String(linha[chaveLon]).replace(',', '.')) : null;
+
+                // Captura opcional do código padrão BR da shopee caso esteja misturado no texto
+                if (!codigo || codigo.length < 5) {
+                    let matchBR = endereco.match(/(BR\d{11})/i);
+                    codigo = matchBR ? matchBR[1].toUpperCase() : `ID-${idCounter}`;
                 }
-                
-                endereco = endereco.replace(/\s+/g, ' ').trim();
 
-                let lat = gpsMatches ? parseFloat(gpsMatches[1]) : (baseLat + (idCounter * 0.0015));
-                let lon = gpsMatches ? parseFloat(gpsMatches[2]) : (baseLon + (idCounter * 0.0015));
+                if (bairro && !endereco.toLowerCase().includes(bairro.toLowerCase())) {
+                    endereco += `, ${bairro}`;
+                }
 
-                if (endereco.length > 5) {
+                // Só adiciona na rota se tiver as coordenadas numéricas lidas com sucesso do arquivo
+                if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
                     bdRotas.push({
                         id: idCounter++,
-                        codigo: codigo,
+                        codigo: codigo.toUpperCase(),
                         endereco: endereco,
                         status: 'pendente',
                         timestamp: null,
@@ -715,65 +594,31 @@
                 }
             });
 
-            finalizarCarregamento(possuiGpsReal);
+            finalizarCarregamento();
         }
 
         function extrairDadosDeTextoBruto(textoBruto) {
-            // Tratamento inteligente para PDF do Circuit: limpa cabeçalhos e separa blocos agregados por ";" ou numeração de paradas
-            let textoTratado = textoBruto
-                .replace(/Powered by Spoke/gi, '')
-                .replace(/total:\s*\d+h\d+min/gi, '')
-                .replace(/Dist\s*â\s*ncia\s*total:\s*\d+([.,]\d+)?\s*km/gi, '')
-                .replace(/Address Estimated Arrival Time Notes/gi, '');
-
-            // Tokenizar usando os divisores comuns de arquivos agregados do Circuit (; ou padrões de quebra "Número ")
-            let blocos = textoTratado.split(/(?=\d+\s+Rua)|(?=\d+\s+Av)|(?=\bBR\d{11}\b)|;/i);
-            
+            const linhas = textoBruto.split(/\r?\n/);
             bdRotas = [];
             let idCounter = 0;
-            let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
-            let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
-            let possuiGpsReal = false;
 
-            blocos.forEach((bloco) => {
-                let linhaLimpa = bloco.replace(/\s+/g, ' ').trim();
-                if (linhaLimpa.length < 12) return;
+            linhas.forEach((linha) => {
+                if (linha.trim().length < 10) return;
 
-                // Remover prefixos numéricos soltos que sobram do splitter (ex: "58", "03", "2")
-                linhaLimpa = linhaLimpa.replace(/^(\d+[-\s]+)+/, '');
-
-                let gpsMatches = linhaLimpa.match(/(-2\d\.\d+)[,\s]+(-4\d\.\d+)/) || linhaLimpa.match(/(-2\d\.\d+).+?(-4\d\.\d+)/);
-                let matchBR = linhaLimpa.match(/(BR\d{11})/i);
-                let matchAT = linhaLimpa.match(/(AT202\d{9}[A-Z0-9]*)/i);
+                // Expressão para extrair latitudes e longitudes negativas comuns de SP (-23.xxxx, -46.xxxx)
+                let gpsMatches = linha.match(/(-23\.\d+)[,\s]+(-46\.\d+)/) || linha.match(/(-23\.\d+).+?(-46\.\d+)/);
+                let matchBR = linha.match(/(BR\d{11})/i);
                 
-                let lat, lon;
                 if (gpsMatches) {
-                    lat = parseFloat(gpsMatches[1]);
-                    lon = parseFloat(gpsMatches[2]);
-                    possuiGpsReal = true;
-                } else {
-                    lat = baseLat + (idCounter * 0.0015);
-                    lon = baseLon + (idCounter * 0.0015);
-                }
+                    let lat = parseFloat(gpsMatches[1]);
+                    let lon = parseFloat(gpsMatches[2]);
+                    let codigo = matchBR ? matchBR[1].toUpperCase() : `ID-${idCounter}`;
+                    let endereco = linha.replace(gpsMatches[0], '').replace(codigo, '').trim();
 
-                let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
-                
-                // Limpar metadados de horários residuais do Circuit de dentro do endereço extraído
-                let endereco = linhaLimpa;
-                if (gpsMatches) { endereco = endereco.replace(gpsMatches[0], ''); }
-                if (matchBR) { endereco = endereco.replace(matchBR[0], ''); }
-                if (matchAT) { endereco = endereco.replace(matchAT[0], ''); }
-                
-                endereco = endereco
-                    .replace(/\d{1,2}:\d{2}/g, '') // Remove horários (ex: 13:30)
-                    .replace(/[-\s]{2,}/g, ' ')
-                    .trim();
-
-                if (endereco.length > 5) {
                     bdRotas.push({
                         id: idCounter++,
                         codigo: codigo,
-                        endereco: endereco || "Endereço da Entrega",
+                        endereco: endereco || "Endereço registrado via GPS",
                         status: 'pendente',
                         timestamp: null,
                         lat: lat,
@@ -782,20 +627,19 @@
                 }
             });
 
-            finalizarCarregamento(possuiGpsReal);
+            finalizarCarregamento();
         }
 
-        function finalizarCarregamento(manterOrdemOriginal = false) {
+        function finalizarCarregamento() {
             if (bdRotas.length === 0) {
-                alert("Nenhum dado legível foi extraído do arquivo.");
-                resetarBotaoUpload();
+                alert("Não foi possível encontrar as colunas de Latitude/Longitude ou dados compatíveis no arquivo. Verifique o arquivo e tente novamente.");
+                document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
                 return;
             }
 
-            if (!manterOrdemOriginal) {
-                executarOtimizacaoTSP(true);
-            }
-            
+            // Otimiza automaticamente logo após carregar, usando os dados exatos de GPS do arquivo
+            executarOtimizacaoTSP(true);
+
             salvarBD();
             document.getElementById('tela-setup').style.display = 'none';
             map.invalidateSize();
@@ -811,7 +655,7 @@
             bdRotas.forEach((e, idx) => {
                 const div = document.createElement('div');
                 div.className = `item-lista ${e.status !== 'pendente' ? 'concluido' : ''}`;
-                div.onclick = () => activarDesdeMapa(idx);
+                div.onclick = () => ativarWidget(idx);
                 
                 div.innerHTML = `
                     <div class="item-topo">
@@ -823,7 +667,6 @@
                 `;
                 container.appendChild(div);
             });
-            atualizarConteudoWidgetFlutuanteInterno();
         }
 
         function atualizarContador() {
@@ -831,55 +674,16 @@
             document.getElementById('contador-restantes').innerText = pendentes;
         }
 
-        function toggleMenu(event) {
-            if (event) event.stopPropagation();
+        function toggleMenu() {
             const menu = document.getElementById('menu-opcoes');
             menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
         }
 
-        function fecharWidget(event) { 
-            if (event) event.stopPropagation();
-            document.getElementById('widget-escuro').style.display = 'none'; 
-        }
+        function fecharWidget() { document.getElementById('widget-escuro').style.display = 'none'; }
         
-        function minimizarWidget(event) {
-            if (event) event.stopPropagation();
-            document.getElementById('wg-detalhe').classList.toggle('minimizada');
-        }
-
-        function alternarExpansaoWidget(event) {
-            if (event.target.classList.contains('btn-ctrl') || event.target.classList.contains('btn-pip')) return;
-            document.getElementById('wg-detalhe').classList.toggle('minimizada');
-        }
-
-        function falarProximaEntrega(idx) {
-            const e = bdRotas[idx];
-            const partes = e.endereco.split(',');
-            const rua = partes[0] || 'Próximo endereço';
-            const ultimosDigitos = e.codigo.slice(-4).split('').join(' ');
-            falarTexto(`Próxima entrega na: ${rua}. Final do código: ${ultimosDigitos}`);
-        }
-
-        function verificarEAtivarWidgetPorCodigo(token) {
-            const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
-            if (idx !== -1) {
-                emitirBip();
-                ativarWidget(idx);
-                return true;
-            }
-            return false;
-        }
-
-        function abrirAbadeNavegacaoExterna(enderecoCompleto) {
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoCompleto)}`, '_blank');
-        }
-
-        function verificarDuplicidade(codigo) {
-            return bdRotas.some(r => r.codigo === codigo);
-        }
-
-        function activarDesdeMapa(idx) {
-            ativarWidget(idx);
+        function minimizarWidget() {
+            const det = document.getElementById('wg-detalhe');
+            det.style.display = (det.style.display === 'none') ? 'block' : 'none';
         }
 
         function ativarWidget(idx) {
@@ -892,12 +696,9 @@
             document.getElementById('wg-rua').innerText = partes[0] || 'Endereço GPS';
             document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim() || e.endereco}`;
             
-            document.getElementById('wg-detalhe').classList.remove('minimizada');
             document.getElementById('widget-escuro').style.display = 'block';
 
-            falarProximaEntrega(idx);
             map.flyTo([e.lat - 0.002, e.lon], 16, { animate: true, duration: 0.8 });
-            atualizarConteudoWidgetFlutuanteInterno();
         }
 
         function registrarAcaoFinal(status) {
@@ -920,38 +721,16 @@
         function navegarApp() {
             if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
             const e = bdRotas[indexAtivo];
-            abrirAbadeNavegacaoExterna(e.endereco);
-        }
-
-        function alternarWidgetFlutuanteInterno(event) {
-            if (event) event.stopPropagation();
-            if (indexAtivo === null) return alert("Ative um endereço na lista para poder flutuar.");
-            
-            const wf = document.getElementById('widget-flutuante-interno');
-            wf.style.display = 'block';
-            atualizarConteudoWidgetFlutuanteInterno();
-        }
-
-        function fecharWidgetFlutuanteInterno() {
-            document.getElementById('widget-flutuante-interno').style.display = 'none';
-        }
-
-        function atualizarConteudoWidgetFlutuanteInterno() {
-            if (indexAtivo === null) return;
-            const e = bdRotas[indexAtivo];
-            const partes = e.endereco.split(',');
-            
-            document.getElementById('wf-rua').innerText = partes[0] || 'Endereço';
-            document.getElementById('wf-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim() || e.endereco}`;
+            // Abre o Waze ou Google Maps usando as coordenadas exatas de latitude e longitude sem chance de errar a rua!
+            window.open(`https://www.google.com/maps/search/?api=1&query=${e.lat},${e.lon}`, '_blank');
         }
 
         function obterLocalizacaoEOTimizar() {
-            const menu = document.getElementById('menu-opcoes');
-            if(menu) menu.style.display = 'none';
+            toggleMenu();
             executarOtimizacaoTSP(false);
         }
 
-        function ejecutarOtimizacaoTSP(silencioso = false) {
+        function executarOtimizacaoTSP(silencioso = false) {
             let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
             let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
             
@@ -970,6 +749,7 @@
                 let menorDist = Infinity;
                 
                 for(let i=0; i<rascunho.length; i++) {
+                    // Distância euclidiana direta sobre as coordenadas reais do arquivo
                     let d = Math.sqrt(Math.pow(atual.lat - rascunho[i].lat, 2) + Math.pow(atual.lon - rascunho[i].lon, 2));
                     if(d < menorDist) { 
                         menorDist = d; 
@@ -988,13 +768,12 @@
                 salvarBD();
                 renderizarLista();
                 plotarNoMapa();
-                alert("Rota reordenada com sucesso!");
+                alert("Rota reordenada com sucesso usando as coordenadas originais!");
             }
         }
 
         function abrirScanner() {
-            const menu = document.getElementById('menu-opcoes');
-            if(menu) menu.style.display = 'none';
+            toggleMenu();
             document.getElementById('modalScanner').style.display = 'flex';
             const feedback = document.getElementById('scannerFeedback');
             feedback.innerText = "Aguardando leitura do código...";
@@ -1007,7 +786,7 @@
                 { fps: 15, qrbox: { width: 280, height: 150 } }, 
                 processarLeituraDaCamera
             ).catch(e => {
-                feedback.innerText = "Erro ao mapear a câmera traseira do dispositivo.";
+                feedback.innerText = "Erro ao iniciar a câmera.";
             });
         }
 
@@ -1026,12 +805,19 @@
             processandoLeitura = true;
             
             const token = textoLido.trim().toUpperCase();
-            const feedback = document.getElementById('scannerFeedback');
-            const ativado = verificarEAtivarWidgetPorCodigo(token);
+            const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
             
-            if (ativado) {
-                feedback.innerText = `✅ Encomenda Localizada!`;
+            const feedback = document.getElementById('scannerFeedback');
+            
+            if (idx !== -1) {
+                emitirBip();
+                const ultimosDigitos = bdRotas[idx].codigo.slice(-4);
+                falarTexto(`Parada ${idx + 1}. Final ${ultimosDigitos.split('').join(' ')}`);
+                
+                feedback.innerText = `✅ Parada #${idx + 1} Localizada!`;
                 feedback.style.color = "var(--cor-verde)";
+                
+                ativarWidget(idx);
                 setTimeout(() => { fecharScanner(); }, 1200);
             } else {
                 feedback.innerText = `❌ Código não listado nesta rota.`;
@@ -1041,18 +827,20 @@
         }
 
         function forcarBaixaManual() {
-            const menu = document.getElementById('menu-opcoes');
-            if(menu) menu.style.display = 'none';
+            toggleMenu();
             const cod = prompt("Digite o código identificador da encomenda:");
             if(cod && cod.trim() !== "") {
-                const ativado = verificarEAtivarWidgetPorCodigo(cod.trim().toUpperCase());
-                if(!ativado) alert("Código não localizado.");
+                const idx = bdRotas.findIndex(i => i.codigo.toUpperCase().includes(cod.trim().toUpperCase()));
+                if(idx !== -1) {
+                    ativarWidget(idx);
+                } else {
+                    alert("Código não localizado.");
+                }
             }
         }
 
         function exportarRelatorioCSV() {
-            const menu = document.getElementById('menu-opcoes');
-            if(menu) menu.style.display = 'none';
+            toggleMenu();
             if(bdRotas.length === 0) return alert("Sem dados.");
             let csv = "\uFEFFID,Codigo,Endereco,Status,Horario\n";
             bdRotas.forEach(p => {
@@ -1066,9 +854,8 @@
         }
 
         function limparSessao() {
-            const menu = document.getElementById('menu-opcoes');
-            if(menu) menu.style.display = 'none';
-            if(confirm("Deseja apagar a rota activa atual?")) {
+            toggleMenu();
+            if(confirm("Deseja apagar a rota ativa atual?")) {
                 localStorage.removeItem('rota_facil_db_oficial');
                 location.reload();
             }
