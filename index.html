@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg Rota Fácil</title>
+    <title>Rota Fácil</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -93,7 +93,7 @@
             font-size: 24px;
             border: none;
             cursor: pointer;
-            z-index: 1000;
+            z-index: 2001;
             color: #333;
         }
 
@@ -127,7 +127,7 @@
 
         #bottom-sheet {
             position: absolute;
-            top: 40vh;
+            top: 50vh;
             bottom: 165px;
             left: 0; right: 0;
             background: white;
@@ -181,14 +181,62 @@
             z-index: 20;
             display: none;
             box-sizing: border-box;
+            cursor: pointer;
         }
-        .widget-controls { position: absolute; top: 5px; right: 10px; display: flex; gap: 10px; }
-        .btn-ctrl { background: none; border: none; color: #aaa; cursor: pointer; font-size: 16px; font-weight: bold; padding: 5px; }
-
-        .w-topo { display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-bottom: 8px;}
-        .w-badge { background: var(--cor-azul-rota); color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        
+        .w-topo { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            font-size: 14px; 
+            color: #aaa; 
+            margin-bottom: 8px;
+        }
+        .w-esquerda {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .widget-controls { 
+            display: flex; 
+            gap: 12px; 
+            align-items: center;
+        }
+        .btn-ctrl { 
+            background: none; 
+            border: none; 
+            color: #aaa; 
+            cursor: pointer; 
+            font-size: 18px; 
+            font-weight: bold; 
+            padding: 4px; 
+        }
+        .btn-pip {
+            background: var(--cor-azul-rota);
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .w-badge { 
+            background: var(--cor-azul-rota); 
+            color: white; 
+            width: 22px; 
+            height: 22px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: bold; 
+            font-size: 12px;
+        }
         .w-rua { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; }
-        .w-sub { font-size: 13px; color: #888; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .w-sub { font-size: 13px; color: #888; margin: 0; }
+        .w-sub.minimizada { display: none; }
 
         #barra-acoes-inferior {
             position: absolute;
@@ -265,13 +313,42 @@
             justify-content: center;
             padding: 20px;
         }
+
+        #widget-flutuante-interno {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 280px;
+            background: var(--bg-escuro);
+            color: white;
+            border-radius: 10px;
+            padding: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 99999;
+            font-family: sans-serif;
+        }
+        .wf-botoes {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .wf-btn {
+            flex: 1;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 11px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
     <div id="tela-setup">
-        <h1 style="color: #ea580c;">📦 AppEgg Rota Fácil</h1>
-        <p style="color: #666; text-align: center;">Carregue sua lista de entregas (PDF, Excel, CSV ou TXT).</p>
+        <h1 style="color: #ea580c;">📦 Rota Fácil</h1>
+        <p style="color: #666; text-align: center;">Carregue sua lista de entregas (Excel, CSV ou PDF).</p>
         
         <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
         
@@ -282,10 +359,10 @@
         <div id="mapa"></div>
     </div>
 
-    <button class="btn-menu" onclick="toggleMenu()">☰</button>
+    <button class="btn-menu" id="btnMenuGeral" onclick="toggleMenu(event)">☰</button>
     <div id="menu-opcoes">
         <button class="menu-item" onclick="abrirScanner()">📷 Iniciar Scanner</button>
-        <button class="menu-item" onclick="executarOtimizacaoTSP()">⚡ Otimizar Rota Atual</button>
+        <button class="menu-item" onclick="obterLocalizacaoEOTimizar()">⚡ Otimizar Rota Real</button>
         <button class="menu-item" onclick="exportarRelatorioCSV()">📥 Exportar Relatório</button>
         <button class="menu-item" onclick="forcarBaixaManual()">✍️ Digitar Código Manual</button>
         <button class="menu-item" style="color: #dc2626;" onclick="limparSessao()">🗑️ Apagar Rota</button>
@@ -296,22 +373,38 @@
         <div id="container-lista"></div>
     </div>
 
-    <div id="widget-escuro">
-        <div class="widget-controls">
-            <button class="btn-ctrl" onclick="minimizarWidget()">−</button>
-            <button class="btn-ctrl" onclick="fecharWidget()">×</button>
-        </div>
+    <div id="widget-escuro" onclick="alternarExpansaoWidget(event)">
         <div class="w-topo">
-            <span id="wg-num">01</span>
-            <span class="w-badge" id="wg-badge">1</span>
+            <div class="w-esquerda">
+                <span id="wg-num">01</span>
+                <span class="w-badge" id="wg-badge">1</span>
+            </div>
+            <div class="widget-controls">
+                <button class="btn-pip" onclick="alternarWidgetFlutuanteInterno(event)">📱 Flutuar</button>
+                <button class="btn-ctrl" onclick="minimizarWidget(event)">−</button>
+                <button class="btn-ctrl" onclick="fecharWidget(event)">×</button>
+            </div>
         </div>
         <h3 class="w-rua" id="wg-rua">Rua Selecionada, 00</h3>
         <p class="w-sub" id="wg-detalhe">Detalhes e código da encomenda</p>
     </div>
 
+    <div id="widget-flutuante-interno">
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#aaa; font-weight:bold; margin-bottom:4px;">
+            <span>📌 ENTREGA FLUTUANTE</span>
+            <button onclick="fecharWidgetFlutuanteInterno()" style="background:none; border:none; color:white; font-size:14px; cursor:pointer;">×</button>
+        </div>
+        <div id="wf-rua" style="font-size:15px; font-weight:bold; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Rua Exemplo</div>
+        <div id="wf-detalhe" style="font-size:11px; color:#bbb; line-height:13px; max-height:26px; overflow:hidden; margin-bottom:8px;">Código e complemento</div>
+        <div class="wf-botoes">
+            <button class="wf-btn" style="background:#232733; color:white;" onclick="navegarApp()">🗺️ Rota</button>
+            <button class="wf-btn" style="background:#16a34a; color:white;" onclick="registrarAcaoFinal('entregue'); fecharWidgetFlutuanteInterno();">✓ OK</button>
+        </div>
+    </div>
+
     <div id="barra-acoes-inferior">
         <div class="banner-laranja">
-            ⚡ <span id="contador-restantes">0</span> Paradas Restantes
+            ⚡ <span id="contador-restantes">0</span> Paradas Restantes (Rota Otimizada)
         </div>
         <div class="texto-status">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--cor-verde)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
@@ -320,7 +413,7 @@
         <div class="linha-3-botoes">
             <button class="btn-acao-dark" onclick="navegarApp()">
                 <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
-                Navegar
+                Abrir app
             </button>
             <button class="btn-acao-dark" onclick="registrarAcaoFinal('falhou')">
                 <svg class="icone-vermelho" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
@@ -348,11 +441,15 @@
         let map;
         let layerMarkers = [];
         let mapPolyline = null;
+        let marcadorUsuario = null;
+        let minhaPosicao = null;
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         window.onload = () => {
             inicializarMapa();
+            monitorarLocalizacaoDispositivo();
+            configurarFechamentoMenuDeFora();
             
             if (bdRotas.length > 0) {
                 document.getElementById('tela-setup').style.display = 'none';
@@ -363,25 +460,52 @@
             }
         };
 
-        function falar(texto) {
-            const msg = new SpeechSynthesisUtterance(texto);
-            msg.lang = 'pt-BR';
-            window.speechSynthesis.speak(msg);
-        }
-
-        function calcularDistancia(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-
         function inicializarMapa() {
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap'
             }).addTo(map);
+        }
+
+        function monitorarLocalizacaoDispositivo() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition((pos) => {
+                    minhaPosicao = {
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude
+                    };
+                    
+                    if (map) {
+                        if (marcadorUsuario) {
+                            marcadorUsuario.setLatLng([minhaPosicao.lat, minhaPosicao.lon]);
+                        } else {
+                            let iconeUser = L.divIcon({
+                                className: 'custom-user-wrapper',
+                                html: `<div class="marker-pin" style="background-color: #3b82f6; border-color: #fff; box-shadow: 0 0 10px #3b82f6;">🏠</div>`,
+                                iconSize: [28, 28],
+                                iconAnchor: [14, 14]
+                            });
+                            marcadorUsuario = L.marker([minhaPosicao.lat, minhaPosicao.lon], { icon: iconeUser }).addTo(map);
+                        }
+                    }
+                }, (err) => {
+                    console.log("Sinal de GPS aguardando maior precisão...");
+                }, {
+                    enableHighAccuracy: true,
+                    maximumAge: 10000,
+                    timeout: 15000
+                });
+            }
+        }
+
+        function configurarFechamentoMenuDeFora() {
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('menu-opcoes');
+                const btnMenu = document.getElementById('btnMenuGeral');
+                if (menu && menu.style.display === 'flex' && !menu.contains(e.target) && e.target !== btnMenu) {
+                    menu.style.display = 'none';
+                }
+            });
         }
 
         function plotarNoMapa() {
@@ -396,8 +520,12 @@
             let bounds = [];
             let latlngsLinha = [];
 
+            if (minhaPosicao && bdRotas.filter(r => r.status === 'pendente').length > 0) {
+                latlngsLinha.push([minhaPosicao.lat, minhaPosicao.lon]);
+            }
+
             bdRotas.forEach((e, idx) => {
-                let cor = e.status === 'pendente' ? '#3b82f6' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
+                let cor = e.status === 'pendente' ? '#ea580c' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
                 
                 let customIcon = L.divIcon({
                     className: 'custom-pin-wrapper',
@@ -407,8 +535,7 @@
                 });
 
                 let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
-                
-                marker.on('click', () => ativarWidget(idx));
+                marker.on('click', () => activarDesdeMapa(idx));
                 
                 layerMarkers.push(marker);
                 bounds.push([e.lat, e.lon]);
@@ -418,124 +545,263 @@
                 }
             });
 
+            if (marcadorUsuario && minhaPosicao) {
+                bounds.push([minhaPosicao.lat, minhaPosicao.lon]);
+            }
+
             if(latlngsLinha.length > 1) {
-                mapPolyline = L.polyline(latlngsLinha, {color: '#3b82f6', weight: 4, opacity: 0.8}).addTo(map);
+                mapPolyline = L.polyline(latlngsLinha, {color: '#ea580c', weight: 4, opacity: 0.8, dashArray: '5, 10'}).addTo(map);
             }
 
             if (bounds.length > 0) {
-                map.fitBounds(bounds, { padding: [30, 30] });
+                map.fitBounds(bounds, { padding: [40, 40] });
             }
+        }
+
+        function activarDesdeMapa(idx) {
+            ativarWidget(idx);
+        }
+
+        function emitirBip() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(950, ctx.currentTime);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.12);
+            } catch (e) { console.log("Áudio indisponível."); }
+        }
+
+        function falarTexto(texto) {
+            try {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const fala = new SpeechSynthesisUtterance(texto);
+                    fala.lang = 'pt-BR';
+                    window.speechSynthesis.speak(fala);
+                }
+            } catch (e) { console.log("Síntese de voz indisponível."); }
         }
 
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
-            if(input.files.length === 0) return alert("Selecione um arquivo de rota primeiro.");
+            if(!input || input.files.length === 0) {
+                alert("Por favor, selecione um arquivo válido primeiro tocando no campo tracejado.");
+                return;
+            }
             const arquivo = input.files[0];
 
-            document.querySelector('.btn-upload').innerText = "Processando arquivo...";
+            document.querySelector('.btn-upload').innerText = "Processando coordenadas...";
             const nomeArquivo = arquivo.name.toLowerCase();
 
             if (nomeArquivo.endsWith('.xlsx') || nomeArquivo.endsWith('.xls')) {
                 const leitor = new FileReader();
                 leitor.onload = function(e) {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
-                    
-                    let linhasTexto = [];
-                    json.forEach(row => {
-                        if (row && row.length > 0) {
-                            let linhaStr = row.map(cell => cell !== null && cell !== undefined ? String(cell).trim() : "").join(" ").trim();
-                            if (linhaStr.length > 5) {
-                                linhasTexto.push(linhaStr);
-                            }
-                        }
-                    });
-                    estruturarBancoDeDados(linhasTexto.join("\n"));
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        const jsonMatriz = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                        analisarDadosPlanilhaUnificada(jsonMatriz);
+                    } catch(err) {
+                        alert("Erro ao ler arquivo Excel: " + err.message);
+                        resetarBotaoUpload();
+                    }
                 };
                 leitor.readAsArrayBuffer(arquivo);
 
+            } else if (nomeArquivo.endsWith('.csv')) {
+                const leitor = new FileReader();
+                leitor.onload = function(e) {
+                    try {
+                        const texto = e.target.result;
+                        const linhas = texto.split('\n');
+                        if(linhas.length < 2) return alert("Arquivo CSV vazio.");
+                        
+                        let separador = linhas[0].includes(';') ? ';' : ',';
+                        let cabecalhos = linhas[0].split(separador).map(c => c.replace(/"/g, '').trim().toLowerCase());
+                        
+                        let listaObjetos = [];
+                        for(let i = 1; i < linhas.length; i++) {
+                            if(linhas[i].trim() === '') continue;
+                            let colunas = linhas[i].split(separador).map(c => c.replace(/"/g, '').trim());
+                            let obj = {};
+                            cabecalhos.forEach((cab, idx) => {
+                                obj[cab] = colunas[idx] || "";
+                            });
+                            listaObjetos.push(obj);
+                        }
+                        analisarDadosPlanilhaUnificada(listaObjetos);
+                    } catch(err) {
+                        alert("Erro ao ler arquivo CSV: " + err.message);
+                        resetarBotaoUpload();
+                    }
+                };
+                leitor.readAsText(arquivo);
             } else if (nomeArquivo.endsWith('.pdf')) {
                 const leitor = new FileReader();
                 leitor.onload = async function() {
                     try {
                         const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
                         let textoCompleto = "";
-                        
                         for (let i = 1; i <= pdf.numPages; i++) {
                             const page = await pdf.getPage(i);
                             const content = await page.getTextContent();
-                            
-                            let items = content.items.sort((a, b) => {
-                                if (Math.abs(a.transform[5] - b.transform[5]) < 5) return a.transform[4] - b.transform[4];
-                                return b.transform[5] - a.transform[5];
-                            });
-                            
-                            let textoPagina = "";
-                            let lastY = null;
-                            
-                            for (let item of items) {
-                                if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) textoPagina += "\n";
-                                textoPagina += item.str + " ";
-                                lastY = item.transform[5];
-                            }
-                            textoCompleto += textoPagina + "\n";
+                            textoCompleto += content.items.map(item => item.str).join(" ") + "\n";
                         }
-                        estruturarBancoDeDados(textoCompleto);
-                    } catch (err) {
-                        alert("Erro ao decodificar as tabelas do PDF.");
-                        document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+                        extrairDadosDeTextoBruto(textoCompleto);
+                    } catch(err) {
+                        alert("Erro ao ler PDF: " + err.message);
+                        resetarBotaoUpload();
                     }
                 };
                 leitor.readAsArrayBuffer(arquivo);
-
             } else {
                 const leitor = new FileReader();
-                leitor.onload = (e) => estruturarBancoDeDados(e.target.result);
+                leitor.onload = (e) => extrairDadosDeTextoBruto(e.target.result);
                 leitor.readAsText(arquivo);
             }
         }
 
-        function estruturarBancoDeDados(texto) {
-            const linhas = texto.split(/\r?\n/);
-            let idCounter = 0;
+        function resetarBotaoUpload() {
+            document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+        }
+
+        function analisarDadosPlanilhaUnificada(matriz) {
             bdRotas = [];
-            
-            linhas.forEach((linha) => {
-                if (linha.trim().length < 5) return;
+            let idCounter = 0;
+            let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
+            let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
+            let possuiGpsReal = false;
 
-                const match = linha.match(/(BR\d{11})/i);
-                if (!match) return;
+            matriz.forEach((linha) => {
+                let valoresBrutos = Object.values(linha).map(v => String(v)).join(" ");
+                if (valoresBrutos.trim().length < 12) return;
 
-                let codigo = match[1].toUpperCase();
-                let endereco = linha.replace(new RegExp(codigo, 'i'), '').replace(/[;\t\|]+/g, ' ').trim();
+                let matchBR = valoresBrutos.match(/(BR\d{11})/i);
+                let matchAT = valoresBrutos.match(/(AT202\d{9}[A-Z0-9]*)/i);
+                let gpsMatches = valoresBrutos.match(/(-2\d\.\d+)[,\s]+(-4\d\.\d+)/) || valoresBrutos.match(/(-2\d\.\d+).+?(-4\d\.\d+)/);
 
-                bdRotas.push({
-                    id: idCounter++,
-                    codigo: codigo,
-                    endereco: endereco,
-                    status: 'pendente',
-                    timestamp: null,
-                    lat: -23.55 + (Math.random() - 0.5) * 0.15,
-                    lon: -46.63 + (Math.random() - 0.5) * 0.15
-                });
+                let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
+                
+                let endereco = valoresBrutos.replace(codigo, '');
+                if (gpsMatches) { 
+                    endereco = endereco.replace(gpsMatches[0], ''); 
+                    possuiGpsReal = true;
+                }
+                
+                endereco = endereco.replace(/\s+/g, ' ').trim();
+
+                let lat = gpsMatches ? parseFloat(gpsMatches[1]) : (baseLat + (idCounter * 0.0015));
+                let lon = gpsMatches ? parseFloat(gpsMatches[2]) : (baseLon + (idCounter * 0.0015));
+
+                if (endereco.length > 5) {
+                    bdRotas.push({
+                        id: idCounter++,
+                        codigo: codigo,
+                        endereco: endereco,
+                        status: 'pendente',
+                        timestamp: null,
+                        lat: lat,
+                        lon: lon
+                    });
+                }
             });
 
-            if(bdRotas.length > 0) {
-                executarOtimizacaoTSP(false); 
-                salvarBD();
-                document.getElementById('tela-setup').style.display = 'none';
-                map.invalidateSize();
-                renderizarLista();
-                atualizarContador();
-                plotarNoMapa();
-                falar("Rota carregada e otimizada por proximidade com sucesso.");
-            } else {
-                alert("Nenhum código no padrão Shopee (BR + 11 dígitos) localizado.");
-                document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+            finalizarCarregamento(possuiGpsReal);
+        }
+
+        function extrairDadosDeTextoBruto(textoBruto) {
+            // Tratamento inteligente para PDF do Circuit: limpa cabeçalhos e separa blocos agregados por ";" ou numeração de paradas
+            let textoTratado = textoBruto
+                .replace(/Powered by Spoke/gi, '')
+                .replace(/total:\s*\d+h\d+min/gi, '')
+                .replace(/Dist\s*â\s*ncia\s*total:\s*\d+([.,]\d+)?\s*km/gi, '')
+                .replace(/Address Estimated Arrival Time Notes/gi, '');
+
+            // Tokenizar usando os divisores comuns de arquivos agregados do Circuit (; ou padrões de quebra "Número ")
+            let blocos = textoTratado.split(/(?=\d+\s+Rua)|(?=\d+\s+Av)|(?=\bBR\d{11}\b)|;/i);
+            
+            bdRotas = [];
+            let idCounter = 0;
+            let baseLat = minhaPosicao ? minhaPosicao.lat : -23.5505;
+            let baseLon = minhaPosicao ? minhaPosicao.lon : -46.6333;
+            let possuiGpsReal = false;
+
+            blocos.forEach((bloco) => {
+                let linhaLimpa = bloco.replace(/\s+/g, ' ').trim();
+                if (linhaLimpa.length < 12) return;
+
+                // Remover prefixos numéricos soltos que sobram do splitter (ex: "58", "03", "2")
+                linhaLimpa = linhaLimpa.replace(/^(\d+[-\s]+)+/, '');
+
+                let gpsMatches = linhaLimpa.match(/(-2\d\.\d+)[,\s]+(-4\d\.\d+)/) || linhaLimpa.match(/(-2\d\.\d+).+?(-4\d\.\d+)/);
+                let matchBR = linhaLimpa.match(/(BR\d{11})/i);
+                let matchAT = linhaLimpa.match(/(AT202\d{9}[A-Z0-9]*)/i);
+                
+                let lat, lon;
+                if (gpsMatches) {
+                    lat = parseFloat(gpsMatches[1]);
+                    lon = parseFloat(gpsMatches[2]);
+                    possuiGpsReal = true;
+                } else {
+                    lat = baseLat + (idCounter * 0.0015);
+                    lon = baseLon + (idCounter * 0.0015);
+                }
+
+                let codigo = matchBR ? matchBR[1].toUpperCase() : (matchAT ? matchAT[1].toUpperCase() : `ID-${idCounter}`);
+                
+                // Limpar metadados de horários residuais do Circuit de dentro do endereço extraído
+                let endereco = linhaLimpa;
+                if (gpsMatches) { endereco = endereco.replace(gpsMatches[0], ''); }
+                if (matchBR) { endereco = endereco.replace(matchBR[0], ''); }
+                if (matchAT) { endereco = endereco.replace(matchAT[0], ''); }
+                
+                endereco = endereco
+                    .replace(/\d{1,2}:\d{2}/g, '') // Remove horários (ex: 13:30)
+                    .replace(/[-\s]{2,}/g, ' ')
+                    .trim();
+
+                if (endereco.length > 5) {
+                    bdRotas.push({
+                        id: idCounter++,
+                        codigo: codigo,
+                        endereco: endereco || "Endereço da Entrega",
+                        status: 'pendente',
+                        timestamp: null,
+                        lat: lat,
+                        lon: lon
+                    });
+                }
+            });
+
+            finalizarCarregamento(possuiGpsReal);
+        }
+
+        function finalizarCarregamento(manterOrdemOriginal = false) {
+            if (bdRotas.length === 0) {
+                alert("Nenhum dado legível foi extraído do arquivo.");
+                resetarBotaoUpload();
+                return;
             }
+
+            if (!manterOrdemOriginal) {
+                executarOtimizacaoTSP(true);
+            }
+            
+            salvarBD();
+            document.getElementById('tela-setup').style.display = 'none';
+            map.invalidateSize();
+            renderizarLista();
+            atualizarContador();
+            plotarNoMapa();
         }
 
         function renderizarLista() {
@@ -545,18 +811,19 @@
             bdRotas.forEach((e, idx) => {
                 const div = document.createElement('div');
                 div.className = `item-lista ${e.status !== 'pendente' ? 'concluido' : ''}`;
-                div.onclick = () => ativarWidget(idx);
+                div.onclick = () => activarDesdeMapa(idx);
                 
                 div.innerHTML = `
                     <div class="item-topo">
                         <span class="parada-titulo">📌 Parada #${idx + 1}</span>
                         <span class="parada-codigo">${e.codigo}</span>
                     </div>
-                    <div class="parada-endereco">${e.endereco.substring(0, 65)}...</div>
+                    <div class="parada-endereco">${e.endereco}</div>
                     ${e.status !== 'pendente' ? `<div style="font-size:11px; color:#16a34a; font-weight:bold; margin-top:4px;">${e.status.toUpperCase()} às ${e.timestamp}</div>` : ''}
                 `;
                 container.appendChild(div);
             });
+            atualizarConteudoWidgetFlutuanteInterno();
         }
 
         function atualizarContador() {
@@ -564,24 +831,55 @@
             document.getElementById('contador-restantes').innerText = pendentes;
         }
 
-        function toggleMenu() {
+        function toggleMenu(event) {
+            if (event) event.stopPropagation();
             const menu = document.getElementById('menu-opcoes');
             menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
         }
-        
-        document.addEventListener('click', function(event) {
-            const menu = document.getElementById('menu-opcoes');
-            const btn = document.querySelector('.btn-menu');
-            if (menu.style.display === 'flex' && !menu.contains(event.target) && event.target !== btn) {
-                menu.style.display = 'none';
-            }
-        });
 
-        function fecharWidget() { document.getElementById('widget-escuro').style.display = 'none'; }
+        function fecharWidget(event) { 
+            if (event) event.stopPropagation();
+            document.getElementById('widget-escuro').style.display = 'none'; 
+        }
         
-        function minimizarWidget() {
-            const det = document.getElementById('wg-detalhe');
-            det.style.display = (det.style.display === 'none') ? 'block' : 'none';
+        function minimizarWidget(event) {
+            if (event) event.stopPropagation();
+            document.getElementById('wg-detalhe').classList.toggle('minimizada');
+        }
+
+        function alternarExpansaoWidget(event) {
+            if (event.target.classList.contains('btn-ctrl') || event.target.classList.contains('btn-pip')) return;
+            document.getElementById('wg-detalhe').classList.toggle('minimizada');
+        }
+
+        function falarProximaEntrega(idx) {
+            const e = bdRotas[idx];
+            const partes = e.endereco.split(',');
+            const rua = partes[0] || 'Próximo endereço';
+            const ultimosDigitos = e.codigo.slice(-4).split('').join(' ');
+            falarTexto(`Próxima entrega na: ${rua}. Final do código: ${ultimosDigitos}`);
+        }
+
+        function verificarEAtivarWidgetPorCodigo(token) {
+            const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
+            if (idx !== -1) {
+                emitirBip();
+                ativarWidget(idx);
+                return true;
+            }
+            return false;
+        }
+
+        function abrirAbadeNavegacaoExterna(enderecoCompleto) {
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoCompleto)}`, '_blank');
+        }
+
+        function verificarDuplicidade(codigo) {
+            return bdRotas.some(r => r.codigo === codigo);
+        }
+
+        function activarDesdeMapa(idx) {
+            ativarWidget(idx);
         }
 
         function ativarWidget(idx) {
@@ -591,13 +889,15 @@
             document.getElementById('wg-badge').innerText = idx + 1;
             
             const partes = e.endereco.split(',');
-            document.getElementById('wg-rua').innerText = partes[0] || 'Endereço';
-            document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim()}`;
+            document.getElementById('wg-rua').innerText = partes[0] || 'Endereço GPS';
+            document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim() || e.endereco}`;
             
+            document.getElementById('wg-detalhe').classList.remove('minimizada');
             document.getElementById('widget-escuro').style.display = 'block';
 
-            map.flyTo([e.lat - 0.015, e.lon], 14, { animate: true, duration: 1 });
-            falar("Parada " + (idx + 1) + ". " + (partes[0] || ""));
+            falarProximaEntrega(idx);
+            map.flyTo([e.lat - 0.002, e.lon], 16, { animate: true, duration: 0.8 });
+            atualizarConteudoWidgetFlutuanteInterno();
         }
 
         function registrarAcaoFinal(status) {
@@ -606,11 +906,7 @@
             bdRotas[indexAtivo].status = status;
             bdRotas[indexAtivo].timestamp = new Date().toLocaleTimeString();
             
-            if (status === 'entregue') {
-                falar("Encomendada entregue com sucesso.");
-            } else {
-                falar("Status registrado como falha.");
-            }
+            if (status === 'entregue') emitirBip();
             
             salvarBD();
             renderizarLista();
@@ -623,59 +919,86 @@
 
         function navegarApp() {
             if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
-            const end = bdRotas[indexAtivo].endereco;
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(end)}&travelmode=driving`, '_blank');
+            const e = bdRotas[indexAtivo];
+            abrirAbadeNavegacaoExterna(e.endereco);
         }
 
-        function executarOtimizacaoTSP(mostrarAlert = true) {
-            if(mostrarAlert) toggleMenu();
-            let pendentes = bdRotas.filter(r => r.status === 'pendente');
-            if(pendentes.length <= 1) return mostrarAlert ? alert("Quantidade insuficiente para otimizar.") : null;
+        function alternarWidgetFlutuanteInterno(event) {
+            if (event) event.stopPropagation();
+            if (indexAtivo === null) return alert("Ative um endereço na lista para poder flutuar.");
             
+            const wf = document.getElementById('widget-flutuante-interno');
+            wf.style.display = 'block';
+            atualizarConteudoWidgetFlutuanteInterno();
+        }
+
+        function fecharWidgetFlutuanteInterno() {
+            document.getElementById('widget-flutuante-interno').style.display = 'none';
+        }
+
+        function atualizarConteudoWidgetFlutuanteInterno() {
+            if (indexAtivo === null) return;
+            const e = bdRotas[indexAtivo];
+            const partes = e.endereco.split(',');
+            
+            document.getElementById('wf-rua').innerText = partes[0] || 'Endereço';
+            document.getElementById('wf-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim() || e.endereco}`;
+        }
+
+        function obterLocalizacaoEOTimizar() {
+            const menu = document.getElementById('menu-opcoes');
+            if(menu) menu.style.display = 'none';
+            executarOtimizacaoTSP(false);
+        }
+
+        function ejecutarOtimizacaoTSP(silencioso = false) {
+            let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
             let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
-            let otimizado = [pendentes.shift()];
             
-            let distTotal = 0;
+            if(rascunho.length === 0) return;
             
-            while(pendentes.length > 0) {
-                let atual = otimizado[otimizado.length - 1];
+            let otimizado = [];
+            let pontoPartida = minhaPosicao ? { lat: minhaPosicao.lat, lon: minhaPosicao.lon } : rascunho.shift();
+            
+            if (!minhaPosicao && rascunho.length > 0) {
+                otimizado.push(pontoPartida);
+            }
+            
+            let atual = pontoPartida;
+            while(rascunho.length > 0) {
                 let indexMaisProximo = 0;
                 let menorDist = Infinity;
                 
-                for(let i=0; i<pendentes.length; i++) {
-                    let d = calcularDistancia(atual.lat, atual.lon, pendentes[i].lat, pendentes[i].lon);
-                    if(d < menorDist) { menorDist = d; indexMaisProximo = i; }
+                for(let i=0; i<rascunho.length; i++) {
+                    let d = Math.sqrt(Math.pow(atual.lat - rascunho[i].lat, 2) + Math.pow(atual.lon - rascunho[i].lon, 2));
+                    if(d < menorDist) { 
+                        menorDist = d; 
+                        indexMaisProximo = i; 
+                    }
                 }
-                let prox = pendentes.splice(indexMaisProximo, 1)[0];
-                distTotal += menorDist;
-                otimizado.push(prox);
+                let proximaParada = rascunho.splice(indexMaisProximo, 1)[0];
+                otimizado.push(proximaParada);
+                atual = proximaParada;
             }
             
             bdRotas = [...concluidos, ...otimizado];
             bdRotas.forEach((item, idx) => item.id = idx);
             
-            salvarBD();
-            renderizarLista();
-            plotarNoMapa();
-
-            if(mostrarAlert) {
-                let tempoHoras = distTotal / 30; // Velocidade média 30km/h
-                let horas = Math.floor(tempoHoras);
-                let minutos = Math.round((tempoHoras - horas) * 60);
-                
-                let msg = `Rota Otimizada!\nDistância: ${distTotal.toFixed(1)} km\nTempo estimado: ${horas > 0 ? horas + 'h e ' : ''}${minutos} min.`;
-                falar(msg);
-                alert(msg);
+            if(!silencioso) {
+                salvarBD();
+                renderizarLista();
+                plotarNoMapa();
+                alert("Rota reordenada com sucesso!");
             }
         }
 
         function abrirScanner() {
-            toggleMenu();
+            const menu = document.getElementById('menu-opcoes');
+            if(menu) menu.style.display = 'none';
             document.getElementById('modalScanner').style.display = 'flex';
             const feedback = document.getElementById('scannerFeedback');
             feedback.innerText = "Aguardando leitura do código...";
             feedback.style.color = "white";
-            falar("Scanner iniciado.");
             
             if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
             
@@ -684,13 +1007,17 @@
                 { fps: 15, qrbox: { width: 280, height: 150 } }, 
                 processarLeituraDaCamera
             ).catch(e => {
-                feedback.innerText = "Erro de hardware na câmera.";
+                feedback.innerText = "Erro ao mapear a câmera traseira do dispositivo.";
             });
         }
 
         function fecharScanner() {
             document.getElementById('modalScanner').style.display = 'none';
-            if (html5QrcodeScanner) html5QrcodeScanner.stop();
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner = null;
+                }).catch(err => console.log(err));
+            }
             processandoLeitura = false;
         }
 
@@ -699,43 +1026,33 @@
             processandoLeitura = true;
             
             const token = textoLido.trim().toUpperCase();
-            const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
-            
             const feedback = document.getElementById('scannerFeedback');
+            const ativado = verificarEAtivarWidgetPorCodigo(token);
             
-            if (idx !== -1) {
-                falar("Parada localizada.");
-                feedback.innerText = `✅ Parada #${idx + 1} Localizada!`;
+            if (ativado) {
+                feedback.innerText = `✅ Encomenda Localizada!`;
                 feedback.style.color = "var(--cor-verde)";
-                ativarWidget(idx);
-                setTimeout(() => { fecharScanner(); }, 1000);
+                setTimeout(() => { fecharScanner(); }, 1200);
             } else {
-                falar("Código não encontrado na rota.");
                 feedback.innerText = `❌ Código não listado nesta rota.`;
                 feedback.style.color = "var(--cor-vermelho)";
-                setTimeout(() => { 
-                    feedback.innerText = "Aguardando leitura do código...";
-                    feedback.style.color = "white";
-                    processandoLeitura = false; 
-                }, 2000);
+                setTimeout(() => { processandoLeitura = false; }, 1500);
             }
         }
 
         function forcarBaixaManual() {
-            toggleMenu();
+            const menu = document.getElementById('menu-opcoes');
+            if(menu) menu.style.display = 'none';
             const cod = prompt("Digite o código identificador da encomenda:");
             if(cod && cod.trim() !== "") {
-                const idx = bdRotas.findIndex(i => i.codigo.toUpperCase().includes(cod.trim().toUpperCase()));
-                if(idx !== -1) {
-                    ativarWidget(idx);
-                } else {
-                    alert("Código inexistente.");
-                }
+                const ativado = verificarEAtivarWidgetPorCodigo(cod.trim().toUpperCase());
+                if(!ativado) alert("Código não localizado.");
             }
         }
 
         function exportarRelatorioCSV() {
-            toggleMenu();
+            const menu = document.getElementById('menu-opcoes');
+            if(menu) menu.style.display = 'none';
             if(bdRotas.length === 0) return alert("Sem dados.");
             let csv = "\uFEFFID,Codigo,Endereco,Status,Horario\n";
             bdRotas.forEach(p => {
@@ -744,13 +1061,14 @@
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `AppEgg_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
+            link.download = `Rota_Facil_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
             link.click();
         }
 
         function limparSessao() {
-            toggleMenu();
-            if(confirm("Deseja expurgar e limpar a rota ativa?")) {
+            const menu = document.getElementById('menu-opcoes');
+            if(menu) menu.style.display = 'none';
+            if(confirm("Deseja apagar a rota activa atual?")) {
                 localStorage.removeItem('rota_facil_db_oficial');
                 location.reload();
             }
