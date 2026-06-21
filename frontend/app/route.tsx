@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  ActivityIndicator,
   FlatList,
   Linking,
   Modal,
@@ -17,13 +18,14 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
-import { COLORS, RADIUS, SPACING } from "@/src/constants/theme";
+import { COLORS, RADIUS, SPACING, API } from "@/src/constants/theme";
 import RouteMap, { MapHandle, MapMessage } from "@/src/components/route-map";
 import { clearRoute, loadRoute, saveRoute } from "@/src/lib/route-store";
-import { optimizeRoute, RouteMetrics, saveHistory } from "@/src/lib/api";
+import { computeMetrics, geocodeBatch, optimizeRoute, RouteMetrics, saveHistory } from "@/src/lib/api";
 import { Stop } from "@/src/types/stop";
 import { getOrCreateUserId } from "@/src/lib/user";
 import { loadSettings } from "@/src/lib/route-settings";
+import { storage } from "@/src/utils/storage";
 
 export default function RouteScreen() {
   const router = useRouter();
@@ -36,6 +38,11 @@ export default function RouteScreen() {
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const [metrics, setMetrics] = useState<RouteMetrics | null>(null);
+  const [geoProgress, setGeoProgress] = useState<{ done: number; total: number } | null>(null);
+  const [editLocationIdx, setEditLocationIdx] = useState<number | null>(null);
+  const [editAddress, setEditAddress] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+  const [circuitMode, setCircuitMode] = useState(false);
   const lastStopTimeRef = useRef<number>(Date.now());
 
   // Load stops on focus
@@ -48,9 +55,47 @@ export default function RouteScreen() {
           return;
         }
         setStops(data);
+        const cm = await storage.getItem<string>("rota_circuit_mode", "");
+        setCircuitMode(cm === "1");
+
+        // Trigger background geocoding for any stop without coords
+        const missingIdx = data
+          .map((s, i) => ({ s, i }))
+          .filter(({ s }) => s.lat == null || s.lon == null);
+        if (missingIdx.length > 0) {
+          backgroundGeocode(data, missingIdx.map((m) => m.i));
+        }
       })();
     }, [router])
   );
+
+  const backgroundGeocode = useCallback(async (current: Stop[], indices: number[]) => {
+    setGeoProgress({ done: 0, total: indices.length });
+    try {
+      const addresses = indices.map((i) => current[i].endereco);
+      const { results } = await geocodeBatch(addresses);
+      const updated = [...current];
+      results.forEach((r: any, k: number) => {
+        const idx = indices[k];
+        if (r?.found) {
+          updated[idx] = { ...updated[idx], lat: r.lat, lon: r.lon };
+        } else {
+          // Fallback fake coords near São Paulo so map renders something
+          updated[idx] = {
+            ...updated[idx],
+            lat: -23.55 + (Math.random() - 0.5) * 0.1,
+            lon: -46.63 + (Math.random() - 0.5) * 0.1,
+          };
+        }
+      });
+      setStops(updated);
+      await saveRoute(updated);
+    } catch (e) {
+      console.log("bg geocode error", e);
+    } finally {
+      setGeoProgress(null);
+    }
+  }, []);
 
   // Initial stops for map (snapshot). Live updates via postMessage.
   const initialStops = useMemo(() => stops, [stops.length === 0 ? 0 : 1]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -120,8 +165,21 @@ export default function RouteScreen() {
 
   const optimizeTSP = async () => {
     setMenuOpen(false);
+    if (circuitMode) {
+      Alert.alert(
+        "Modo Circuit ativo",
+        "A ordem da rota já está mantida do PDF. Para reotimizar, desative o modo Circuit na tela de upload.",
+      );
+      return;
+    }
     if (stops.filter((s) => s.status === "pendente").length <= 1) {
       Alert.alert("Atenção", "Quantidade de paradas pendentes insuficiente.");
+      return;
+    }
+    // Require all pending stops to have coordinates
+    const missing = stops.filter((s) => s.status === "pendente" && (s.lat == null || s.lon == null));
+    if (missing.length > 0) {
+      Alert.alert("Aguarde", `Ainda localizando ${missing.length} endereço(s)…`);
       return;
     }
     setOptimizing(true);
@@ -141,15 +199,99 @@ export default function RouteScreen() {
         const h = Math.floor(m.estimated_minutes / 60);
         const min = Math.round(m.estimated_minutes % 60);
         const timeStr = h > 0 ? `${h}h ${min}min` : `${min}min`;
-        Alert.alert(
-          "Rota Otimizada ⚡",
-          `${m.total_distance_km.toFixed(1)} km • ~${timeStr}\nReordenada via algoritmo TSP (vizinho mais próximo)`,
-        );
+        Alert.alert("Rota Otimizada ⚡", `${m.total_distance_km.toFixed(1)} km • ~${timeStr}`);
       }
     } catch {
       Alert.alert("Erro", "Falha ao otimizar a rota.");
     } finally {
       setOptimizing(false);
+    }
+  };
+
+  // Compute metrics without reordering (for Circuit mode)
+  useEffect(() => {
+    if (!circuitMode) return;
+    const pending = stops.filter((s) => s.status === "pendente" && s.lat != null && s.lon != null);
+    if (pending.length === 0) return;
+    (async () => {
+      try {
+        const settings = await loadSettings();
+        const m = await computeMetrics(stops, {
+          start_lat: settings.startLat,
+          start_lon: settings.startLon,
+          return_to_start: settings.returnToStart,
+          minutes_per_stop: settings.minutesPerStop,
+          avg_speed_kmh: settings.avgSpeedKmh,
+        });
+        setMetrics(m);
+      } catch {}
+    })();
+  }, [circuitMode, stops]);
+
+  const openEditLocation = (idx: number) => {
+    setEditLocationIdx(idx);
+    setEditAddress(stops[idx].endereco);
+  };
+
+  const useCurrentLocationForStop = async () => {
+    if (editLocationIdx === null) return;
+    if (Platform.OS === "web") {
+      Alert.alert("Indisponível", "GPS só funciona no app mobile.");
+      return;
+    }
+    setEditLoading(true);
+    try {
+      const Location = await import("expo-location");
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permissão negada");
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({});
+      const updated = [...stops];
+      updated[editLocationIdx] = {
+        ...updated[editLocationIdx],
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+      };
+      setStops(updated);
+      await saveRoute(updated);
+      setEditLocationIdx(null);
+    } catch {
+      Alert.alert("Erro", "Falha ao obter localização.");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const geocodeEdited = async () => {
+    if (editLocationIdx === null || !editAddress.trim()) return;
+    setEditLoading(true);
+    try {
+      const res = await fetch(`${API}/geocode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: editAddress }),
+      });
+      const data = await res.json();
+      if (data.found) {
+        const updated = [...stops];
+        updated[editLocationIdx] = {
+          ...updated[editLocationIdx],
+          endereco: editAddress,
+          lat: data.lat,
+          lon: data.lon,
+        };
+        setStops(updated);
+        await saveRoute(updated);
+        setEditLocationIdx(null);
+      } else {
+        Alert.alert("Não encontrado", "Tente um endereço mais específico.");
+      }
+    } catch {
+      Alert.alert("Erro", "Falha ao buscar endereço.");
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -263,6 +405,24 @@ export default function RouteScreen() {
           onMessage={onMapMessage}
         />
 
+        {/* Geocoding progress banner */}
+        {geoProgress && (
+          <View style={styles.geoBanner} testID="geocoding-banner">
+            <ActivityIndicator size="small" color="#fff" />
+            <Text style={styles.geoBannerText}>
+              Localizando endereços no mapa…
+            </Text>
+          </View>
+        )}
+
+        {/* Circuit mode badge */}
+        {circuitMode && (
+          <View style={styles.circuitBadge}>
+            <Ionicons name="lock-closed" size={11} color="#fff" />
+            <Text style={styles.circuitBadgeText}>Circuit</Text>
+          </View>
+        )}
+
         {/* Menu button overlay */}
         <TouchableOpacity
           style={styles.menuBtn}
@@ -351,6 +511,7 @@ export default function RouteScreen() {
                 activeIdx === index && styles.stopRowActive,
               ]}
               onPress={() => activateStop(index)}
+              onLongPress={() => openEditLocation(index)}
               testID={`stop-row-${index}`}
             >
               <View style={[styles.stopNum, { backgroundColor: getStatusColor(item.status) }]}>
@@ -363,13 +524,22 @@ export default function RouteScreen() {
                 <Text style={styles.stopAddr} numberOfLines={2}>
                   {item.endereco}
                 </Text>
+                {(item.lat == null || item.lon == null) && (
+                  <Text style={styles.stopWarn}>📍 Sem localização — toque ✏️ para corrigir</Text>
+                )}
                 {item.status !== "pendente" && (
                   <Text style={[styles.stopStatus, { color: getStatusColor(item.status) }]}>
                     {item.status.toUpperCase()} • {item.timestamp}
                   </Text>
                 )}
               </View>
-              <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} />
+              <TouchableOpacity
+                onPress={() => openEditLocation(index)}
+                style={styles.editIcon}
+                testID={`edit-location-${index}`}
+              >
+                <Ionicons name="create-outline" size={18} color={COLORS.textSecondary} />
+              </TouchableOpacity>
             </TouchableOpacity>
           )}
         />
@@ -526,6 +696,57 @@ export default function RouteScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* EDIT LOCATION MODAL */}
+      <Modal
+        visible={editLocationIdx !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditLocationIdx(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.manualCard} testID="edit-location-modal">
+            <Text style={styles.manualCardTitle}>📍 Corrigir Localização</Text>
+            <Text style={styles.manualCardDesc}>
+              Ajuste o endereço ou use sua localização atual como ponto desta parada.
+            </Text>
+            <TextInput
+              value={editAddress}
+              onChangeText={setEditAddress}
+              placeholder="Endereço completo (rua, número, cidade)"
+              placeholderTextColor={COLORS.textTertiary}
+              style={styles.manualInput}
+              multiline
+              testID="edit-address-input"
+            />
+            <TouchableOpacity
+              style={[styles.modalBtn, styles.modalBtnPrimary, editLoading && { opacity: 0.6 }]}
+              onPress={geocodeEdited}
+              disabled={editLoading}
+              testID="geocode-edit-button"
+            >
+              {editLoading ? <ActivityIndicator color="#fff" /> : (
+                <Text style={styles.modalBtnText}>🔍 Buscar Endereço</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalBtn, { backgroundColor: COLORS.bgElevated, marginTop: SPACING.sm }]}
+              onPress={useCurrentLocationForStop}
+              disabled={editLoading}
+              testID="use-gps-button"
+            >
+              <Text style={styles.modalBtnText}>📡 Usar Minha Localização Atual</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalBtn, styles.modalBtnCancel, { marginTop: SPACING.sm }]}
+              onPress={() => setEditLocationIdx(null)}
+              testID="edit-cancel-button"
+            >
+              <Text style={styles.modalBtnTextDark}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -659,6 +880,28 @@ const styles = StyleSheet.create({
   metricsItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   metricsValue: { color: COLORS.textPrimary, fontWeight: "800", fontSize: 13 },
   metricsDivider: { width: 1, height: 18, backgroundColor: COLORS.border },
+
+  geoBanner: {
+    position: "absolute", top: SPACING.md, left: 70, right: 70,
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: SPACING.sm, backgroundColor: "rgba(234,88,12,0.95)",
+    paddingVertical: 8, paddingHorizontal: SPACING.md, borderRadius: RADIUS.full,
+    zIndex: 10,
+  },
+  geoBannerText: { color: "#fff", fontWeight: "700", fontSize: 12 },
+  circuitBadge: {
+    position: "absolute", bottom: SPACING.sm, left: SPACING.sm,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "rgba(22,163,74,0.9)", paddingHorizontal: SPACING.sm,
+    paddingVertical: 4, borderRadius: RADIUS.full, zIndex: 5,
+  },
+  circuitBadgeText: { color: "#fff", fontWeight: "800", fontSize: 11 },
+
+  stopWarn: { color: COLORS.error, fontSize: 11, fontWeight: "700", marginTop: 4 },
+  editIcon: {
+    width: 32, height: 32, justifyContent: "center", alignItems: "center",
+    borderRadius: RADIUS.full, backgroundColor: COLORS.bgElevated,
+  },
 
   stopRow: {
     flexDirection: "row",

@@ -392,12 +392,16 @@ async def geocode(req: GeocodeRequest):
 
 @api_router.post("/geocode-batch")
 async def geocode_batch(payload: dict):
+    """Geocode multiple addresses in parallel with concurrency limit.
+    Nominatim public API tolerates a few concurrent requests for moderate volume."""
     addresses: List[str] = payload.get("addresses", [])
-    results = []
-    for addr in addresses:
-        r = await geocode_nominatim(addr)
-        results.append(r)
-        await asyncio.sleep(1.0)
+    semaphore = asyncio.Semaphore(4)  # 4 in parallel
+
+    async def bounded(addr: str):
+        async with semaphore:
+            return await geocode_nominatim(addr)
+
+    results = await asyncio.gather(*[bounded(a) for a in addresses])
     return {"results": results}
 
 

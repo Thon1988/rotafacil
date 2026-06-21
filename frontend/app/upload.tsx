@@ -6,6 +6,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -17,9 +18,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 
 import { COLORS, RADIUS, SPACING } from "@/src/constants/theme";
-import { geocodeBatch, parseFile, parseText } from "@/src/lib/api";
+import { parseFile, parseText } from "@/src/lib/api";
 import { saveRoute } from "@/src/lib/route-store";
 import { Stop } from "@/src/types/stop";
+import { storage } from "@/src/utils/storage";
+
+const CIRCUIT_KEY = "rota_circuit_mode";
 
 export default function UploadScreen() {
   const router = useRouter();
@@ -27,6 +31,12 @@ export default function UploadScreen() {
   const [loadingStep, setLoadingStep] = useState("");
   const [manualText, setManualText] = useState("");
   const [mode, setMode] = useState<"file" | "manual">("file");
+  const [circuitMode, setCircuitMode] = useState(false);
+
+  // Load saved circuit pref
+  useState(() => {
+    storage.getItem<string>(CIRCUIT_KEY, "").then((v) => setCircuitMode(v === "1"));
+  });
 
   const handlePickFile = async () => {
     try {
@@ -49,9 +59,8 @@ export default function UploadScreen() {
           type: asset.mimeType || "application/octet-stream",
         })
       );
-    } catch (e: any) {
+    } catch {
       Alert.alert("Erro", "Falha ao ler o arquivo.");
-      console.log("File error:", e);
     }
   };
 
@@ -66,7 +75,7 @@ export default function UploadScreen() {
   const processStops = async (fetcher: () => Promise<{ stops: Stop[]; total: number }>) => {
     try {
       setLoading(true);
-      setLoadingStep("Detectando códigos...");
+      setLoadingStep("Lendo arquivo...");
       const { stops, total } = await fetcher();
 
       if (total === 0) {
@@ -78,24 +87,19 @@ export default function UploadScreen() {
         return;
       }
 
-      setLoadingStep(`Geocodificando ${total} endereços...`);
-      const { results } = await geocodeBatch(stops.map((s) => s.endereco));
+      // Save circuit preference
+      await storage.setItem(CIRCUIT_KEY, circuitMode ? "1" : "");
 
-      const enriched: Stop[] = stops.map((s, i) => {
-        const r = results[i];
-        // Fallback: random São Paulo if not found
-        return {
-          ...s,
-          lat: r?.lat ?? -23.55 + (Math.random() - 0.5) * 0.1,
-          lon: r?.lon ?? -46.63 + (Math.random() - 0.5) * 0.1,
-        };
-      });
+      // Save stops IMMEDIATELY without waiting for geocoding.
+      // Background geocoding will fill in lat/lon on the route screen.
+      const initial = stops.map((s) => ({ ...s, lat: null, lon: null }));
+      await saveRoute(initial);
 
-      await saveRoute(enriched);
+      setLoadingStep("Abrindo rota...");
       router.replace("/route");
-    } catch (e: any) {
+    } catch (e) {
       console.log("Process error:", e);
-      Alert.alert("Erro", "Não foi possível processar a rota. Tente novamente.");
+      Alert.alert("Erro", "Não foi possível processar a rota.");
     } finally {
       setLoading(false);
     }
@@ -134,18 +138,32 @@ export default function UploadScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{ flex: 1 }}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: SPACING.xl * 2 }}>
+          {/* Circuit-mode toggle */}
+          <View style={styles.circuitCard} testID="circuit-mode-card">
+            <View style={styles.circuitTextWrap}>
+              <Text style={styles.circuitTitle}>🎯 Manter ordem original (Circuit)</Text>
+              <Text style={styles.circuitDesc}>
+                {circuitMode
+                  ? "Ativado — o app não vai reordenar as paradas, respeitando a ordem do PDF."
+                  : "Desativado — o app pode otimizar a ordem com TSP quando você clicar em \"Otimizar\"."}
+              </Text>
+            </View>
+            <Switch
+              value={circuitMode}
+              onValueChange={setCircuitMode}
+              trackColor={{ false: COLORS.bgElevated, true: COLORS.primary }}
+              testID="circuit-mode-switch"
+            />
+          </View>
+
           {mode === "file" ? (
             <View style={styles.uploadBox}>
-              <Ionicons name="cloud-upload-outline" size={72} color={COLORS.primary} />
+              <Ionicons name="cloud-upload-outline" size={64} color={COLORS.primary} />
               <Text style={styles.uploadTitle}>Carregue sua lista</Text>
               <Text style={styles.uploadDesc}>
-                Suporta PDF, Excel (.xlsx), CSV ou TXT exportados do sistema da
-                Shopee, Mercado Livre, Correios e outros.
+                PDF (Circuit, Shopee), Excel, CSV ou TXT
               </Text>
               <View style={styles.badgesRow}>
                 <View style={styles.badge}><Text style={styles.badgeText}>PDF</Text></View>
@@ -167,8 +185,7 @@ export default function UploadScreen() {
             <View style={styles.manualBox}>
               <Text style={styles.manualTitle}>Cole sua lista</Text>
               <Text style={styles.manualDesc}>
-                Cole o texto com códigos (Shopee BR…, Mercado Livre MLB…) e
-                endereços. Um por linha.
+                Cole o texto com códigos (BR…, MLB…) e endereços. Um por linha.
               </Text>
               <TextInput
                 style={styles.textArea}
@@ -195,8 +212,9 @@ export default function UploadScreen() {
           <View style={styles.helpCard}>
             <Ionicons name="information-circle" size={20} color={COLORS.primary} />
             <Text style={styles.helpText}>
-              Detectamos automaticamente os códigos das principais
-              transportadoras. A geocodificação é gratuita via OpenStreetMap.
+              Após processar o arquivo, a rota abre <Text style={{ fontWeight: "800" }}>imediatamente</Text>.
+              Os endereços são localizados no mapa em segundo plano. Se algum
+              ponto ficar errado, toque em &quot;Editar local&quot; na parada.
             </Text>
           </View>
         </ScrollView>
@@ -207,7 +225,6 @@ export default function UploadScreen() {
           <View style={styles.loadingCard}>
             <ActivityIndicator size="large" color={COLORS.primary} />
             <Text style={styles.loadingText}>{loadingStep}</Text>
-            <Text style={styles.loadingSub}>Pode levar alguns segundos...</Text>
           </View>
         </View>
       )}
@@ -218,127 +235,85 @@ export default function UploadScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bgBase },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: SPACING.md,
   },
   backBtn: { width: 40, height: 40, justifyContent: "center" },
   headerTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: "800" },
   tabs: {
-    flexDirection: "row",
-    marginHorizontal: SPACING.lg,
-    marginVertical: SPACING.md,
-    backgroundColor: COLORS.bgSurface,
-    borderRadius: RADIUS.full,
-    padding: 4,
+    flexDirection: "row", marginHorizontal: SPACING.lg, marginVertical: SPACING.md,
+    backgroundColor: COLORS.bgSurface, borderRadius: RADIUS.full, padding: 4,
   },
   tab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.xs,
-    paddingVertical: 10,
-    borderRadius: RADIUS.full,
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: SPACING.xs, paddingVertical: 10, borderRadius: RADIUS.full,
   },
   tabActive: { backgroundColor: COLORS.primary },
   tabText: { color: COLORS.textSecondary, fontWeight: "600", fontSize: 14 },
   tabTextActive: { color: "#fff" },
   body: { paddingHorizontal: SPACING.lg, flex: 1 },
 
+  circuitCard: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    backgroundColor: COLORS.bgSurface, borderRadius: RADIUS.lg,
+    padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border,
+    marginBottom: SPACING.md,
+  },
+  circuitTextWrap: { flex: 1 },
+  circuitTitle: { color: COLORS.textPrimary, fontWeight: "800", fontSize: 14 },
+  circuitDesc: { color: COLORS.textSecondary, fontSize: 12, marginTop: 4, lineHeight: 16 },
+
   uploadBox: {
-    backgroundColor: COLORS.bgSurface,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    borderWidth: 2,
-    borderStyle: "dashed",
-    borderColor: COLORS.primary,
-    alignItems: "center",
-    gap: SPACING.sm,
+    backgroundColor: COLORS.bgSurface, borderRadius: RADIUS.xl, padding: SPACING.lg,
+    borderWidth: 2, borderStyle: "dashed", borderColor: COLORS.primary,
+    alignItems: "center", gap: SPACING.sm,
   },
   uploadTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: "800", marginTop: SPACING.sm },
   uploadDesc: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    textAlign: "center",
-    marginBottom: SPACING.sm,
-    lineHeight: 18,
+    color: COLORS.textSecondary, fontSize: 13, textAlign: "center",
+    marginBottom: SPACING.sm, lineHeight: 18,
   },
   badgesRow: { flexDirection: "row", gap: SPACING.sm, marginVertical: SPACING.sm },
   badge: {
-    backgroundColor: COLORS.bgElevated,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 6,
-    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.bgElevated, paddingHorizontal: SPACING.md,
+    paddingVertical: 6, borderRadius: RADIUS.full,
   },
   badgeText: { color: COLORS.textSecondary, fontSize: 11, fontWeight: "700" },
   primaryBtn: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: RADIUS.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    width: "100%",
-    justifyContent: "center",
-    marginTop: SPACING.md,
+    backgroundColor: COLORS.primary, paddingVertical: 16, paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.lg, flexDirection: "row", alignItems: "center",
+    gap: SPACING.sm, width: "100%", justifyContent: "center", marginTop: SPACING.md,
   },
   primaryBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" },
 
   manualBox: {
-    backgroundColor: COLORS.bgSurface,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgSurface, borderRadius: RADIUS.xl, padding: SPACING.lg,
+    borderWidth: 1, borderColor: COLORS.border,
   },
   manualTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: "800" },
   manualDesc: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: SPACING.md,
+    color: COLORS.textSecondary, fontSize: 13, marginTop: 4, marginBottom: SPACING.md,
   },
   textArea: {
-    backgroundColor: COLORS.bgBase,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    minHeight: 200,
-    color: COLORS.textPrimary,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgBase, borderRadius: RADIUS.md, padding: SPACING.md,
+    minHeight: 200, color: COLORS.textPrimary, fontSize: 14,
+    borderWidth: 1, borderColor: COLORS.border,
   },
 
   helpCard: {
-    flexDirection: "row",
-    backgroundColor: COLORS.bgSurface,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    gap: SPACING.sm,
-    marginTop: SPACING.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    flexDirection: "row", backgroundColor: COLORS.bgSurface, borderRadius: RADIUS.md,
+    padding: SPACING.md, gap: SPACING.sm, marginTop: SPACING.lg,
+    borderWidth: 1, borderColor: COLORS.border,
   },
   helpText: { color: COLORS.textSecondary, fontSize: 12, flex: 1, lineHeight: 17 },
 
   loadingOverlay: {
-    position: "absolute",
-    top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.85)",
-    justifyContent: "center",
-    alignItems: "center",
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.85)", justifyContent: "center", alignItems: "center",
   },
   loadingCard: {
-    backgroundColor: COLORS.bgSurface,
-    padding: SPACING.lg,
-    borderRadius: RADIUS.xl,
-    alignItems: "center",
-    gap: SPACING.sm,
-    minWidth: 240,
+    backgroundColor: COLORS.bgSurface, padding: SPACING.lg, borderRadius: RADIUS.xl,
+    alignItems: "center", gap: SPACING.sm, minWidth: 240,
   },
   loadingText: { color: COLORS.textPrimary, fontWeight: "700", fontSize: 15, marginTop: SPACING.sm },
-  loadingSub: { color: COLORS.textTertiary, fontSize: 12 },
 });
