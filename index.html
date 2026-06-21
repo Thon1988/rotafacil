@@ -3,138 +3,308 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg - Sistema de Logística e Mapas</title>
+    <title>AppEgg — Roteirizador Profissional Estilo Circuit</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+
     <style>
+        :root {
+            --primary: #1a73e8;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --dark: #212529;
+            --light: #f8f9fa;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 20px;
-            background-color: #f0f2f5;
+            padding: 0;
+            background-color: #eef2f7;
             color: #333;
+            overflow: hidden;
         }
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
+
+        .app-layout {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Painel Lateral de Controle e Listagem */
+        .sidebar {
+            width: 420px;
+            background-color: #ffffff;
+            box-shadow: 3px 0 10px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            z-index: 1000;
         }
-        .header {
-            background-color: #ffffff;
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+
+        .sidebar-header {
+            background-color: var(--primary);
+            color: white;
+            padding: 15px 20px;
+        }
+
+        .sidebar-header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .status-banner {
+            background-color: #0d6efd;
+            color: white;
+            padding: 8px 20px;
+            font-size: 12px;
+            font-weight: bold;
+            min-height: 16px;
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .control-panel {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: var(--light);
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 13px;
+            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .btn:hover { opacity: 0.9; }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-success { background-color: var(--success); color: white; }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-dark { background-color: var(--dark); color: white; }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Scanner de Câmera embutido */
+        #scanner-container {
+            width: 100%;
+            background-color: #000;
+            border-radius: 6px;
+            overflow: hidden;
+            display: none;
+        }
+
+        /* Lista Dinâmica de Entregas */
+        .deliveries-queue {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #f4f6f9;
+        }
+
+        .delivery-card {
+            background: white;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            border-left: 5px solid #ccc;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+
+        .delivery-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .delivery-card.active {
+            border-left-color: var(--primary);
+            background-color: #e8f0fe;
+        }
+
+        .delivery-card.entregue { border-left-color: var(--success); }
+        .delivery-card.falhou { border-left-color: var(--danger); }
+
+        .delivery-card-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-            color: #1a73e8;
-        }
-        .main-content {
-            display: flex;
-            gap: 20px;
-            height: 650px;
-        }
-        .sidebar {
-            flex: 1;
-            background-color: #ffffff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            min-width: 380px;
-        }
-        .sidebar label {
+            font-size: 12px;
             font-weight: bold;
-            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
         }
-        textarea {
-            width: 100%;
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #cccccc;
-            border-radius: 6px;
-            resize: none;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 11px;
-            box-sizing: border-box;
-            background-color: #fafafa;
-        }
-        button {
-            background-color: #28a745;
-            color: #ffffff;
-            border: none;
-            padding: 14px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        button:hover {
-            background-color: #218838;
-        }
-        #progress-status {
+
+        .delivery-card-address {
             font-size: 13px;
-            font-weight: bold;
-            color: #0056b3;
-            min-height: 18px;
+            font-weight: 500;
+            color: #222;
         }
-        .log-container {
-            height: 120px;
-            overflow-y: auto;
-            background-color: #212529;
-            color: #f8f9fa;
-            padding: 10px;
-            border-radius: 6px;
-            font-family: monospace;
+
+        .delivery-card-actions {
+            margin-top: 8px;
+            display: flex;
+            gap: 5px;
+            justify-content: flex-end;
+        }
+
+        .action-mini-btn {
+            padding: 4px 8px;
             font-size: 11px;
-            box-sizing: border-box;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
         }
-        .log-list {
-            margin: 0;
-            padding: 0;
-            list-style: none;
-        }
-        .log-list li {
-            margin-bottom: 4px;
-        }
-        #map {
-            flex: 2;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+
+        /* Área do Mapa Principal */
+        .map-container {
+            flex: 1;
+            position: relative;
             height: 100%;
-            background-color: #e5e9f0;
         }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Widget Flutuante de Próxima Parada (Estilo HUD Circuit) */
+        .floating-widget {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            z-index: 2000;
+            width: 320px;
+            border-top: 4px solid var(--success);
+        }
+
+        .floating-widget h3 {
+            margin: 0 0 5px 0;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #666;
+            letter-spacing: 0.5px;
+        }
+
+        .floating-widget .widget-address {
+            font-size: 14px;
+            font-weight: bold;
+            color: #111;
+            margin-bottom: 10px;
+        }
+
+        /* Log de Console em formato reduzido */
+        .console-log {
+            height: 80px;
+            background: var(--dark);
+            color: #00ff00;
+            font-family: monospace;
+            font-size: 10px;
+            padding: 8px;
+            overflow-y: auto;
+            border-top: 1px solid #444;
+        }
+
+        /* Ícone Sequencial Numérico Costumizado para Marcadores Leaflet */
+        .leaflet-marker-number {
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            border: 2px solid white;
+            text-align: center;
+            font-size: 11px;
+            font-weight: bold;
+            line-height: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .leaflet-marker-number.done { background: var(--success); }
+        .leaflet-marker-number.fail { background: var(--danger); }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <h1>AppEgg — Otimizador de Rotas e GPS</h1>
-        <div id="progress-status">Aguardando inserção de dados...</div>
+<div class="app-layout">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>AppEgg Logistics Tracker</h1>
+        </div>
+        
+        <div id="progress-status" class="status-banner">Pronto para carregar rotas.</div>
+
+        <div class="control-panel">
+            <div class="file-input-wrapper">
+                <button class="btn btn-primary" style="width: 100%;">📥 Importar Rota (PDF ou TXT)</button>
+                <input type="file" id="fileSelector" accept=".pdf,.txt" onchange="processarUploadArquivo(this)" />
+            </div>
+
+            <div id="scanner-container">
+                <div id="reader" style="width: 100%;"></div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-dark" onclick="alternarScanner()">📷 Escanear Cód.</button>
+                <button class="btn btn-dark" onclick="baixaManual()">⌨ Baixa Manual</button>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="exportarCSV()">📊 Exportar CSV</button>
+                <button class="btn btn-danger" onclick="limparBancoDados()">🗑 Limpar Tudo</button>
+            </div>
+        </div>
+
+        <div class="deliveries-queue" id="deliveriesList">
+            </div>
+
+        <div class="console-log">
+            <div id="logContent">Sistemas inicializados. Aguardando arquivos Spoke Circuit...</div>
+        </div>
     </div>
 
-    <div class="main-content">
-        <div class="sidebar">
-            <label for="rawInput">Dados Brutos do Spoke Circuit:</label>
-            <textarea id="rawInput" placeholder="Cole aqui o texto completo copiado do PDF do Spoke..."></textarea>
-            
-            <button onclick="processAndPlotRoute()">Processar e Plotar no Mapa</button>
-            
-            <label>Console de Geocodificação:</label>
-            <div class="log-container">
-                <ul id="logList" class="log-list">
-                    <li>Sistema pronto. Insira a rota acima.</li>
-                </ul>
+    <div class="map-container">
+        <div class="floating-widget" id="nextStopWidget" style="display: none;">
+            <h3>Próxima Parada Ativa</h3>
+            <div class="widget-address" id="widgetAddress">Nenhuma rota pendente</div>
+            <div style="display: flex; gap: 5px;">
+                <button class="btn btn-success" style="padding: 6px 12px; font-size: 11px;" onclick="registrarAcaoWidget('entregue')">Entregue</button>
+                <button class="btn btn-danger" style="padding: 6px 12px; font-size: 11px;" onclick="registrarAcaoWidget('falhou')">Falhou</button>
+                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background-color:#ff9800;" onclick="dispararNavegadorWidget()">Navegar GPS</button>
             </div>
         </div>
 
@@ -142,35 +312,139 @@
     </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    let map;
-    let markersGroup;
+    // Inicialização da biblioteca de leitura de PDF do PDF.js
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-    // Inicialização do mapa quando a janela terminar de carregar
+    // Estado Geral da Aplicação (Banco de Dados Local Embutido)
+    let bd = [];
+    let idxAtivo = null;
+    let map = null;
+    let markersGroup = null;
+    let polylineRoute = null;
+    let posMarker = null; // Simulação ou captura de marcador de posição inicial real
+    let html5QrCode = null;
+
+    // Configuração inicial do ambiente ao carregar a página
     window.addEventListener('DOMContentLoaded', () => {
-        // Define a visualização inicial centralizada em São Paulo
-        map = L.map('map').setView([-23.55052, -46.633308], 11);
-        
-        // Configura a camada de mapa do OpenStreetMap
+        inicializarMapa();
+        carregarGatilhoPersistencia();
+    });
+
+    function inicializarMapa() {
+        // Inicializa o Leaflet centralizado em São Paulo
+        map = L.map('map').setView([-23.55052, -46.633308], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // Grupo de camadas para gerenciar e limpar os marcadores facilmente
         markersGroup = L.layerGroup().addTo(map);
-    });
-
-    /**
-     * Extrai, limpa e separa perfeitamente os 40 registros contidos no bloco de texto.
-     */
-    function parseSpokeCircuitRoute(rawText) {
-        const routeId = "AT2026061969UZ6";
         
-        // Corrige a junção de linhas (como os itens 28 e 29) dividindo pelo token identificador
+        // Adiciona um marcador de simulação de posição inicial GPS (ponto de partida do motorista)
+        posMarker = L.marker([-23.5422, -46.6000], {
+            draggable: true
+        }).bindPopup("<b>Sua Localização (Arraste para mudar o ponto de partida)</b>");
+        
+        posMarker.on('dragend', function() {
+            toast("📍 Ponto inicial alterado. Reotimizando rota...");
+            otimizar();
+        });
+        
+        posMarker.addTo(map);
+    }
+
+    // Gerenciamento de Logs internos e UI Status
+    function toast(mensagem) {
+        document.getElementById('progress-status').innerText = mensagem;
+        const logContent = document.getElementById('logContent');
+        logContent.innerHTML += `<br>➔ ${mensagem}`;
+        logContent.scrollTop = logContent.scrollHeight;
+    }
+
+    // Persistência em Banco de Dados Local (localStorage)
+    function salvar() {
+        localStorage.setItem('appegg_bd_routes', JSON.stringify(bd));
+    }
+
+    function carregarGatilhoPersistencia() {
+        const dadosSalvos = localStorage.getItem('appegg_bd_routes');
+        if (dadosSalvos) {
+            bd = JSON.parse(dadosSalvos);
+            toast(`Recuperadas ${bd.length} entregas salvas na sessão anterior.`);
+            renderLista();
+            renderResumo();
+            plotar();
+        }
+    }
+
+    function limparBancoDados() {
+        if(confirm("Deseja apagar permanentemente os registros da rota atual?")) {
+            localStorage.removeItem('appegg_bd_routes');
+            bd = [];
+            idxAtivo = null;
+            markersGroup.clearLayers();
+            if(polylineRoute) map.removeLayer(polylineRoute);
+            renderLista();
+            renderResumo();
+            toast("Banco de dados limpo com sucesso.");
+        }
+    }
+
+    // Orquestrador Inteligente de Entrada de Arquivos (PDF / TXT)
+    async function processarUploadArquivo(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        toast(`Arquivo carregado: ${file.name}. Identificando tipo...`);
+
+        if (file.name.toLowerCase().endsWith(".pdf")) {
+            await importarPDFCircuit(file);
+        } else {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                processarTextoBruto(e.target.result);
+            };
+            reader.readAsText(file);
+        }
+        // Limpa o input de arquivo para permitir re-upload se necessário
+        input.value = '';
+    }
+
+    // Extração Completa de Texto de PDF via PDF.js em tempo de execução Client-side
+    async function importarPDFCircuit(file) {
+        toast("Processando estrutura interna do PDF...");
+        const reader = new FileReader();
+        
+        reader.onload = async function(e) {
+            const typedarray = new Uint8Array(e.target.result);
+            try {
+                const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                let textoExtraidoCompleto = "";
+                
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(" ");
+                    textoExtraidoCompleto += "\n" + pageText;
+                }
+                
+                toast("Texto do PDF extraído com sucesso. Executando o parser...");
+                processarTextoBruto(textoExtraidoCompleto);
+            } catch (err) {
+                toast(`❌ Falha ao decodificar PDF: ${err.message}`);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // Interpretador e Tratador de Estruturas de Rotas do Spoke Circuit
+    function processarTextoBruto(rawText) {
+        const routeId = "AT2026061969UZ6";
         const blocks = rawText.split(routeId);
-        const cleanDeliveries = [];
-        let itemCounter = 1;
+        
+        const novasEntregas = [];
+        let contadorItem = 1;
 
         for (let i = 1; i < blocks.length; i++) {
             let blockText = blocks[i].trim();
@@ -188,7 +462,7 @@
                 let city = fields[brIndex + 3] || "";
                 let cep = fields[brIndex + 4] || "";
 
-                // Normalização de caracteres corrompidos da extração do PDF
+                // Limpeza completa e sanitização contra corrupções textuais do leitor de PDF
                 city = city.replace(/Sä\s*o\s*Paulo/gi, 'São Paulo')
                            .replace(/Sā\s*o\s*Paulo/gi, 'São Paulo')
                            .replace(/Sã\s*o\s*Paulo/gi, 'São Paulo')
@@ -202,110 +476,436 @@
                     continue;
                 }
 
-                // String limpa pura contendo apenas os dados geográficos, sem os comentários internos
-                const formattedAddressForGPS = `${street}, ${neighborhood}, ${city} - SP, ${cep}, Brazil`;
+                const formattedAddressForGPS = `${street}, ${neighborhood}, ${city} - SP, ${cep}, Brasil`;
 
-                cleanDeliveries.push({
-                    index: itemCounter++,
+                novasEntregas.push({
+                    index: contadorItem++,
                     trackingCode: trackingCode,
                     street: street,
                     neighborhood: neighborhood,
                     city: city,
                     cep: cep,
-                    formattedAddressForGPS: formattedAddressForGPS
+                    formattedAddressForGPS: formattedAddressForGPS,
+                    lat: null,
+                    lon: null,
+                    status: "pendente"
                 });
             }
         }
-        return cleanDeliveries;
+
+        if(novasEntregas.length > 0) {
+            bd = novasEntregas;
+            salvar();
+            toast(`Sucesso: ${bd.length} pacotes carregados. Iniciando geocodificação real...`);
+            renderLista();
+            geocodificarEmLote();
+        } else {
+            toast("⚠️ Padrão de rota não reconhecido no arquivo enviado.");
+            alert("Nenhum registro de entrega válido encontrado. Verifique a assinatura ID da rota no arquivo.");
+        }
     }
 
-    // Função utilitária para gerar pausas (evita bloqueios de rate limit na API de GPS)
-    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-    /**
-     * Orquestra a leitura, conversão de endereços em coordenadas e plots no mapa.
-     */
-    async function processAndPlotRoute() {
-        const rawText = document.getElementById('rawInput').value;
-        const progressStatus = document.getElementById('progress-status');
-        const logList = document.getElementById('logList');
+    // Motor de Geocodificação Automática Sequencial via GPS Nominatim OpenStreetMap
+    async function geocodificarEmLote() {
+        toast("Aguarde, processando coordenadas reais dos endereços...");
         
-        logList.innerHTML = '';
-        markersGroup.clearLayers();
+        for (let i = 0; i < bd.length; i++) {
+            if (bd[i].lat && bd[i].lon) continue; // Pula se já possuir coordenadas salvas
 
-        if (!rawText.trim()) {
-            alert('Por favor, cole o conteúdo de texto da sua rota antes de prosseguir.');
-            return;
-        }
-
-        progressStatus.innerText = "Separando e corrigindo strings de endereços...";
-        const deliveries = parseSpokeCircuitRoute(rawText);
-        
-        if (deliveries.length === 0) {
-            progressStatus.innerText = "Nenhum endereço válido pôde ser mapeado.";
-            const li = document.createElement('li');
-            li.innerText = "Falha: Verifique se o padrão do ID da rota confere.";
-            li.style.color = "#dc3545";
-            logList.appendChild(li);
-            return;
-        }
-
-        progressStatus.innerText = `Processando ${deliveries.length} pontos. Consultando GPS...`;
-        const coordinateBounds = [];
-
-        for (let delivery of deliveries) {
-            const li = document.createElement('li');
-            li.innerText = `[${delivery.index}/40] Buscando coordenadas: ${delivery.street}`;
-            logList.appendChild(li);
-            logList.scrollTop = logList.scrollHeight;
-
+            toast(`Geocodificando [${i+1}/${bd.length}]: ${bd[i].street}`);
+            
             try {
-                // Consulta a API do GPS utilizando a nossa string de endereço 100% limpa extraída da coluna 'Notes'
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(delivery.formattedAddressForGPS)}&limit=1`;
+                // Injeta contexto fixo restritivo para evitar escapes falsos da API de busca global
+                const queryAddress = bd[i].formattedAddressForGPS;
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryAddress)}&limit=1`;
                 
                 const response = await fetch(url, {
-                    headers: { 'User-Agent': 'AppEgg-Logistica-App' }
+                    headers: { 'User-Agent': 'AppEgg-Logistics-Platform' }
                 });
                 const data = await response.json();
 
                 if (data && data.length > 0) {
-                    const lat = parseFloat(data[0].lat);
-                    const lon = parseFloat(data[0].lon);
-                    
-                    // Adiciona o ponto extraído diretamente na camada do mapa
-                    const marker = L.marker([lat, lon]).bindPopup(`
-                        <strong>Item:</strong> ${delivery.index}<br>
-                        <strong>Código:</strong> ${delivery.trackingCode}<br>
-                        <strong>Rua:</strong> ${delivery.street}<br>
-                        <strong>Bairro:</strong> ${delivery.neighborhood}<br>
-                        <strong>CEP:</strong> ${delivery.cep}
-                    `);
-                    
-                    markersGroup.addLayer(marker);
-                    coordinateBounds.push([lat, lon]);
-                    
-                    li.innerText = `✔ [Item ${delivery.index}] Plotado com sucesso!`;
-                    li.style.color = "#28a745";
+                    bd[i].lat = parseFloat(data[0].lat);
+                    bd[i].lon = parseFloat(data[0].lon);
+                    salvar();
+                    toast(`✔ Localizado: ${bd[i].street}`);
                 } else {
-                    li.innerText = `❌ [Item ${delivery.index}] GPS não retornou coordenadas para este endereço.`;
-                    li.style.color = "#ffc107";
+                    toast(`❌ Endereço não resolvido pelo GPS: ${bd[i].street}`);
                 }
-            } catch (error) {
-                li.innerText = `❌ [Item ${delivery.index}] Erro de conexão: ${error.message}`;
-                li.style.color = "#dc3545";
+            } catch (err) {
+                toast(`Falha de conexão com GPS: ${err.message}`);
             }
 
-            // Pausa obrigatória de 1 segundo para respeitar as políticas públicas de requisição do GPS
-            await sleep(1000);
-            progressStatus.innerText = `Mapeamento em andamento: ${delivery.index} de ${deliveries.length} avaliados.`;
+            // Intervalo mandatório de 1 segundo (Respeito às regras públicas de Rate Limit da API Nominatim)
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Acionamento de reordenação em tempo real integrado se contiver amostragem mínima viável
+            if (bd.filter(e => e.lat && e.lon).length > 2) {
+                otimizar();
+            }
+        }
+        toast("🏁 Processamento de geocodificação finalizado.");
+    }
+
+    // ============================================================================
+    // MOTOR DE INTELIGÊNCIA GEOGRÁFICA, ROTEIRIZAÇÃO TSP E OTIMIZAÇÃO (HAVERSINE + 2-OPT)
+    // ============================================================================
+
+    // Nova função de cálculo de distância real baseada na fórmula matemática de Haversine
+    function geo(a, b) {
+        const R = 6371; // Raio médio da Terra em quilômetros
+        const dLat = (b.lat - a.lat) * Math.PI / 180;
+        const dLon = (b.lon - a.lon) * Math.PI / 180;
+        const lat1 = a.lat * Math.PI / 180;
+        const lat2 = b.lat * Math.PI / 180;
+
+        const x = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1) * Math.cos(lat2) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        const y = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+        return R * y;
+    }
+
+    // Novo algoritmo heurístico 2-opt adaptado para caminho aberto (Foco em entregas logísticas sequênciais)
+    function doisOpt(rota) {
+        let melhorou = true;
+        while (melhorou) {
+            melhorou = false;
+            for (let i = 0; i < rota.length - 1; i++) {
+                for (let j = i + 2; j < rota.length - 1; j++) {
+                    
+                    const atual = geo(rota[i], rota[i + 1]) + geo(rota[j], rota[j + 1]);
+                    const proposta = geo(rota[i], rota[j]) + geo(rota[i + 1], rota[j + 1]);
+
+                    if (proposta < atual) {
+                        const trecho = rota.slice(i + 1, j + 1).reverse();
+                        rota.splice(i + 1, j - i, ...trecho);
+                        melhorou = true;
+                    }
+                }
+            }
+        }
+        return rota;
+    }
+
+    // Nova função centralizada otimizar() — Combina Nearest Neighbor, 2-Opt e Separação de Estados de Negócio
+    function otimizar() {
+        const pendentes = bd.filter(e => e.status === 'pendente' && e.lat && e.lon);
+        const semCoord = bd.filter(e => e.status === 'pendente' && (!e.lat || !e.lon));
+        const concluidas = bd.filter(e => e.status !== 'pendente');
+
+        if (pendentes.length < 2) {
+            toast('⚠️ Poucas paradas geocodificadas para aplicar o motor de otimização.');
+            return;
         }
 
-        // Ajusta o zoom do mapa automaticamente para enquadrar todas as coordenadas localizadas
-        if (coordinateBounds.length > 0) {
-            map.fitBounds(coordinateBounds);
+        let origem;
+        if (posMarker) {
+            const p = posMarker.getLatLng();
+            origem = { lat: p.lat, lon: p.lng };
+        } else {
+            origem = pendentes[0];
         }
+
+        const restantes = [...pendentes];
+        const rota = [];
+        let atual = origem;
+
+        // Executa busca gulosa de vizinho mais próximo (Nearest Neighbor) como semente inicial
+        while (restantes.length) {
+            let menor = Infinity;
+            let indice = 0;
+
+            restantes.forEach((p, i) => {
+                const d = geo(atual, p);
+                if (d < menor) {
+                    menor = d;
+                    indice = i;
+                }
+            });
+
+            const prox = restantes.splice(indice, 1)[0];
+            rota.push(prox);
+            atual = prox;
+        }
+
+        // Refina a rota aplicando o algoritmo 2-opt de caminho aberto
+        const rotaFinal = doisOpt(rota);
+
+        // Remonta o banco mantendo integridade estrutural absoluta
+        bd = [
+            ...rotaFinal,
+            ...semCoord,
+            ...concluidas
+        ];
+
+        salvar();
+        idxAtivo = null;
+
+        renderLista();
+        renderResumo();
+        plotar();
+
+        toast(`⚡ Rota otimizada automaticamente (${rotaFinal.length} paradas coordenadas).`);
+    }
+
+    // ============================================================================
+    // COMPONENTES DE RENDERIZAÇÃO E INTERACTION DESIGN DO WORKFLOW
+    // ============================================================================
+
+    // Renderiza a fila de cartões visuais do painel esquerdo
+    function renderLista() {
+        const container = document.getElementById('deliveriesList');
+        container.innerHTML = '';
+
+        bd.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = `delivery-card ${item.status} ${index === idxAtivo ? 'active' : ''}`;
+            card.setAttribute('onclick', `abrirEntrega(${index})`);
+
+            card.innerHTML = `
+                <div class="delivery-card-header">
+                    <span>#${index + 1} — Cód: ${item.trackingCode}</span>
+                    <span style="text-transform: uppercase;">${item.status}</span>
+                </div>
+                <div class="delivery-card-address">${item.street}</div>
+                <div style="font-size: 11px; color: #555; margin-top:3px;">${item.neighborhood} | ${item.cep}</div>
+                <div class="delivery-card-actions">
+                    <button class="btn-success action-mini-btn" onclick="event.stopPropagation(); registrarAcaoDireta(${index}, 'entregue')">✔ Sucesso</button>
+                    <button class="btn-danger action-mini-btn" onclick="event.stopPropagation(); registrarAcaoDireta(${index}, 'falhou')">❌ Falha</button>
+                    <button class="btn-primary action-mini-btn" style="background-color:#ff9800;" onclick="event.stopPropagation(); abrirNavegacaoExterna(${index})">🗺 GPS</button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    // Atualiza o Widget de cabeçalho e HUD dinâmico flutuante
+    function renderResumo() {
+        const proxima = bd.find(x => x.status === "pendente");
+        const widget = document.getElementById('nextStopWidget');
         
-        progressStatus.innerText = `Mapeamento finalizado! ${coordinateBounds.length} pontos renderizados com sucesso.`;
+        if (proxima) {
+            widget.style.display = 'block';
+            document.getElementById('widgetAddress').innerText = `#${bd.indexOf(proxima) + 1} — ${proxima.street}`;
+        } else {
+            document.getElementById('widgetAddress').innerText = "Todas as entregas concluídas!";
+            widget.style.display = 'block';
+        }
+    }
+
+    // Plota elementos visuais de rota e marcadores numerados sequencialmente no mapa Leaflet
+    function plotar() {
+        markersGroup.clearLayers();
+        if (polylineRoute) map.removeLayer(polylineRoute);
+
+        const activeCoordinates = [];
+
+        bd.forEach((item, index) => {
+            if (!item.lat || !item.lon) return;
+
+            // Determina status da classe de cor do marcador customizado numerado
+            let statusClass = "";
+            if (item.status === 'entregue') statusClass = "done";
+            if (item.status === 'falhou') statusClass = "fail";
+
+            // Cria ícone div customizado exibindo a sequência numérica correta do roteiro
+            const markerIcon = L.divIcon({
+                className: `leaflet-marker-number ${statusClass}`,
+                html: index + 1,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+
+            const marker = L.marker([item.lat, item.lon], { icon: markerIcon })
+                .bindPopup(`
+                    <b>Parada #${index + 1}</b><br>
+                    <b>Código:</b> ${item.trackingCode}<br>
+                    <b>Endereço:</b> ${item.street}<br>
+                    <b>Status:</b> ${item.status}
+                `);
+
+            markersGroup.addLayer(marker);
+
+            if (item.status === 'pendente') {
+                activeCoordinates.push([item.lat, item.lon]);
+            }
+        });
+
+        // Desenha a polilinha conectando os pontos geográficos da rota se houver paradas
+        if (activeCoordinates.length > 1) {
+            polylineRoute = L.polyline(activeCoordinates, {
+                color: '#1a73e8',
+                weight: 5,
+                opacity: 0.7,
+                dashArray: '5, 10'
+            }).addTo(map);
+        }
+    }
+
+    function abrirEntrega(index) {
+        idxAtivo = index;
+        renderLista();
+        
+        const item = bd[index];
+        if (item && item.lat && item.lon) {
+            map.setView([item.lat, item.lon], 16);
+            // Procura o marcador correspondente para abrir o pop-up associado
+            markersGroup.eachLayer(layer => {
+                if(layer.getLatLng().lat === item.lat && layer.getLatLng().lng === item.lon) {
+                    layer.openPopup();
+                }
+            });
+        }
+    }
+
+    // ============================================================================
+    // ROTINAS DE TRABALHO DIÁRIO, BAIXAS, SCANNER E NAVEGAÇÃO INTELIGENTE
+    // ============================================================================
+
+    // Avanço automático de parada baseado em mudança de status
+    function registrarAcaoFinal(status) {
+        if (idxAtivo === null) return;
+
+        bd[idxAtivo].status = status;
+        salvar();
+
+        toast(`Parada #${idxAtivo + 1} marcada como [${status}]. Buscando próxima...`);
+
+        const proxima = bd.find(x => x.status === "pendente");
+        if (proxima) {
+            abrirEntrega(bd.indexOf(proxima));
+        } else {
+            idxAtivo = null;
+            toast("🎉 Perfeito! Todos os pacotes da rota foram processados.");
+        }
+
+        renderLista();
+        renderResumo();
+        plotar();
+    }
+
+    function registrarAcaoDireta(index, status) {
+        idxAtivo = index;
+        registrarAcaoFinal(status);
+    }
+
+    function registrarAcaoWidget(status) {
+        const proxima = bd.find(x => x.status === "pendente");
+        if (proxima) {
+            idxAtivo = bd.indexOf(proxima);
+            registrarAcaoFinal(status);
+        }
+    }
+
+    // Lançador de mapas inteligente permitindo escolha nativa entre aplicativos (Google Maps / Waze)
+    function abrirNavegacaoExterna(index) {
+        const item = bd[index];
+        if (!item) return;
+
+        const destino = encodeURIComponent(item.formattedAddressForGPS);
+        
+        // Exibe caixa de diálogo para escolha de preferência do navegador GPS do usuário
+        const escolha = confirm("Deseja abrir no [OK] Google Maps ou [Cancelar] Waze?");
+        let url = "";
+
+        if (escolha) {
+            // Deep link universal para o aplicativo nativo do Google Maps
+            url = `https://www.google.com/maps/dir/?api=1&destination=${destino}&travelmode=driving`;
+        } else {
+            // Deep link direto para o Waze Navigator
+            url = `waze://?q=${destino}&navigate=yes`;
+        }
+
+        window.open(url, '_blank');
+    }
+
+    function dispararNavegadorWidget() {
+        const proxima = bd.find(x => x.status === "pendente");
+        if (proxima) {
+            abrirNavegacaoExterna(bd.indexOf(proxima));
+        }
+    }
+
+    // Integração nativa com a API de câmera do dispositivo para leitura de código de barras / QR Code
+    function alternarScanner() {
+        const container = document.getElementById('scanner-container');
+        if (container.style.display === 'block') {
+            container.style.display = 'none';
+            if(html5QrCode) html5QrCode.stop();
+        } else {
+            container.style.display = 'block';
+            inicializarInstanciaScanner();
+        }
+    }
+
+    function inicializarInstanciaScanner() {
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            { fps: 10, qrbox: { width: 250, height: 120 } },
+            (decodedText) => {
+                toast(`📷 Código capturado via scanner: ${decodedText}`);
+                processarBaixaPorCodigo(decodedText);
+                alternarScanner(); // Fecha a câmera após leitura bem sucedida
+            },
+            (errorMessage) => { /* Silencia erros de varredura contínua */ }
+        ).catch(err => {
+            toast(`Erro ao abrir câmera: ${err}`);
+        });
+    }
+
+    // Interface para execução de baixa manual baseada em inserção de string de texto por prompt
+    function baixaManual() {
+        const codigo = prompt("Digite ou cole o código da encomenda (Ex: BR... ou SPX...):");
+        if(codigo) {
+            processarBaixaPorCodigo(codigo.trim());
+        }
+    }
+
+    function processarBaixaPorCodigo(codigo) {
+        // Localiza a encomenda no array ignorando diferenças de caixa alta/baixa
+        const index = bd.findIndex(e => e.trackingCode.toLowerCase() === codigo.toLowerCase());
+        
+        if (index !== -1) {
+            idxAtivo = index;
+            abrirEntrega(index);
+            const acao = confirm(`Encomenda localizada na posição #${index + 1}.\nConfirmar entrega como realizada com Sucesso?`);
+            if (acao) {
+                registrarAcaoFinal('entregue');
+            } else {
+                registrarAcaoFinal('falhou');
+            }
+        } else {
+            alert(`Encomenda com o código "${codigo}" não pôde ser localizada na rota carregada.`);
+            toast(`⚠️ Falha de busca: Código ${codigo} não pertence a esta rota.`);
+        }
+    }
+
+    // Gerador automático e download imediato de relatórios operacionais em formato CSV padrão Excel
+    function exportarCSV() {
+        if(bd.length === 0) {
+            alert("Não há dados carregados para gerar relatórios.");
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "SEQUENCIA,CODIGO,ENDERECO,BAIRRO,CEP,STATUS\n";
+
+        bd.forEach((e, i) => {
+            const linha = `${i + 1},"${e.trackingCode}","${e.street}","${e.neighborhood}","${e.cep}",${e.status}`;
+            csvContent += linha + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Relatorio_Rotas_AppEgg_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast("📊 Relatório operacional exportado em formato CSV.");
     }
 </script>
 
