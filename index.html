@@ -27,7 +27,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .logo-box{
   width:72px;height:72px;background:linear-gradient(135deg,var(--laranja),var(--laranja2));
   border-radius:20px;display:flex;align-items:center;justify-content:center;
-  margin-bottom:12px;box-shadow:0 8px 24px rgba(234,88,12,.35);
+  font-size:36px;margin-bottom:12px;box-shadow:0 8px 24px rgba(234,88,12,.35);
 }
 .logo-nome{font-size:28px;font-weight:800;color:var(--escuro);}
 .logo-sub{font-size:13px;color:var(--sub);margin-top:3px;}
@@ -117,8 +117,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 }
 .sc:active{transform:scale(.98);}
 .sc.entregue{border-left-color:var(--verde);opacity:.65;}
-.sc.falhou  {border-left-color:var(--vermelho);opacity:.65;}
-.sc.ausente {border-left-color:var(--amarelo);opacity:.65;}
+.sc.falhou{border-left-color:var(--vermelho);opacity:.65;}
+.sc.ausente{border-left-color:var(--amarelo);opacity:.65;}
 .sc.sem-coord{border-left-color:#94a3b8;}
 .sc.ativo-card{box-shadow:0 4px 16px rgba(234,88,12,.3);border-left-color:var(--laranja);}
 .sn{
@@ -126,8 +126,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;
 }
 .sc.entregue .sn{background:var(--verde);}
-.sc.falhou .sn  {background:var(--vermelho);}
-.sc.ausente .sn {background:var(--amarelo);}
+.sc.falhou .sn{background:var(--vermelho);}
+.sc.ausente .sn{background:var(--amarelo);}
 .sc.sem-coord .sn{background:#94a3b8;}
 .sc.ativo-card .sn{background:var(--laranja);}
 .si{flex:1;min-width:0;}
@@ -179,10 +179,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .pab-fail{background:#450a0a;color:#f87171;}
 .pab-aus{background:#451a03;color:#fbbf24;}
 .pa-nota-lbl{font-size:11px;color:#64748b;margin:12px 0 5px;}
-.pa-nota{
+.pa-nota(
   width:100%;padding:10px;background:#334155;border:none;border-radius:10px;
   color:white;font-size:13px;resize:none;height:56px;font-family:inherit;
-}
+)
 .pa-nota::placeholder{color:#475569;}
 
 /* ═══ MENU DRAWER ════════════════════════════════════════════ */
@@ -243,13 +243,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 
 <div id="tela-setup">
   <div class="logo-wrap">
-    <div class="logo-box">
-      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-        <line x1="12" y1="22.08" x2="12" y2="12"></line>
-      </svg>
-    </div>
+    <div class="logo-box">📦</div>
     <div class="logo-nome">Rota Fácil</div>
     <div class="logo-sub">Otimização de entregas inteligente</div>
   </div>
@@ -263,6 +257,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   </div>
 
   <button class="btn-go" id="btn-go" onclick="processar()">🚀 Carregar Rota</button>
+
+
 </div>
 
 <div id="app">
@@ -470,9 +466,20 @@ async function lerPDF(f){
       Math.abs(a.transform[5]-b.transform[5])<5 ? a.transform[4]-b.transform[4] : b.transform[5]-a.transform[5]
     );
     let ly=null;
+    let lx=null;
     for(const it of items){
-      if(ly!==null && Math.abs(it.transform[5]-ly)>5) txt+='\n';
-      txt+=it.str+' '; ly=it.transform[5];
+      if(ly!==null && Math.abs(it.transform[5]-ly)>5){
+        txt+='\n';
+        lx=null;
+      }
+      // Verifica o espaçamento horizontal real para evitar que acentos criem espaços falsos
+      if(lx!==null && Math.abs(it.transform[5]-ly)<=5){
+        let gap = it.transform[4] - lx;
+        if(gap > 3) txt+=' ';
+      }
+      txt+=it.str;
+      ly=it.transform[5];
+      lx=it.transform[4] + (it.width || 0);
     }
     txt+='\n';
   }
@@ -481,8 +488,27 @@ async function lerPDF(f){
 
 function lerTexto(f){ return new Promise(res=>{
   const r=new FileReader();
-  r.onload=e=>{ estruturar(e.target.result); res(); };
-  r.readAsText(f,'UTF-8');
+  r.onload=e=>{
+    const arr = new Uint8Array(e.target.result);
+    // Validação e Fallback de codificação UTF-8 / Windows-1252 para evitar quebra de acentos
+    let isUTF8 = true;
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i] > 127) {
+        if ((arr[i] & 0xE0) === 0xC0 && i + 1 < arr.length && (arr[i+1] & 0xC0) === 0x80) {
+          i++;
+        } else if ((arr[i] & 0xF0) === 0xE0 && i + 2 < arr.length && (arr[i+1] & 0xC0) === 0x80 && (arr[i+2] & 0xC0) === 0x80) {
+          i += 2;
+        } else {
+          isUTF8 = false;
+          break;
+        }
+      }
+    }
+    const decoder = new TextDecoder(isUTF8 ? 'utf-8' : 'iso-8859-1');
+    estruturar(decoder.decode(arr));
+    res();
+  };
+  r.readAsArrayBuffer(f);
 });}
 
 // ──────────────────────────────────────────────────────────
@@ -840,7 +866,7 @@ function tab(t){
 // ──────────────────────────────────────────────────────────
 //  PAINEL DE AÇÃO
 // ──────────────────────────────────────────────────────────
-function ativar(i){
+function activar(i){
   idxAtivo=i;
   const e=bd[i];
   document.getElementById('pa-num').textContent=i+1;
@@ -874,8 +900,14 @@ function reg(status){
 function navegar(){
   if(idxAtivo===null) return;
   const e=bd[idxAtivo];
-  const q=encodeURIComponent(e.endereco);
-  window.open(`https://www.google.com/maps/search/?api=1&query=${q}`,'_blank');
+  let url;
+  // Constrói o link oficial de rotas integrando coordenadas diretas ou o endereço limpo
+  if(e.lat && e.lon){
+    url = `https://www.google.com/maps/dir/?api=1&destination=${e.lat},${e.lon}&travelmode=driving`;
+  } else {
+    url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(e.endereco)}&travelmode=driving`;
+  }
+  window.open(url,'_blank');
 }
 
 // ──────────────────────────────────────────────────────────
