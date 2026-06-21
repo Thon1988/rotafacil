@@ -20,8 +20,9 @@ import * as Haptics from "expo-haptics";
 import { COLORS, RADIUS, SPACING } from "@/src/constants/theme";
 import RouteMap, { MapHandle, MapMessage } from "@/src/components/route-map";
 import { clearRoute, loadRoute, saveRoute } from "@/src/lib/route-store";
-import { optimizeRoute } from "@/src/lib/api";
+import { optimizeRoute, saveHistory } from "@/src/lib/api";
 import { Stop } from "@/src/types/stop";
+import { getOrCreateUserId } from "@/src/lib/user";
 
 export default function RouteScreen() {
   const router = useRouter();
@@ -145,12 +146,30 @@ export default function RouteScreen() {
 
   const clearAll = () => {
     setMenuOpen(false);
-    Alert.alert("Apagar Rota", "Deseja apagar a rota ativa?", [
+    Alert.alert("Encerrar rota", "Deseja encerrar e salvar a rota no histórico?", [
       { text: "Cancelar", style: "cancel" },
       {
-        text: "Apagar",
+        text: "Encerrar",
         style: "destructive",
         onPress: async () => {
+          // Save to history first
+          const delivered = stops.filter((s) => s.status === "entregue").length;
+          const failed = stops.filter((s) => s.status === "falhou").length;
+          if (stops.length > 0) {
+            try {
+              const userId = await getOrCreateUserId();
+              await saveHistory({
+                user_id: userId,
+                route_id: `r_${Date.now()}`,
+                started_at: new Date().toISOString(),
+                ended_at: new Date().toISOString(),
+                total_stops: stops.length,
+                delivered,
+                failed,
+                stops: stops.map((s) => ({ codigo: s.codigo, status: s.status, timestamp: s.timestamp })),
+              });
+            } catch {}
+          }
           await clearRoute();
           router.replace("/");
         },
@@ -363,8 +382,8 @@ export default function RouteScreen() {
               testID="menu-new-route"
             />
             <MenuItem
-              icon="trash"
-              label="Apagar Rota Atual"
+              icon="checkmark-done"
+              label="Encerrar e Salvar Rota"
               onPress={clearAll}
               danger
               testID="menu-clear"

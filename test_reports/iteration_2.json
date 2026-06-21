@@ -1,0 +1,48 @@
+{
+  "summary": "Rota Fácil Iteration 2 testing. Backend logic verified end-to-end against localhost (all features pass): real admin login returns JWT with hp:false; 2 failed attempts return 401 'Credenciais inválidas'; 3rd+ attempt returns honeypot JWT (hp:true) without bumping rate limit; honeypot /admin/pending-payments returns 5 FAKE items + '_decoy_hint' pointing to /api/admin/level/2; honeypot /admin/level/{n} returns fake items + next_level_url=/api/admin/level/{n+1} + hash_token + secret_note (infinite recursion verified up to level 5); real admin /admin/level/2 → 404; honeypot /admin/approve-payment returns fake {ok:true,_hint:...} without DB change. PIX flow: /pix/generate returns whatsapp_number=5511983454007 + whatsapp_message containing TXID; /pix/submit-payment sets status=pending_approval (NOT auto-activation); /subscription/{uid} returns {active:false, pending:true} during pending; admin approve → activates 30-day subscription (days_remaining=29); admin reject sets status=rejected. History: /history/save persists, /history/{uid} returns sorted desc. Stats: weekly/monthly/all-time aggregates correct, badge='⚡ Em ritmo' for 60 weekly deliveries, best_day populated. Audit logs persist with ip+user_agent+success+timestamp. Frontend: admin login screen renders, wrong-pass shows 'Credenciais inválidas', correct pass shows dashboard with Ativas/Pendentes/R$ mês cards + pending list (6 items visible) + Sair button. Logout returns to login. Landing shows 'Assinar' state correctly. /history, /stats, /paywall all render. CRITICAL ISSUE — honeypot trigger does NOT work via public ingress URL because K8s ingress proxies through multiple pods with different request.client.host values; count_failed_attempts(ip) never reaches threshold from any single IP.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/admin/login (honeypot trigger)", "issue": "Honeypot never triggers in production behind K8s ingress. server.py:556 uses request.client.host (immediate TCP peer = ingress proxy pod IP). Each request may come from a DIFFERENT proxy pod, so count_failed_attempts(ip) returns 0/1 from any single IP even after many fails. Fix: parse X-Forwarded-For header (first IP). Verified logic works correctly when called against localhost:8001 directly (3rd fail → hp:true JWT).", "priority": "HIGH"},
+      {"endpoint": "POST /api/admin/login (rate limit)", "issue": "slowapi limit '5/10minute' is in-memory only; resets on backend restart but persists across pytest session, making automated retest hard. Also same proxy-IP issue affects rate limiting (each ingress pod tracks its own counter). Consider Redis-backed limiter or raising the limit (e.g. 30/10min) for production resilience.", "priority": "MEDIUM"}
+    ],
+    "minor": [
+      {"endpoint": "passlib bcrypt", "issue": "Backend startup warning: 'AttributeError: module bcrypt has no attribute __about__' (passlib 1.7.x vs bcrypt 4.x incompat). Auth still functional (hash verifies correctly) but should pin bcrypt<4.1 or upgrade passlib to 1.7.5+/argon2."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Admin honeypot demo via UI", "issue": "Because of the ingress proxy-IP issue (see backend critical), attempting to brute-force admin login from a real browser via the public URL will return 401 forever and NEVER drop the attacker into the honeypot. Honeypot is effectively dead in production until the IP detection is fixed.", "affected_testIDs": ["admin-login-button", "admin-error"]}
+    ],
+    "design_issues": [
+      {"screen": "global", "issues": ["Deprecated 'shadow*' style props warnings (use 'boxShadow') — repeated across multiple screens.", "Deprecated 'props.pointerEvents' warning (use style.pointerEvents)."]}
+    ],
+    "react_native_issues": [
+      {"component": "Expo SDK version drift", "issue": "expo@54.0.34 (expected ~54.0.35), expo-font@14.0.11 (expected ~14.0.12), expo-router@6.0.23 (expected ~6.0.24). Run `npx expo install --check`. Reference: /var/log/supervisor/expo.err.log"}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iteration2.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "HIGH — Fix request IP detection for honeypot and rate limit: read X-Forwarded-For (first IP) instead of relying on request.client.host. Without this, the entire russian-doll feature is non-functional in production. Suggested: implement a get_client_ip(request) helper and use it in both count_failed_attempts and the slowapi key_func.",
+    "MEDIUM — Pin bcrypt<4.1 in requirements.txt or upgrade passlib to silence the AttributeError on startup.",
+    "LOW — Update Expo packages: `cd /app/frontend && npx expo install expo expo-font expo-router`.",
+    "LOW — Replace 'shadow*' style props with 'boxShadow' and 'props.pointerEvents' with 'style.pointerEvents' to silence warnings."
+  ],
+  "critical_code_review_comments": [
+    "server.py:556 — `ip = request.client.host` is the proxy IP behind ingress; must use X-Forwarded-For for the honeypot and rate-limit to be IP-accurate.",
+    "server.py:554 — `@limiter.limit('5/10minute')` is very restrictive and uses same flawed IP source. Consider 30/10min and Redis backend.",
+    "server.py:285 — get_current_admin correctly preserves hp flag; auth flow is solid.",
+    "server.py:579 — _fake_pending uses seed=level*7919 → DETERMINISTIC fake data per level. An attacker who notices that GET /admin/level/2 returns the same items every time can detect the honeypot. Consider seed = level*7919 + int(time.time()/3600) for hourly variation.",
+    "server.py:707 — RateLimitExceeded handler returns 429 with helpful message — good UX.",
+    "server.py:430 — submit_payment uses model_dump-like pattern manually; consider Pydantic .model_dump(exclude_none=True).",
+    "admin.tsx:84 — error mapping reads `e.message === 'rate_limited'` exactly; api.ts throws 'rate_limited' for 429 — OK. Other 4xx fall into 'invalid_credentials' which the UI shows as 'Credenciais inválidas' — semantically misleading for 5xx errors but acceptable.",
+    "paywall.tsx (Iteration 1 bug carryover) — fix confirmed: handleSubmitPayment now sets state and navigates correctly without relying on Alert.alert callback. submitted state triggers pending-screen render."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% logic correctness on localhost (verified end-to-end via curl/scripts); honeypot trigger and rate limit FAIL via public ingress URL due to proxy IP issue", "frontend": "100% (admin login, error message, dashboard, stats cards, pending list, logout, landing states, /history, /stats, /paywall all rendering correctly)"},
+  "seed_data_creation": "Inserted TEST_user_* PIX transactions and route_history entries in test_database. Audit_logs collection was cleared multiple times during testing. Use db.pix_transactions.delete_many({user_id: /^TEST_/}) and db.route_history.delete_many({user_id: /^TEST_/}) for cleanup.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "DO NOT run all admin auth tests sequentially against localhost or public URL — slowapi rate limit of 5/10min is in-memory and blocks tests within ~5 requests. Either restart backend between test classes, or split into separate files. The public URL behind K8s ingress distributes requests across multiple pods, so (a) the slowapi in-memory counter is per-pod (effectively raises the limit), (b) more critically, request.client.host varies per request so the honeypot's count_failed_attempts(ip) never sees ≥3 from one IP. Verified by direct localhost testing: H1=401, H2=401, H3=200 with hp=true JWT — logic is correct. The pytest file /app/backend/tests/test_iteration2.py is structured properly but will only pass if (1) backend uses X-Forwarded-For for IP, and (2) rate limit is raised or tests run with backend restarts between classes.",
+  "rca_of_issue": "ROOT CAUSE — Honeypot non-functional via public URL: server.py:556 reads request.client.host which in a Kubernetes ingress deployment is the IP of the ingress proxy pod (e.g. 10.208.138.130, 10.208.138.133, ...). Different requests from the same external client may be routed through DIFFERENT ingress pods, so the per-IP failure counter never accumulates ≥3 fails for any single IP. The slowapi limiter has the same defect (per-pod and per-proxy-IP counter). REPRODUCTION: from the public URL, attempt 10 wrong admin logins in a row — all return 401, never honeypot. From localhost (curl http://localhost:8001), after exactly 3 wrong logins the 3rd response returns 200 with a JWT whose hp claim decodes to true. MITIGATION: add a helper `def get_real_ip(request: Request) -> str: return (request.headers.get('x-forwarded-for') or request.client.host).split(',')[0].strip()` and use it everywhere request.client.host appears (count_failed_attempts call, log_audit, slowapi key_func via custom key function passed to Limiter)."
+}

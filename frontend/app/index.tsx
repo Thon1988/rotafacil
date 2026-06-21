@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, AppState, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { COLORS, RADIUS, SPACING } from "@/src/constants/theme";
@@ -9,35 +9,58 @@ import { getOrCreateUserId } from "@/src/lib/user";
 import { getSubscription } from "@/src/lib/api";
 import { loadRoute } from "@/src/lib/route-store";
 
+type SubState = "loading" | "active" | "pending" | "none";
+
 export default function Index() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [hasSubscription, setHasSubscription] = useState(false);
+  const [state, setState] = useState<SubState>("loading");
+  const [daysRemaining, setDaysRemaining] = useState(0);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const userId = await getOrCreateUserId();
-        const sub = await getSubscription(userId);
-        setHasSubscription(sub.active);
-
-        // If has active subscription and route already exists, go straight to route screen
-        if (sub.active) {
+  const checkSubscription = useCallback(async (autoRedirect = false) => {
+    try {
+      const userId = await getOrCreateUserId();
+      const sub = await getSubscription(userId);
+      if (sub.active) {
+        setState("active");
+        setDaysRemaining(sub.days_remaining);
+        if (autoRedirect) {
           const route = await loadRoute();
           if (route.length > 0) {
             router.replace("/route");
-            return;
           }
         }
-      } catch (e) {
-        console.log("Erro ao verificar assinatura:", e);
-      } finally {
-        setLoading(false);
+      } else if (sub.pending) {
+        setState("pending");
+      } else {
+        setState("none");
       }
-    })();
+    } catch {
+      setState("none");
+    }
   }, [router]);
 
-  if (loading) {
+  useEffect(() => {
+    checkSubscription(true);
+  }, [checkSubscription]);
+
+  // Poll while pending (every 8s) so user sees activation soon
+  useFocusEffect(
+    useCallback(() => {
+      let interval: any;
+      if (state === "pending") {
+        interval = setInterval(() => checkSubscription(false), 8000);
+      }
+      const sub = AppState.addEventListener("change", (s) => {
+        if (s === "active") checkSubscription(false);
+      });
+      return () => {
+        if (interval) clearInterval(interval);
+        sub.remove();
+      };
+    }, [state, checkSubscription])
+  );
+
+  if (state === "loading") {
     return (
       <View style={styles.loadingContainer} testID="landing-loading">
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -55,25 +78,77 @@ export default function Index() {
         <Text style={styles.subtitle}>
           Roteirização inteligente para entregadores
         </Text>
+
+        {state === "active" && (
+          <View style={styles.activeBadge}>
+            <Ionicons name="shield-checkmark" size={14} color={COLORS.success} />
+            <Text style={styles.activeBadgeText}>
+              Assinatura ativa • {daysRemaining}d
+            </Text>
+          </View>
+        )}
+
+        {state === "pending" && (
+          <View style={styles.pendingBadge}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={styles.pendingBadgeText}>
+              Aguardando aprovação do pagamento
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.featuresGrid}>
         <FeatureCard icon="map" title="Mapa" desc="Rota otimizada visual" />
         <FeatureCard icon="scan" title="Scanner" desc="Shopee & Mercado Livre" />
-        <FeatureCard icon="flash" title="TSP" desc="Algoritmo de proximidade" />
+        <FeatureCard icon="stats-chart" title="Stats" desc="Histórico e badges" />
         <FeatureCard icon="document-text" title="Importar" desc="PDF, Excel, CSV" />
       </View>
 
       <View style={styles.ctaSection}>
-        {hasSubscription ? (
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => router.push("/upload")}
-            testID="landing-start-route-button"
-          >
-            <Ionicons name="rocket" size={20} color="#fff" />
-            <Text style={styles.primaryButtonText}>Iniciar Nova Rota</Text>
-          </TouchableOpacity>
+        {state === "active" ? (
+          <>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => router.push("/upload")}
+              testID="landing-start-route-button"
+            >
+              <Ionicons name="rocket" size={20} color="#fff" />
+              <Text style={styles.primaryButtonText}>Iniciar Nova Rota</Text>
+            </TouchableOpacity>
+            <View style={styles.secondaryRow}>
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={() => router.push("/history")}
+                testID="landing-history-button"
+              >
+                <Ionicons name="time" size={18} color={COLORS.textPrimary} />
+                <Text style={styles.secondaryButtonText}>Histórico</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={() => router.push("/stats")}
+                testID="landing-stats-button"
+              >
+                <Ionicons name="trophy" size={18} color={COLORS.textPrimary} />
+                <Text style={styles.secondaryButtonText}>Estatísticas</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : state === "pending" ? (
+          <>
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: COLORS.bgElevated }]}
+              onPress={() => checkSubscription(false)}
+              testID="landing-refresh-button"
+            >
+              <Ionicons name="refresh" size={20} color="#fff" />
+              <Text style={styles.primaryButtonText}>Verificar Aprovação</Text>
+            </TouchableOpacity>
+            <Text style={styles.pricingNote}>
+              Você receberá acesso assim que o admin aprovar seu pagamento
+            </Text>
+          </>
         ) : (
           <>
             <TouchableOpacity
@@ -104,95 +179,50 @@ function FeatureCard({ icon, title, desc }: { icon: any; title: string; desc: st
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: COLORS.bgBase,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bgBase,
-    paddingHorizontal: SPACING.lg,
-    justifyContent: "space-between",
-  },
-  heroSection: {
-    alignItems: "center",
-    marginTop: SPACING.xl,
-  },
+  loadingContainer: { flex: 1, backgroundColor: COLORS.bgBase, justifyContent: "center", alignItems: "center" },
+  container: { flex: 1, backgroundColor: COLORS.bgBase, paddingHorizontal: SPACING.lg, justifyContent: "space-between" },
+  heroSection: { alignItems: "center", marginTop: SPACING.xl },
   logoCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: COLORS.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: SPACING.lg,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
+    width: 90, height: 90, borderRadius: 45, backgroundColor: COLORS.primary,
+    justifyContent: "center", alignItems: "center", marginBottom: SPACING.lg,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4, shadowRadius: 16,
   },
-  title: {
-    fontSize: 36,
-    fontWeight: "900",
-    color: COLORS.textPrimary,
-    letterSpacing: -1,
+  title: { fontSize: 36, fontWeight: "900", color: COLORS.textPrimary, letterSpacing: -1 },
+  subtitle: { fontSize: 16, color: COLORS.textSecondary, marginTop: SPACING.sm, textAlign: "center" },
+  activeBadge: {
+    marginTop: SPACING.md, flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "rgba(22,163,74,0.15)", paddingHorizontal: SPACING.md,
+    paddingVertical: 6, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.success,
   },
-  subtitle: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.sm,
-    textAlign: "center",
+  activeBadgeText: { color: COLORS.success, fontWeight: "700", fontSize: 12 },
+  pendingBadge: {
+    marginTop: SPACING.md, flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    backgroundColor: "rgba(234,88,12,0.15)", paddingHorizontal: SPACING.md,
+    paddingVertical: 8, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.primary,
   },
-  featuresGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING.md,
-    justifyContent: "space-between",
-  },
+  pendingBadgeText: { color: COLORS.primary, fontWeight: "700", fontSize: 12 },
+  featuresGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.md, justifyContent: "space-between" },
   featureCard: {
-    width: "47%",
-    backgroundColor: COLORS.bgSurface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: SPACING.sm,
+    width: "47%", backgroundColor: COLORS.bgSurface, borderRadius: RADIUS.lg,
+    padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border, gap: SPACING.sm,
   },
-  featureTitle: {
-    color: COLORS.textPrimary,
-    fontWeight: "700",
-    fontSize: 15,
-  },
-  featureDesc: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-  },
-  ctaSection: {
-    gap: SPACING.md,
-  },
+  featureTitle: { color: COLORS.textPrimary, fontWeight: "700", fontSize: 15 },
+  featureDesc: { color: COLORS.textSecondary, fontSize: 12 },
+  ctaSection: { gap: SPACING.md },
   primaryButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 18,
-    borderRadius: RADIUS.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
+    backgroundColor: COLORS.primary, paddingVertical: 18,
+    borderRadius: RADIUS.lg, flexDirection: "row", alignItems: "center",
+    justifyContent: "center", gap: SPACING.sm,
   },
-  primaryButtonText: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "800",
+  primaryButtonText: { color: "#fff", fontSize: 17, fontWeight: "800" },
+  secondaryRow: { flexDirection: "row", gap: SPACING.sm },
+  secondaryButton: {
+    flex: 1, backgroundColor: COLORS.bgSurface, paddingVertical: 14,
+    borderRadius: RADIUS.lg, flexDirection: "row", alignItems: "center",
+    justifyContent: "center", gap: SPACING.sm, borderWidth: 1, borderColor: COLORS.border,
   },
-  pricingNote: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    textAlign: "center",
-  },
-  bold: {
-    color: COLORS.primary,
-    fontWeight: "800",
-  },
+  secondaryButtonText: { color: COLORS.textPrimary, fontWeight: "700", fontSize: 14 },
+  pricingNote: { color: COLORS.textSecondary, fontSize: 14, textAlign: "center" },
+  bold: { color: COLORS.primary, fontWeight: "800" },
 });
