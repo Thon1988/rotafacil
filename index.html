@@ -53,8 +53,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .btn-go:active{transform:scale(.98);}
 .btn-go:disabled{opacity:.6;cursor:not-allowed;}
 
-
-
 /* ═══ APP LAYOUT ════════════════════════════════════════════ */
 #app{display:none;position:fixed;inset:0;flex-direction:column;}
 #app.ativo{display:flex;}
@@ -116,11 +114,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   border-left:4px solid var(--azul);transition:transform .15s,box-shadow .15s;
 }
 .sc:active{transform:scale(.98);}
-.sc.entregue Whitespace-color:var(--verde);opacity:.65;}
+.sc.entregue{border-left-color:var(--verde);opacity:.65;}
 .sc.falhou{border-left-color:var(--vermelho);opacity:.65;}
 .sc.ausente{border-left-color:var(--amarelo);opacity:.65;}
 .sc.sem-coord{border-left-color:#94a3b8;}
 .sc.ativo-card{box-shadow:0 4px 16px rgba(234,88,12,.3);border-left-color:var(--laranja);}
+
 .sn{
   min-width:30px;height:30px;border-radius:50%;background:var(--azul);color:white;
   display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;
@@ -130,13 +129,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .sc.ausente .sn{background:var(--amarelo);}
 .sc.sem-coord .sn{background:#94a3b8;}
 .sc.ativo-card .sn{background:var(--laranja);}
+
 .si{flex:1;min-width:0;}
 .sr{font-size:14px;font-weight:700;color:var(--escuro);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .se{font-size:12px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sc-cod{font-size:10px;color:var(--sub);margin-top:3px;font-family:monospace;}
 .badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-top:4px;}
-.b-pend">● Pendente</span>',entregue:'<span class="badge b-ok">✓ Entregue</span>',falhou:'<span class="badge b-fail">✕ Não entregue</span>',ausente:'<span class="badge b-aus">⚠ Ausente</span>'};
-.b-fail{background:#fee2e2;color:#b91c1c;}.b-aus{background:#fef3c7;color:#b45309;}
+
+.b-pend{background:#e0f2fe;color:#0369a1;}
+.b-ok{background:#dcfce7;color:#15803d;}
+.b-fail{background:#fee2e2;color:#b91c1c;}
+.b-aus{background:#fef3c7;color:#b45309;}
 .b-sem{background:#f1f5f9;color:#64748b;}
 .sc-hora{font-size:10px;color:var(--sub);margin-top:2px;}
 
@@ -241,6 +244,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 </head>
 <body>
 
+<!-- ══ TELA SETUP ══════════════════════════════════════════ -->
 <div id="tela-setup">
   <div class="logo-wrap">
     <div class="logo-box">📦</div>
@@ -257,10 +261,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   </div>
 
   <button class="btn-go" id="btn-go" onclick="processar()">🚀 Carregar Rota</button>
-
-
 </div>
 
+<!-- ══ APP ═════════════════════════════════════════════════ -->
 <div id="app">
   <div id="mapa-wrap">
     <div id="mapa"></div>
@@ -268,6 +271,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
     <button class="fab" id="fab-gps" onclick="irGPS()">📍</button>
     <button class="fab" id="fab-fit" onclick="fitAll()">⊞</button>
     <div id="prog-map"><div id="prog-map-inner"></div></div>
+    <!-- Overlay de geocodificação -->
     <div id="geo-overlay">
       <div class="geo-spinner"></div>
       <div class="geo-txt" id="geo-txt">Localizando endereços...</div>
@@ -287,6 +291,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   </div>
 </div>
 
+<!-- Painel de ação -->
 <div id="pa">
   <div class="pa-h"></div>
   <div class="pa-top">
@@ -306,6 +311,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   <textarea class="pa-nota" id="pa-nota" placeholder="Ex: Deixei na portaria, vizinho recebeu..."></textarea>
 </div>
 
+<!-- Menu drawer -->
 <div id="ov" onclick="fecharMenu()"></div>
 <div id="drawer">
   <div class="dh">
@@ -323,6 +329,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   </div>
 </div>
 
+<!-- Scanner -->
 <div id="scanner-modal">
   <div class="sm-hd">
     <div class="sm-title">📷 Scanner</div>
@@ -332,6 +339,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   <div id="scan-fb">Aguardando leitura do código...</div>
 </div>
 
+<!-- Toast -->
 <div id="toast"></div>
 
 <script>
@@ -387,7 +395,6 @@ function lerExcel(f){ return new Promise(res=>{
     const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
     if(!rows.length){ toast('⚠️ Planilha vazia'); return; }
 
-    // ── Detecta colunas pelo cabeçalho (padrão Shopee) ──
     const header = rows[0].map(c=>String(c).toLowerCase());
     const iCod  = header.findIndex(h=>h.includes('spx')||h.includes('tracking')||h.includes('tn'));
     const iEnd  = header.findIndex(h=>h.includes('destination')||h.includes('address')||h.includes('endereco')||h.includes('endereço'));
@@ -397,11 +404,9 @@ function lerExcel(f){ return new Promise(res=>{
     const iLat   = header.findIndex(h=>h.includes('lat'));
     const iLon   = header.findIndex(h=>h.includes('lon')||h.includes('lng'));
 
-    // Se encontrou colunas Shopee, usa modo estruturado
     if(iCod>=0 && iEnd>=0){
       estruturarExcel(rows.slice(1), {iCod,iEnd,iBairro,iCidade,iCEP,iLat,iLon});
     } else {
-      // Fallback: une colunas como texto e usa regex
       const linhas=rows.map(row=>row.map(c=>String(c).trim()).join(' ').trim()).filter(l=>l.length>3);
       estruturar(linhas.join('\n'));
     }
@@ -417,11 +422,9 @@ function estruturarExcel(rows, {iCod,iEnd,iBairro,iCidade,iCEP,iLat,iLon}){
   for(const row of rows){
     const cod = String(row[iCod]||'').trim().toUpperCase();
     if(!cod || codVistos.has(cod)) continue;
-    // Valida padrão de código (2 letras + dígitos)
     if(!/^[A-Z]{2}\d{9,15}/.test(cod)) continue;
     codVistos.add(cod);
 
-    // Monta endereço: Rua, Bairro, Cidade, CEP
     const partes=[
       String(row[iEnd]||'').trim(),
       iBairro>=0 ? String(row[iBairro]||'').trim() : '',
@@ -430,7 +433,6 @@ function estruturarExcel(rows, {iCod,iEnd,iBairro,iCidade,iCEP,iLat,iLon}){
     ].filter(p=>p.length>0);
     const end = partes.join(', ');
 
-    // Lat/Lon já existentes no arquivo
     const lat = iLat>=0 && row[iLat]!=='' ? parseFloat(row[iLat]) : null;
     const lon = iLon>=0 && row[iLon]!=='' ? parseFloat(row[iLon]) : null;
     const temCoord = lat!==null && lon!==null && !isNaN(lat) && !isNaN(lon);
@@ -487,21 +489,19 @@ function lerTexto(f){ return new Promise(res=>{
 function estruturar(texto){
   const linhas = texto.split(/\r?\n/);
   const novo = [];
-  const codVistos = new Set(); // evita duplicatas
+  const codVistos = new Set();
 
   for(const linha of linhas){
     const l = linha.trim();
     if(l.length < 5) continue;
 
-    // Regex: código Shopee/Correios — 2 letras + 9-13 dígitos + até 2 letras opcionais
     const m = l.match(/\b([A-Z]{2}\d{9,13}[A-Z]{0,2})\b/i);
     if(!m) continue;
 
     const cod = m[1].toUpperCase();
-    if(codVistos.has(cod)) continue; // DEDUPLICAÇÃO
+    if(codVistos.has(cod)) continue;
     codVistos.add(cod);
 
-    // Remove o código e limpa o endereço
     let end = l
       .replace(new RegExp('\\b'+cod+'\\b','i'), '')
       .replace(/[;\t|]+/g, ' ')
@@ -520,7 +520,7 @@ function estruturar(texto){
       nota: '',
       lat: null,
       lon: null,
-      geocodStatus: 'pendente' // 'ok' | 'erro' | 'pendente'
+      geocodStatus: 'pendente'
     });
   }
 
@@ -530,11 +530,8 @@ function estruturar(texto){
   salvar();
   mostrarApp();
   toast(`✅ ${bd.length} paradas carregadas`);
-  // Geocodifica em background imediatamente
   setTimeout(()=>geocodificar(false), 300);
 }
-
-
 
 // ──────────────────────────────────────────────────────────
 //  INICIAR APP
@@ -551,7 +548,6 @@ function mostrarApp(){
 
 function criarMapa(){
   if(map) return;
-  // ── Carto Voyager — aparência idêntica ao Google Maps, sem API key ──
   map = L.map('mapa', { zoomControl:false, attributionControl:false });
   L.tileLayer(
     'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
@@ -619,8 +615,7 @@ function irGPS(){
 }
 
 // ──────────────────────────────────────────────────────────
-//  GEOCODIFICAÇÃO — PRECISÃO MÁXIMA
-//  Estratégia: 1º CEP via BrasilAPI → 2º Photon (sem rate limit)
+//  GEOCODIFICAÇÃO
 // ──────────────────────────────────────────────────────────
 async function geocodificar(silencioso=false){
   const fila = bd.filter(e=>e.geocodStatus!=='ok');
@@ -641,14 +636,12 @@ async function geocodificar(silencioso=false){
     gsub.textContent  = e.endereco.substring(0,50)+'...';
     gbar.style.width  = Math.round(ok/fila.length*100)+'%';
 
-    // — Tentativa 1: extrair CEP e usar BrasilAPI (mais preciso para BR) —
     const cep = extrairCEP(e.endereco);
     if(cep){
       const res = await geocodCEP(cep);
       if(res){ e.lat=res.lat; e.lon=res.lon; e.geocodStatus='ok'; ok++; salvar(); plotar(); renderLista(); continue; }
     }
 
-    // — Tentativa 2: Photon geocoder (OSM, sem limite de taxa) —
     const res2 = await geocodPhoton(e.endereco);
     if(res2){ e.lat=res2.lat; e.lon=res2.lon; e.geocodStatus='ok'; ok++; }
     else { e.geocodStatus='erro'; }
@@ -682,7 +675,6 @@ async function geocodCEP(cep){
     if(d.location?.coordinates?.latitude){
       return {lat: d.location.coordinates.latitude, lon: d.location.coordinates.longitude};
     }
-    // Sem coordenadas: usa cidade/bairro para fallback
     return null;
   }catch(e){ return null; }
 }
@@ -700,10 +692,8 @@ async function geocodPhoton(end){
   }catch(e){ return null; }
 }
 
-const sleep = ms => new Promise(r=>setTimeout(r,ms));
-
 // ──────────────────────────────────────────────────────────
-//  OTIMIZAÇÃO DE ROTA — Nearest Neighbor + 2-opt
+//  OTIMIZAÇÃO DE ROTA (TSP)
 // ──────────────────────────────────────────────────────────
 function otimizar(){
   const pen = bd.filter(e=>e.status==='pendente'&&e.lat&&e.lon);
@@ -712,7 +702,6 @@ function otimizar(){
 
   if(pen.length<2) return toast('⚠️ Precisa de pelo menos 2 paradas com coordenadas');
 
-  // 1. Nearest Neighbor partindo da posição atual ou primeira parada
   let inicio = posMarker
     ? {lat:posMarker.getLatLng().lat, lon:posMarker.getLatLng().lng}
     : pen[0];
@@ -726,7 +715,6 @@ function otimizar(){
     atual=rota[rota.length-1];
   }
 
-  // 2. Melhoria 2-opt
   rota = doisOpt(rota);
 
   bd = [...conc, ...semCoord, ...rota];
@@ -754,7 +742,7 @@ function doisOpt(rota){
   return rota;
 }
 
-function geo(a,b){ // distância euclidiana em graus
+function geo(a,b){
   return Math.sqrt((a.lat-b.lat)**2+(a.lon-b.lon)**2);
 }
 
@@ -850,6 +838,9 @@ function activar(i){
   renderLista(); plotar();
 }
 
+// Alias em PT-BR para manter compatibilidade com chamadas de clique inline
+function ativar(i) { activar(i); }
+
 function fecharPA(){
   document.getElementById('pa').classList.remove('open');
   idxAtivo=null; renderLista(); plotar();
@@ -871,7 +862,6 @@ function navegar(){
   if(idxAtivo===null) return;
   const e=bd[idxAtivo];
   const q=encodeURIComponent(e.endereco);
-  // Google Maps com modo carro — deep link abre app nativo no celular integrado com a busca por string
   window.open(`https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=driving`, '_blank');
 }
 
@@ -977,7 +967,6 @@ window.onload = () => {
     mostrarApp();
     const p=bd.filter(e=>e.status==='pendente').length;
     toast(`📦 Rota retomada · ${p} pendentes`);
-    // Geocodifica os que ainda faltam
     const semCoord = bd.filter(e=>e.geocodStatus!=='ok').length;
     if(semCoord>0) setTimeout(()=>geocodificar(true),500);
   }
