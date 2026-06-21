@@ -20,9 +20,10 @@ import * as Haptics from "expo-haptics";
 import { COLORS, RADIUS, SPACING } from "@/src/constants/theme";
 import RouteMap, { MapHandle, MapMessage } from "@/src/components/route-map";
 import { clearRoute, loadRoute, saveRoute } from "@/src/lib/route-store";
-import { optimizeRoute, saveHistory } from "@/src/lib/api";
+import { optimizeRoute, RouteMetrics, saveHistory } from "@/src/lib/api";
 import { Stop } from "@/src/types/stop";
 import { getOrCreateUserId } from "@/src/lib/user";
+import { loadSettings } from "@/src/lib/route-settings";
 
 export default function RouteScreen() {
   const router = useRouter();
@@ -34,6 +35,8 @@ export default function RouteScreen() {
   const [optimizing, setOptimizing] = useState(false);
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [manualCode, setManualCode] = useState("");
+  const [metrics, setMetrics] = useState<RouteMetrics | null>(null);
+  const lastStopTimeRef = useRef<number>(Date.now());
 
   // Load stops on focus
   useFocusEffect(
@@ -82,14 +85,18 @@ export default function RouteScreen() {
       Alert.alert("Atenção", "Selecione uma parada primeiro.");
       return;
     }
+    const now = Date.now();
+    const elapsed = Math.round((now - lastStopTimeRef.current) / 1000);
     const updated = [...stops];
     updated[activeIdx] = {
       ...updated[activeIdx],
       status,
       timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+      duration_seconds: elapsed,
     };
     setStops(updated);
     await saveRoute(updated);
+    lastStopTimeRef.current = now;
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(
         status === "entregue"
@@ -113,21 +120,62 @@ export default function RouteScreen() {
 
   const optimizeTSP = async () => {
     setMenuOpen(false);
-    if (stops.filter((s) => s.status === "pendente").length <= 2) {
+    if (stops.filter((s) => s.status === "pendente").length <= 1) {
       Alert.alert("Atenção", "Quantidade de paradas pendentes insuficiente.");
       return;
     }
     setOptimizing(true);
     try {
-      const { stops: optimized } = await optimizeRoute(stops);
+      const settings = await loadSettings();
+      const { stops: optimized, metrics: m } = await optimizeRoute(stops, {
+        start_lat: settings.startLat,
+        start_lon: settings.startLon,
+        return_to_start: settings.returnToStart,
+        minutes_per_stop: settings.minutesPerStop,
+        avg_speed_kmh: settings.avgSpeedKmh,
+      });
       setStops(optimized);
       await saveRoute(optimized);
-      Alert.alert("Sucesso", "Rota otimizada via algoritmo TSP (vizinho mais próximo).");
+      setMetrics(m);
+      if (m) {
+        const h = Math.floor(m.estimated_minutes / 60);
+        const min = Math.round(m.estimated_minutes % 60);
+        const timeStr = h > 0 ? `${h}h ${min}min` : `${min}min`;
+        Alert.alert(
+          "Rota Otimizada ⚡",
+          `${m.total_distance_km.toFixed(1)} km • ~${timeStr}\nReordenada via algoritmo TSP (vizinho mais próximo)`,
+        );
+      }
     } catch {
       Alert.alert("Erro", "Falha ao otimizar a rota.");
     } finally {
       setOptimizing(false);
     }
+  };
+
+  const invertRoute = async () => {
+    setMenuOpen(false);
+    const pending = stops.filter((s) => s.status === "pendente");
+    const done = stops.filter((s) => s.status !== "pendente");
+    if (pending.length < 2) {
+      Alert.alert("Atenção", "Precisa de pelo menos 2 paradas pendentes para inverter.");
+      return;
+    }
+    const reversed = [...pending].reverse();
+    const combined = [...done, ...reversed].map((s, i) => ({ ...s, id: i }));
+    setStops(combined);
+    await saveRoute(combined);
+    Alert.alert("Rota invertida", "A ordem das paradas pendentes foi invertida.");
+  };
+
+  const openSummary = () => {
+    setMenuOpen(false);
+    router.push("/summary");
+  };
+
+  const openSettings = () => {
+    setMenuOpen(false);
+    router.push("/route-settings");
   };
 
   const exportCSV = async () => {
@@ -267,6 +315,29 @@ export default function RouteScreen() {
           </View>
         </View>
 
+        {metrics && (
+          <View style={styles.metricsBar} testID="metrics-bar">
+            <View style={styles.metricsItem}>
+              <Ionicons name="navigate" size={14} color={COLORS.primary} />
+              <Text style={styles.metricsValue}>{metrics.total_distance_km.toFixed(1)} km</Text>
+            </View>
+            <View style={styles.metricsDivider} />
+            <View style={styles.metricsItem}>
+              <Ionicons name="time" size={14} color={COLORS.primary} />
+              <Text style={styles.metricsValue}>
+                {metrics.estimated_minutes >= 60
+                  ? `${Math.floor(metrics.estimated_minutes / 60)}h ${Math.round(metrics.estimated_minutes % 60)}min`
+                  : `${Math.round(metrics.estimated_minutes)}min`}
+              </Text>
+            </View>
+            <View style={styles.metricsDivider} />
+            <View style={styles.metricsItem}>
+              <Ionicons name="cube" size={14} color={COLORS.primary} />
+              <Text style={styles.metricsValue}>{pendingCount}</Text>
+            </View>
+          </View>
+        )}
+
         <FlatList
           data={stops}
           keyExtractor={(item) => String(item.id)}
@@ -360,6 +431,12 @@ export default function RouteScreen() {
               testID="menu-manual"
             />
             <MenuItem
+              icon="options"
+              label="Configurar Rota (saída, ritmo)"
+              onPress={openSettings}
+              testID="menu-settings"
+            />
+            <MenuItem
               icon="flash"
               label={optimizing ? "Otimizando..." : "Otimizar Rota (TSP)"}
               onPress={optimizeTSP}
@@ -367,8 +444,20 @@ export default function RouteScreen() {
               disabled={optimizing}
             />
             <MenuItem
+              icon="swap-vertical"
+              label="Inverter Ordem"
+              onPress={invertRoute}
+              testID="menu-invert"
+            />
+            <MenuItem
+              icon="stats-chart"
+              label="Ver Resumo"
+              onPress={openSummary}
+              testID="menu-summary"
+            />
+            <MenuItem
               icon="download"
-              label="Exportar Relatório CSV"
+              label="Exportar CSV"
               onPress={exportCSV}
               testID="menu-export"
             />
@@ -560,6 +649,16 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
   },
   counterText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+
+  metricsBar: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-around",
+    backgroundColor: COLORS.bgSurface, borderRadius: RADIUS.md,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.primary,
+  },
+  metricsItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  metricsValue: { color: COLORS.textPrimary, fontWeight: "800", fontSize: 13 },
+  metricsDivider: { width: 1, height: 18, backgroundColor: COLORS.border },
 
   stopRow: {
     flexDirection: "row",

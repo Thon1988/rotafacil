@@ -234,7 +234,8 @@ export default function AdminScreen() {
               {item.customer_contact && (
                 <Text style={styles.itemContact}>📱 {item.customer_contact}</Text>
               )}
-              <Text style={styles.itemTxid}>TXID: {item.txid}</Text>
+              <Text style={styles.itemLogin}>🔑 Login: {item.user_id}</Text>
+              <Text style={styles.itemTxid}>🧾 {item.txid}</Text>
               <Text style={styles.itemDate}>
                 Enviado: {item.user_submitted_at ? new Date(item.user_submitted_at).toLocaleString("pt-BR") : "agora"}
               </Text>
@@ -342,7 +343,8 @@ const styles = StyleSheet.create({
   itemName: { color: COLORS.textPrimary, fontWeight: "800", fontSize: 16 },
   itemAmount: { color: COLORS.success, fontWeight: "800", fontSize: 16 },
   itemContact: { color: COLORS.textSecondary, fontSize: 13, marginTop: 4 },
-  itemTxid: { color: COLORS.textTertiary, fontSize: 11, marginTop: 4, fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" },
+  itemLogin: { color: COLORS.primary, fontSize: 12, fontWeight: "700", marginTop: 4, fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" },
+  itemTxid: { color: COLORS.textTertiary, fontSize: 11, marginTop: 2, fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" },
   itemDate: { color: COLORS.textTertiary, fontSize: 11, marginTop: 2 },
   itemActions: { flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.md },
   actionBtn: {

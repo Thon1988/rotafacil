@@ -43,13 +43,44 @@ export async function geocodeBatch(addresses: string[]): Promise<{ results: any[
   return res.json();
 }
 
-export async function optimizeRoute(stops: Stop[]): Promise<{ stops: Stop[] }> {
+export interface RouteMetrics {
+  total_distance_km: number;
+  estimated_minutes: number;
+  driving_minutes: number;
+  stops_minutes: number;
+}
+
+export interface OptimizeOptions {
+  start_lat?: number | null;
+  start_lon?: number | null;
+  return_to_start?: boolean;
+  minutes_per_stop?: number;
+  avg_speed_kmh?: number;
+}
+
+export async function optimizeRoute(
+  stops: Stop[],
+  options: OptimizeOptions = {}
+): Promise<{ stops: Stop[]; metrics: RouteMetrics | null }> {
   const res = await fetch(`${API}/optimize`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ stops }),
+    body: JSON.stringify({ stops, ...options }),
   });
   if (!res.ok) throw new Error(`Otimizar falhou: ${res.status}`);
+  return res.json();
+}
+
+export async function computeMetrics(
+  stops: Stop[],
+  options: OptimizeOptions = {}
+): Promise<RouteMetrics> {
+  const res = await fetch(`${API}/route-metrics`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ stops, ...options }),
+  });
+  if (!res.ok) throw new Error(`Metrics falhou: ${res.status}`);
   return res.json();
 }
 

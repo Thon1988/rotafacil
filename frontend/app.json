@@ -39,6 +39,12 @@
         {
           "cameraPermission": "Escanear códigos de entrega"
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Definir ponto de saída e rastrear entregas"
+        }
       ]
     ],
     "experiments": {

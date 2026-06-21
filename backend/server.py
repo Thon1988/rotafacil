@@ -111,10 +111,21 @@ class OptimizeRequest(BaseModel):
     stops: List[Stop]
     start_lat: Optional[float] = None
     start_lon: Optional[float] = None
+    return_to_start: bool = False
+    minutes_per_stop: float = 3.0  # default: 20 packages/hour
+    avg_speed_kmh: float = 30.0    # urban average
+
+
+class RouteMetrics(BaseModel):
+    total_distance_km: float
+    estimated_minutes: float
+    driving_minutes: float
+    stops_minutes: float
 
 
 class OptimizeResponse(BaseModel):
     stops: List[Stop]
+    metrics: Optional[RouteMetrics] = None
 
 
 class PixRequest(BaseModel):
@@ -390,34 +401,100 @@ async def geocode_batch(payload: dict):
     return {"results": results}
 
 
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance between two points on Earth in km."""
+    import math
+    R = 6371.0
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    return 2 * R * math.asin(math.sqrt(a))
+
+
 @api_router.post("/optimize", response_model=OptimizeResponse)
 async def optimize_route(req: OptimizeRequest):
     pending = [s for s in req.stops if s.status == "pendente" and s.lat is not None and s.lon is not None]
     done = [s for s in req.stops if s.status != "pendente"]
-    if len(pending) <= 1:
+
+    if len(pending) == 0:
         return OptimizeResponse(stops=req.stops)
+
+    # Start point: provided origin OR first pending stop
     if req.start_lat is not None and req.start_lon is not None:
-        optimized = []
-        remaining = list(pending)
         start = (req.start_lat, req.start_lon)
+        optimized: List[Stop] = []
+        remaining = list(pending)
     else:
         optimized = [pending[0]]
         remaining = pending[1:]
         start = (pending[0].lat, pending[0].lon)
+
     while remaining:
         last_lat, last_lon = (optimized[-1].lat, optimized[-1].lon) if optimized else start
         nearest_idx = 0
         min_d = float("inf")
         for i, s in enumerate(remaining):
-            d = ((last_lat - s.lat) ** 2 + (last_lon - s.lon) ** 2) ** 0.5
+            d = haversine_km(last_lat, last_lon, s.lat, s.lon)
             if d < min_d:
                 min_d = d
                 nearest_idx = i
         optimized.append(remaining.pop(nearest_idx))
+
+    # Compute metrics
+    total_km = 0.0
+    prev = start
+    for s in optimized:
+        total_km += haversine_km(prev[0], prev[1], s.lat, s.lon)
+        prev = (s.lat, s.lon)
+    if req.return_to_start:
+        total_km += haversine_km(prev[0], prev[1], start[0], start[1])
+
+    # Real-world factor (~1.3 for urban driving vs straight line)
+    total_km *= 1.3
+    driving_min = (total_km / max(req.avg_speed_kmh, 1.0)) * 60.0
+    stops_min = len(optimized) * req.minutes_per_stop
+    total_min = driving_min + stops_min
+
     final = done + optimized
     for idx, s in enumerate(final):
         s.id = idx
-    return OptimizeResponse(stops=final)
+
+    metrics = RouteMetrics(
+        total_distance_km=round(total_km, 2),
+        estimated_minutes=round(total_min, 1),
+        driving_minutes=round(driving_min, 1),
+        stops_minutes=round(stops_min, 1),
+    )
+    return OptimizeResponse(stops=final, metrics=metrics)
+
+
+@api_router.post("/route-metrics", response_model=RouteMetrics)
+async def compute_metrics(req: OptimizeRequest):
+    """Compute metrics for current order without reordering."""
+    pending = [s for s in req.stops if s.status == "pendente" and s.lat is not None and s.lon is not None]
+    if len(pending) == 0:
+        return RouteMetrics(total_distance_km=0, estimated_minutes=0, driving_minutes=0, stops_minutes=0)
+
+    start = (req.start_lat, req.start_lon) if req.start_lat is not None else (pending[0].lat, pending[0].lon)
+    total_km = 0.0
+    prev = start
+    for s in pending:
+        total_km += haversine_km(prev[0], prev[1], s.lat, s.lon)
+        prev = (s.lat, s.lon)
+    if req.return_to_start:
+        total_km += haversine_km(prev[0], prev[1], start[0], start[1])
+
+    total_km *= 1.3
+    driving_min = (total_km / max(req.avg_speed_kmh, 1.0)) * 60.0
+    stops_min = len(pending) * req.minutes_per_stop
+    return RouteMetrics(
+        total_distance_km=round(total_km, 2),
+        estimated_minutes=round(driving_min + stops_min, 1),
+        driving_minutes=round(driving_min, 1),
+        stops_minutes=round(stops_min, 1),
+    )
 
 
 # =============== PIX FLOW ===============
@@ -438,12 +515,13 @@ async def generate_pix(req: PixRequest):
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
 
-    # WhatsApp pre-filled message
+    # WhatsApp pre-filled message — includes user_id so admin can match in panel
     msg = (
-        f"Olá! Acabei de pagar a assinatura do Rota Fácil.%0A"
-        f"Valor: R$ {SUBSCRIPTION_PRICE:.2f}%0A"
-        f"TXID: {txid}%0A"
-        f"Segue meu comprovante 👇"
+        f"Olá! Acabei de pagar a assinatura do Rota Fácil 🚀%0A"
+        f"%0A💰 Valor: R$ {SUBSCRIPTION_PRICE:.2f}"
+        f"%0A🔑 Login (ID): {req.user_id}"
+        f"%0A🧾 TXID: {txid}"
+        f"%0A%0A👉 Segue meu comprovante anexado:"
     )
 
     return PixResponse(
