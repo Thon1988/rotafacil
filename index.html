@@ -1,1052 +1,776 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head><base href="https://d16ilfvy4mv02r.cloudfront.net/workspaces/8ORxNKeOZauUDlF90xVQ0o1kyyicjfU0/bf285724-e652-49a5-a830-5fa0f238638c/files/">
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Rota Fácil</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-:root{
-  --laranja:#ea580c;--laranja2:#fb923c;--verde:#16a34a;
-  --vermelho:#dc2626;--azul:#2563eb;--amarelo:#d97706;
-  --bg:#f1f5f9;--escuro:#1e293b;--texto:#334155;--sub:#94a3b8;--borda:#e2e8f0;
-}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);overflow:hidden;height:100dvh;}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rota Fácil</title>
+   
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+   
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+   
+    <style>
+        :root {
+            --cor-laranja: #ea580c;
+            --cor-verde: #16a34a;
+            --cor-vermelho: #dc2626;
+            --bg-escuro: #1c1c1e;
+            --bg-botoes: #232733;
+            --cor-azul-rota: #3b82f6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            overflow: hidden;
+        }
 
-/* ═══ TELA SETUP ═══════════════════════════════════════════ */
-#tela-setup{
-  position:fixed;inset:0;background:white;z-index:99999;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 20px;
-}
-.logo-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:28px;}
-.logo-box{
-  width:72px;height:72px;background:linear-gradient(135deg,var(--laranja),var(--laranja2));
-  border-radius:20px;display:flex;align-items:center;justify-content:center;
-  font-size:36px;margin-bottom:12px;box-shadow:0 8px 24px rgba(234,88,12,.35);
-}
-.logo-nome{font-size:28px;font-weight:800;color:var(--escuro);}
-.logo-sub{font-size:13px;color:var(--sub);margin-top:3px;}
+        #tela-setup {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: white;
+            z-index: 99999;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-upload {
+            background: var(--cor-laranja);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            max-width: 400px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
 
-.upload-area{
-  width:100%;max-width:420px;background:var(--bg);border-radius:16px;
-  padding:24px;border:2px dashed var(--borda);cursor:pointer;
-  display:flex;flex-direction:column;align-items:center;gap:8px;transition:border-color .2s;
-}
-.upload-area:hover,.upload-area.over{border-color:var(--laranja);}
-.upload-ic{font-size:42px;}
-.upload-txt{font-size:15px;font-weight:700;color:var(--texto);}
-.upload-sub{font-size:12px;color:var(--sub);}
-.upload-nome{font-size:13px;color:var(--laranja);font-weight:600;margin-top:4px;}
-#fileInput{display:none;}
+        #mapa-container {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 50vh;
+            background: #e5e3df;
+            z-index: 1;
+        }
+        #mapa {
+            width: 100%;
+            height: 100%;
+        }
 
-.btn-go{
-  width:100%;max-width:420px;padding:16px;border:none;border-radius:12px;
-  background:linear-gradient(135deg,var(--laranja),var(--laranja2));color:white;
-  font-size:16px;font-weight:700;cursor:pointer;margin-top:16px;
-  box-shadow:0 4px 14px rgba(234,88,12,.4);transition:transform .1s;
-}
-.btn-go:active{transform:scale(.98);}
-.btn-go:disabled{opacity:.6;cursor:not-allowed;}
+        .marker-pin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid white;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+        }
 
-/* ═══ APP LAYOUT ════════════════════════════════════════════ */
-#app{display:none;position:fixed;inset:0;flex-direction:column;}
-#app.ativo{display:flex;}
+        .btn-menu {
+            position: absolute;
+            top: 20px; left: 20px;
+            width: 45px; height: 45px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            border: none;
+            cursor: pointer;
+            z-index: 1000;
+            color: #333;
+        }
 
-/* mapa */
-#mapa-wrap{position:relative;flex:0 0 45vh;}
-#mapa{width:100%;height:100%;}
-.fab{
-  position:absolute;width:42px;height:42px;border-radius:50%;border:none;
-  background:white;box-shadow:0 2px 12px rgba(0,0,0,.2);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;font-size:18px;z-index:500;
-}
-#fab-menu{top:14px;left:14px;}
-#fab-gps{top:14px;right:14px;}
-#fab-fit{top:66px;right:14px;font-size:15px;}
+        #menu-opcoes {
+            display: none;
+            position: absolute;
+            top: 75px; left: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 2000;
+            flex-direction: column;
+            width: 260px;
+            overflow: hidden;
+        }
+        .menu-item {
+            padding: 16px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: none;
+            border-left: none; border-right: none; border-top: none;
+            text-align: left;
+            width: 100%;
+        }
 
-/* barra progresso mapa */
-#prog-map{position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(255,255,255,.4);z-index:400;}
-#prog-map-inner{height:100%;background:var(--verde);transition:width .5s;width:0%;}
+        #bottom-sheet {
+            position: absolute;
+            top: 40vh;
+            bottom: 165px;
+            left: 0; right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            padding: 20px 15px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+        .titulo-passo2 {
+            color: #d35400;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 0 15px 0;
+        }
 
-/* geocoding overlay */
-#geo-overlay{
-  display:none;position:absolute;inset:0;background:rgba(30,41,59,.75);
-  z-index:600;flex-direction:column;align-items:center;justify-content:center;gap:14px;
-  border-radius:0;
-}
-#geo-overlay.vis{display:flex;}
-.geo-spinner{
-  width:44px;height:44px;border:4px solid rgba(255,255,255,.25);
-  border-top-color:white;border-radius:50%;animation:spin .8s linear infinite;
-}
-@keyframes spin{to{transform:rotate(360deg);}}
-.geo-txt{color:white;font-size:15px;font-weight:700;}
-.geo-sub{color:rgba(255,255,255,.7);font-size:13px;}
-.geo-bar-wrap{width:200px;height:6px;background:rgba(255,255,255,.25);border-radius:99px;overflow:hidden;}
-.geo-bar{height:100%;background:var(--laranja2);border-radius:99px;transition:width .3s;width:0%;}
+        .item-lista {
+            border-bottom: 1px solid #eee;
+            padding: 12px 0;
+            cursor: pointer;
+        }
+        .item-lista.concluido { opacity: 0.5; }
+        .item-topo {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 15px;
+        }
+        .parada-titulo { color: #d35400; }
+        .parada-codigo { color: #d35400; font-size: 14px; }
+        .parada-endereco {
+            color: #444;
+            font-size: 14px;
+            margin-top: 6px;
+        }
 
-/* ═══ PAINEL INFERIOR ════════════════════════════════════════ */
-#painel{
-  flex:1;display:flex;flex-direction:column;overflow:hidden;
-  background:var(--bg);border-radius:20px 20px 0 0;
-  margin-top:-18px;box-shadow:0 -4px 20px rgba(0,0,0,.08);z-index:100;
-}
-.drag-h{width:40px;height:4px;background:var(--borda);border-radius:2px;margin:10px auto 0;}
-.abas{display:flex;padding:10px 16px 0;gap:6px;flex-shrink:0;}
-.aba{
-  flex:1;padding:9px 4px;border:none;background:none;border-radius:10px 10px 0 0;
-  font-size:13px;font-weight:700;color:var(--sub);cursor:pointer;
-  border-bottom:2px solid transparent;transition:all .2s;
-}
-.aba.on{color:var(--laranja);border-bottom-color:var(--laranja);}
-.aba-body{flex:1;overflow-y:auto;padding:10px 12px 12px;}
+        #widget-escuro {
+            position: absolute;
+            bottom: 175px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 380px;
+            background: var(--bg-escuro);
+            color: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            z-index: 20;
+            display: none;
+            box-sizing: border-box;
+        }
+        .widget-controls { position: absolute; top: 5px; right: 10px; display: flex; gap: 10px; }
+        .btn-ctrl { background: none; border: none; color: #aaa; cursor: pointer; font-size: 16px; font-weight: bold; padding: 5px; }
 
-/* cards de parada */
-.sc{
-  background:white;border-radius:14px;padding:12px;margin-bottom:8px;
-  box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer;
-  display:flex;gap:10px;align-items:flex-start;
-  border-left:4px solid var(--azul);transition:transform .15s,box-shadow .15s;
-}
-.sc:active{transform:scale(.98);}
-.sc.entregue{border-left-color:var(--verde);opacity:.65;}
-.sc.falhou{border-left-color:var(--vermelho);opacity:.65;}
-.sc.ausente{border-left-color:var(--amarelo);opacity:.65;}
-.sc.sem-coord{border-left-color:#94a3b8;}
-.sc.ativo-card{box-shadow:0 4px 16px rgba(234,88,12,.3);border-left-color:var(--laranja);}
-.sn{
-  min-width:30px;height:30px;border-radius:50%;background:var(--azul);color:white;
-  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;
-}
-.sc.entregue .sn{background:var(--verde);}
-.sc.falhou .sn{background:var(--vermelho);}
-.sc.ausente .sn{background:var(--amarelo);}
-.sc.sem-coord .sn{background:#94a3b8;}
-.sc.ativo-card .sn{background:var(--laranja);}
-.si{flex:1;min-width:0;}
-.sr{font-size:14px;font-weight:700;color:var(--escuro);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.se{font-size:12px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.sc-cod{font-size:10px;color:var(--sub);margin-top:3px;font-family:monospace;}
-.badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-top:4px;}
-.b-pend{background:#dbeafe;color:#1d4ed8;}.b-ok{background:#dcfce7;color:#15803d;}
-.b-fail{background:#fee2e2;color:#b91c1c;}.b-aus{background:#fef3c7;color:#b45309;}
-.b-sem{background:#f1f5f9;color:#64748b;}
-.sc-hora{font-size:10px;color:var(--sub);margin-top:2px;}
+        .w-topo { display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-bottom: 8px;}
+        .w-badge { background: var(--cor-azul-rota); color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .w-rua { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; }
+        .w-sub { font-size: 13px; color: #888; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* resumo */
-.rg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
-.rc{background:white;border-radius:12px;padding:14px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.05);}
-.rn{font-size:28px;font-weight:800;}
-.rl{font-size:11px;color:var(--sub);font-weight:600;margin-top:2px;}
-.pb-w{background:var(--borda);border-radius:99px;height:8px;overflow:hidden;margin:8px 0 4px;}
-.pb-i{height:100%;border-radius:99px;background:var(--verde);transition:width .5s;}
-.pb-l{font-size:12px;color:var(--sub);text-align:center;}
+        #barra-acoes-inferior {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 165px;
+            background: white;
+            padding: 10px 15px;
+            box-sizing: border-box;
+            z-index: 30;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
 
-/* ═══ PAINEL AÇÃO ════════════════════════════════════════════ */
-#pa{
-  position:fixed;bottom:0;left:0;right:0;background:var(--escuro);color:white;
-  border-radius:20px 20px 0 0;z-index:3000;
-  transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
-  padding:0 16px 30px;box-shadow:0 -8px 30px rgba(0,0,0,.4);
-}
-#pa.open{transform:translateY(0);}
-.pa-h{width:40px;height:4px;background:#475569;border-radius:2px;margin:12px auto 16px;}
-.pa-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
-.pa-num{
-  width:36px;height:36px;background:var(--laranja);border-radius:50%;
-  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0;
-}
-.pa-rua{font-size:16px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.pa-x{background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;padding:2px 4px;}
-.pa-end{font-size:12px;color:#94a3b8;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.pa-cod{font-size:11px;color:#64748b;font-family:monospace;margin-bottom:14px;}
-.pa-btns{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;}
-.pab{
-  border:none;border-radius:12px;padding:10px 4px;font-size:11px;font-weight:700;
-  display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:transform .1s;
-}
-.pab:active{transform:scale(.93);}
-.pab .ic{font-size:22px;}
-.pab-nav{background:#1e3a5f;color:#60a5fa;}
-.pab-ok{background:#14532d;color:#4ade80;}
-.pab-fail{background:#450a0a;color:#f87171;}
-.pab-aus{background:#451a03;color:#fbbf24;}
-.pa-nota-lbl{font-size:11px;color:#64748b;margin:12px 0 5px;}
-.pa-nota{
-  width:100%;padding:10px;background:#334155;border:none;border-radius:10px;
-  color:white;font-size:13px;resize:none;height:56px;font-family:inherit;
-}
-.pa-nota::placeholder{color:#475569;}
+        .banner-laranja {
+            background: var(--cor-laranja);
+            color: white;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
 
-/* ═══ MENU DRAWER ════════════════════════════════════════════ */
-#ov{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:8000;display:none;}
-#drawer{
-  position:fixed;top:0;left:-280px;width:280px;height:100%;background:white;
-  z-index:8001;transition:left .25s;display:flex;flex-direction:column;
-  box-shadow:4px 0 20px rgba(0,0,0,.2);
-}
-#drawer.open{left:0;}
-.dh{padding:48px 20px 20px;background:linear-gradient(135deg,#1e293b,#334155);}
-.dh h2{color:white;font-size:20px;font-weight:800;}
-.dh p{color:#94a3b8;font-size:13px;margin-top:4px;}
-.dl{flex:1;overflow-y:auto;}
-.di{
-  display:flex;align-items:center;gap:14px;padding:15px 20px;border:none;background:none;
-  width:100%;text-align:left;font-size:14px;font-weight:600;color:var(--escuro);cursor:pointer;
-  border-bottom:1px solid var(--borda);transition:background .15s;
-}
-.di:hover{background:var(--bg);}
-.di.danger{color:var(--vermelho);}
+        .texto-status {
+            text-align: center;
+            color: var(--cor-verde);
+            font-weight: bold;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
 
-/* ═══ SCANNER ════════════════════════════════════════════════ */
-#scanner-modal{
-  display:none;position:fixed;inset:0;background:rgba(0,0,0,.97);
-  z-index:999999;flex-direction:column;align-items:center;padding:20px;overflow-y:auto;
-}
-.sm-hd{width:100%;max-width:420px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
-.sm-title{color:white;font-size:20px;font-weight:700;}
-.sm-close{background:#dc2626;color:white;border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer;}
-#reader{width:100%;max-width:420px;border-radius:14px;overflow:hidden;background:#000;border:2px solid #334155;}
-#scan-fb{
-  color:white;margin-top:18px;font-size:17px;font-weight:700;text-align:center;
-  max-width:420px;padding:14px 20px;background:#1e293b;border-radius:12px;width:100%;
-}
+        .linha-3-botoes {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+        .btn-acao-dark {
+            flex: 1;
+            background: var(--bg-botoes);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 5px;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .btn-acao-dark svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; }
+        .btn-acao-dark .icone-verde { stroke: var(--cor-verde); }
+        .btn-acao-dark .icone-vermelho { stroke: var(--cor-vermelho); }
 
-/* ═══ TOAST ══════════════════════════════════════════════════ */
-#toast{
-  position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);
-  background:var(--escuro);color:white;padding:11px 18px;border-radius:12px;
-  font-size:13px;font-weight:600;z-index:99999;transition:transform .3s;
-  white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.35);pointer-events:none;
-}
-#toast.vis{transform:translateX(-50%) translateY(0);}
-
-/* marker personalizado */
-.mp{
-  width:32px;height:32px;border-radius:50%;border:3px solid white;color:white;
-  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;
-  box-shadow:0 3px 10px rgba(0,0,0,.4);
-}
-
-::-webkit-scrollbar{width:3px;}
-::-webkit-scrollbar-thumb{background:var(--borda);border-radius:99px;}
-</style>
+        #modalScanner {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 999999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+    </style>
 </head>
 <body>
 
-<div id="tela-setup">
-  <div class="logo-wrap">
-    <div class="logo-box">📦</div>
-    <div class="logo-nome">Rota Fácil</div>
-    <div class="logo-sub">Otimização de entregas inteligente</div>
-  </div>
-
-  <div class="upload-area" id="drop-zone" onclick="document.getElementById('fileInput').click()">
-    <span class="upload-ic">📂</span>
-    <span class="upload-txt">Toque para selecionar arquivo</span>
-    <span class="upload-sub">PDF, Excel (.xlsx), CSV ou TXT com os códigos Shopee</span>
-    <span class="upload-nome" id="fname">Nenhum arquivo selecionado</span>
-    <input type="file" id="fileInput" accept=".pdf,.txt,.csv,.xlsx,.xls">
-  </div>
-
-  <button class="btn-go" id="btn-go" onclick="processar()">🚀 Carregar Rota</button>
-</div>
-
-<div id="app">
-  <div id="mapa-wrap">
-    <div id="mapa"></div>
-    <button class="fab" id="fab-menu" onclick="abrirMenu()">☰</button>
-    <button class="fab" id="fab-gps" onclick="irGPS()">📍</button>
-    <button class="fab" id="fab-fit" onclick="fitAll()">⊞</button>
-    <div id="prog-map"><div id="prog-map-inner"></div></div>
-    <div id="geo-overlay">
-      <div class="geo-spinner"></div>
-      <div class="geo-txt" id="geo-txt">Localizando endereços...</div>
-      <div class="geo-sub" id="geo-sub">Aguarde, buscando coordenadas precisas</div>
-      <div class="geo-bar-wrap"><div class="geo-bar" id="geo-bar"></div></div>
+    <div id="tela-setup">
+        <h1 style="color: #ea580c;">📦 Rota Fácil</h1>
+        <p style="color: #666; text-align: center;">Carregue sua lista de entregas (PDF, Excel, CSV ou TXT).</p>
+       
+        <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
+       
+        <button class="btn-upload" onclick="processarArquivoFisico()">Processar Rota Ativa</button>
     </div>
-  </div>
 
-  <div id="painel">
-    <div class="drag-h"></div>
-    <div class="abas">
-      <button class="aba on" id="tab-p" onclick="tab('p')">📍 Paradas</button>
-      <button class="aba" id="tab-r" onclick="tab('r')">📊 Resumo</button>
+    <div id="mapa-container">
+        <div id="mapa"></div>
     </div>
-    <div class="aba-body" id="body-p"></div>
-    <div class="aba-body" id="body-r" style="display:none"></div>
-  </div>
-</div>
 
-<div id="pa">
-  <div class="pa-h"></div>
-  <div class="pa-top">
-    <div class="pa-num" id="pa-num">1</div>
-    <div class="pa-rua" id="pa-rua">—</div>
-    <button class="pa-x" onclick="fecharPA()">✕</button>
-  </div>
-  <div class="pa-end" id="pa-end">—</div>
-  <div class="pa-cod" id="pa-cod">—</div>
-  <div class="pa-btns">
-    <button class="pab pab-nav" onclick="navegar()"><span class="ic">🧭</span>Navegar</button>
-    <button class="pab pab-ok"  onclick="reg('entregue')"><span class="ic">✅</span>Entregue</button>
-    <button class="pab pab-fail" onclick="reg('falhou')"><span class="ic">❌</span>Não entre...</button>
-    <button class="pab pab-aus" onclick="reg('ausente')"><span class="ic">🚪</span>Ausente</button>
-  </div>
-  <div class="pa-nota-lbl">📝 Observação (opcional)</div>
-  <textarea class="pa-nota" id="pa-nota" placeholder="Ex: Deixei na portaria, vizinho recebeu..."></textarea>
-</div>
+    <button class="btn-menu" onclick="toggleMenu()">☰</button>
+    <div id="menu-opcoes">
+        <button class="menu-item" onclick="abrirScanner()">📷 Iniciar Scanner</button>
+        <button class="menu-item" onclick="executarOtimizacaoTSP()">⚡ Otimizar Rota Atual</button>
+        <button class="menu-item" onclick="exportarRelatorioCSV()">📥 Exportar Relatório</button>
+        <button class="menu-item" onclick="forcarBaixaManual()">✍️ Digitar Código Manual</button>
+        <button class="menu-item" style="color: #dc2626;" onclick="limparSessao()">🗑️ Apagar Rota</button>
+    </div>
 
-<div id="ov" onclick="fecharMenu()"></div>
-<div id="drawer">
-  <div class="dh">
-    <h2>📦 Rota Fácil</h2>
-    <p id="dh-info">0 paradas</p>
-  </div>
-  <div class="dl">
-    <button class="di" onclick="abrirScanner();fecharMenu()">📷 Scanner de Código</button>
-    <button class="di" onclick="digitarCodigo();fecharMenu()">✍️ Digitar Código</button>
-    <button class="di" onclick="otimizar();fecharMenu()">⚡ Otimizar Rota (TSP)</button>
-    <button class="di" onclick="regeocod();fecharMenu()">🗺️ Regeocodificar Endereços</button>
-    <button class="di" onclick="exportCSV();fecharMenu()">📥 Exportar Relatório CSV</button>
-    <button class="di" onclick="novaRota();fecharMenu()">🔄 Carregar Nova Rota</button>
-    <button class="di danger" onclick="limpar();fecharMenu()">🗑️ Apagar Rota</button>
-  </div>
-</div>
+    <div id="bottom-sheet">
+        <h2 class="titulo-passo2">Passo 2: Processar Rota Ativa</h2>
+        <div id="container-lista"></div>
+    </div>
 
-<div id="scanner-modal">
-  <div class="sm-hd">
-    <div class="sm-title">📷 Scanner</div>
-    <button class="sm-close" onclick="fecharScanner()">✕ Fechar</button>
-  </div>
-  <div id="reader"></div>
-  <div id="scan-fb">Aguardando leitura do código...</div>
-</div>
+    <div id="widget-escuro">
+        <div class="widget-controls">
+            <button class="btn-ctrl" onclick="minimizarWidget()">−</button>
+            <button class="btn-ctrl" onclick="fecharWidget()">×</button>
+        </div>
+        <div class="w-topo">
+            <span id="wg-num">01</span>
+            <span class="w-badge" id="wg-badge">1</span>
+        </div>
+        <h3 class="w-rua" id="wg-rua">Rua Selecionada, 00</h3>
+        <p class="w-sub" id="wg-detalhe">Detalhes e código da encomenda</p>
+    </div>
 
-<div id="toast"></div>
+    <div id="barra-acoes-inferior">
+        <div class="banner-laranja">
+            ⚡ <span id="contador-restantes">0</span> Paradas Restantes (Rota Otimizada)
+        </div>
+        <div class="texto-status">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--cor-verde)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            Rota em Execução!
+        </div>
+        <div class="linha-3-botoes">
+            <button class="btn-acao-dark" onclick="navegarApp()">
+                <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                Abrir app
+            </button>
+            <button class="btn-acao-dark" onclick="registrarAcaoFinal('falhou')">
+                <svg class="icone-vermelho" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                Não entre...
+            </button>
+            <button class="btn-acao-dark" onclick="registrarAcaoFinal('entregue')">
+                <svg class="icone-verde" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+                Entregue
+            </button>
+        </div>
+    </div>
 
-<script>
-// ──────────────────────────────────────────────────────────
-//  ESTADO GLOBAL
-// ──────────────────────────────────────────────────────────
-let bd = JSON.parse(localStorage.getItem('rf3')) || [];
-let idxAtivo = null;
-let map, layers, posMarker;
-let scanInst = null, scanBusy = false;
-let abaAtual = 'p';
+    <div id="modalScanner">
+        <button onclick="fecharScanner()" style="padding: 12px; margin-bottom: 20px; background: #dc2626; color: white; border: none; border-radius: 8px; font-size: 16px; width: 100%; max-width: 400px; font-weight: bold;">✕ Fechar Scanner</button>
+        <div id="reader" style="width: 100%; max-width: 400px; background: #000; border-radius: 8px; overflow: hidden; border: 2px solid #333;"></div>
+        <div id="scannerFeedback" style="color: white; margin-top: 20px; font-size: 18px; font-weight: bold; text-align: center;">Aguardando leitura do código...</div>
+    </div>
 
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    <script>
+        let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
+        let html5QrcodeScanner = null;
+        let indexAtivo = null;
+        let processandoLeitura = false;
+       
+        let map;
+        let layerMarkers = [];
+        let mapPolyline = null;
 
-// ──────────────────────────────────────────────────────────
-//  SETUP — ARQUIVO
-// ──────────────────────────────────────────────────────────
-document.getElementById('fileInput').addEventListener('change', function(){
-  if(this.files[0]) document.getElementById('fname').textContent = '📄 ' + this.files[0].name;
-});
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-// Drag & drop
-const dz = document.getElementById('drop-zone');
-['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('over'); }));
-['dragleave','drop'].forEach(ev => dz.addEventListener(ev, () => dz.classList.remove('over')));
-dz.addEventListener('drop', e => {
-  e.preventDefault();
-  const f = e.dataTransfer.files[0];
-  if(f){ document.getElementById('fileInput').files = e.dataTransfer.files; document.getElementById('fname').textContent = '📄 '+f.name; }
-});
+        window.onload = () => {
+            inicializarMapa();
+           
+            if (bdRotas.length > 0) {
+                document.getElementById('tela-setup').style.display = 'none';
+                map.invalidateSize();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+            }
+        };
 
-async function processar(){
-  const inp = document.getElementById('fileInput');
-  if(!inp.files.length) return toast('⚠️ Selecione um arquivo primeiro');
-  const f = inp.files[0];
-  const btn = document.getElementById('btn-go');
-  btn.disabled = true; btn.textContent = '⏳ Processando...';
-  try {
-    const n = f.name.toLowerCase();
-    if(n.endsWith('.xlsx')||n.endsWith('.xls')) await lerExcel(f);
-    else if(n.endsWith('.pdf')) await lerPDF(f);
-    else await lerTexto(f);
-  } catch(e){ toast('❌ Erro ao ler arquivo: '+e.message); }
-  btn.disabled = false; btn.textContent = '🚀 Carregar Rota';
-}
-
-function lerExcel(f){ return new Promise(res=>{
-  const r=new FileReader();
-  r.onload=e=>{
-    const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-    if(!rows.length){ toast('⚠️ Planilha vazia'); return; }
-
-    // ── Detecta colunas pelo cabeçalho (padrão Shopee) ──
-    const header = rows[0].map(c=>String(c).toLowerCase());
-    const iCod  = header.findIndex(h=>h.includes('spx')||h.includes('tracking')||h.includes('tn'));
-    const iEnd  = header.findIndex(h=>h.includes('destination')||h.includes('address')||h.includes('endereco')||h.includes('endereço'));
-    const iBairro = header.findIndex(h=>h.includes('bairro')||h.includes('district'));
-    const iCidade = header.findIndex(h=>h.includes('city')||h.includes('cidade'));
-    const iCEP   = header.findIndex(h=>h.includes('zip')||h.includes('postal')||h.includes('cep'));
-    const iLat   = header.findIndex(h=>h.includes('lat'));
-    const iLon   = header.findIndex(h=>h.includes('lon')||h.includes('lng'));
-
-    // Se encontrou colunas Shopee, usa modo estruturado
-    if(iCod>=0 && iEnd>=0){
-      estruturarExcel(rows.slice(1), {iCod,iEnd,iBairro,iCidade,iCEP,iLat,iLon});
-    } else {
-      // Fallback: une colunas como texto e usa regex
-      const linhas=rows.map(row=>row.map(c=>String(c).trim()).join(' ').trim()).filter(l=>l.length>3);
-      estruturar(linhas.join('\n'));
-    }
-    res();
-  };
-  r.readAsArrayBuffer(f);
-});}
-
-function estruturarExcel(rows, {iCod,iEnd,iBairro,iCidade,iCEP,iLat,iLon}){
-  const novo=[];
-  const codVistos=new Set();
-
-  for(const row of rows){
-    const cod = String(row[iCod]||'').trim().toUpperCase();
-    if(!cod || codVistos.has(cod)) continue;
-    // Valida padrão de código (2 letras + dígitos)
-    if(!/^[A-Z]{2}\d{9,15}/.test(cod)) continue;
-    codVistos.add(cod);
-
-    // Monta endereço: Rua, Bairro, Cidade, CEP
-    const partes=[
-      String(row[iEnd]||'').trim(),
-      iBairro>=0 ? String(row[iBairro]||'').trim() : '',
-      iCidade>=0 ? String(row[iCidade]||'').trim() : '',
-      iCEP>=0    ? String(row[iCEP]||'').trim()    : '',
-    ].filter(p=>p.length>0);
-    const end = partes.join(', ');
-
-    // Lat/Lon já existentes no arquivo
-    const lat = iLat>=0 && row[iLat]!=='' ? parseFloat(row[iLat]) : null;
-    const lon = iLon>=0 && row[iLon]!=='' ? parseFloat(row[iLon]) : null;
-    const temCoord = lat!==null && lon!==null && !isNaN(lat) && !isNaN(lon);
-
-    novo.push({
-      id: novo.length,
-      codigo: cod,
-      endereco: end,
-      status: 'pendente',
-      timestamp: null,
-      nota: '',
-      lat: temCoord ? lat : null,
-      lon: temCoord ? lon : null,
-      geocodStatus: temCoord ? 'ok' : 'pendente'
-    });
-  }
-
-  if(novo.length===0) return toast('⚠️ Nenhum código Shopee localizado na planilha');
-  bd=novo; salvar(); mostrarApp();
-  const semC=novo.filter(e=>!e.lat).length;
-  toast(`✅ ${novo.length} paradas carregadas${semC>0?' · '+semC+' sem coord.':''}`);
-  if(semC>0) setTimeout(()=>geocodificar(true),500);
-}
-
-async function lerPDF(f){
-  const buf=await f.arrayBuffer();
-  const pdf=await pdfjsLib.getDocument(new Uint8Array(buf)).promise;
-  let txt='';
-  for(let p=1;p<=pdf.numPages;p++){
-    const pg=await pdf.getPage(p);
-    const ct=await pg.getTextContent();
-    const items=ct.items.sort((a,b)=>
-      Math.abs(a.transform[5]-b.transform[5])<5 ? a.transform[4]-b.transform[4] : b.transform[5]-a.transform[5]
-    );
-    let ly=null;
-    let lx=null;
-    for(const it of items){
-      if(ly!==null && Math.abs(it.transform[5]-ly)>5){
-        txt+='\n';
-        lx=null;
-      }
-      // Verifica o espaçamento horizontal real para evitar que acentos criem espaços falsos
-      if(lx!==null && Math.abs(it.transform[5]-ly)<=5){
-        let gap = it.transform[4] - lx;
-        if(gap > 3) txt+=' ';
-      }
-      txt+=it.str;
-      ly=it.transform[5];
-      lx=it.transform[4] + (it.width || 0);
-    }
-    txt+='\n';
-  }
-  estruturar(txt);
-}
-
-function lerTexto(f){ return new Promise(res=>{
-  const r=new FileReader();
-  r.onload=e=>{
-    const arr = new Uint8Array(e.target.result);
-    // Validação e Fallback de codificação UTF-8 / Windows-1252 para evitar quebra de acentos
-    let isUTF8 = true;
-    for (let i = 0; i < arr.length; i++) {
-      if (arr[i] > 127) {
-        if ((arr[i] & 0xE0) === 0xC0 && i + 1 < arr.length && (arr[i+1] & 0xC0) === 0x80) {
-          i++;
-        } else if ((arr[i] & 0xF0) === 0xE0 && i + 2 < arr.length && (arr[i+1] & 0xC0) === 0x80 && (arr[i+2] & 0xC0) === 0x80) {
-          i += 2;
-        } else {
-          isUTF8 = false;
-          break;
+        function inicializarMapa() {
+            map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
         }
-      }
-    }
-    const decoder = new TextDecoder(isUTF8 ? 'utf-8' : 'iso-8859-1');
-    estruturar(decoder.decode(arr));
-    res();
-  };
-  r.readAsArrayBuffer(f);
-});}
 
-// ──────────────────────────────────────────────────────────
-//  PARSING — ESTRUTURAÇÃO DO BANCO
-// ──────────────────────────────────────────────────────────
-function estruturar(texto){
-  // Identifica se o arquivo de texto bruto vem estruturado de um PDF/Relatório do Circuit
-  const isCircuit = texto.includes('Powered by Spoke') || texto.includes('Arrival Time') || texto.includes('AT2026');
-  const novo = [];
-  const codVistos = new Set();
-  const regexCod = /\b([A-Z]{2}\d{9,15}[A-Z]{0,2})\b/gi;
+        function plotarNoMapa() {
+            if (!map) return;
+           
+            layerMarkers.forEach(m => map.removeLayer(m));
+            layerMarkers = [];
+            if (mapPolyline) map.removeLayer(mapPolyline);
 
-  if (isCircuit) {
-    // Modo de Extração Avançada para Circuit PDF:
-    // Mapeia os dados diretamente pelo bloco que cerca o código de barras, contornando as quebras de linha internas da tabela
-    let match;
-    while ((match = regexCod.exec(texto)) !== null) {
-      const cod = match[1].toUpperCase();
-      if (codVistos.has(cod)) continue;
-      codVistos.add(cod);
+            if (bdRotas.length === 0) return;
 
-      // Coleta o bloco de texto imediatamente à frente do código (campo de Notas do Circuit que traz o endereço inteiro)
-      let trechoApos = texto.slice(match.index + match[0].length);
-      const fimCampo = trechoApos.search(/"/);
-      if (fimCampo !== -1) {
-        trechoApos = trechoApos.slice(0, fimCampo);
-      }
+            let bounds = [];
+            let latlngsLinha = [];
 
-      // Normaliza as quebras e pontuações internas para criar uma string limpa de geocodificação
-      let end = trechoApos
-        .replace(/\s+/g, ' ')
-        .replace(/^[;\s\-,:]+/, '')
-        .replace(/[;\s\-,:]+$/, '')
-        .replace(/;/g, ',')
-        .replace(/,+/g, ',')
-        .trim();
+            bdRotas.forEach((e, idx) => {
+                let cor = e.status === 'pendente' ? '#3b82f6' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
+               
+                let customIcon = L.divIcon({
+                    className: 'custom-pin-wrapper',
+                    html: `<div class="marker-pin" style="background-color: ${cor};">${idx + 1}</div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
 
-      if (end.length < 5) end = 'Endereço não identificado';
+                let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
+               
+                marker.on('click', () => activarWidget(idx));
+               
+                layerMarkers.push(marker);
+                bounds.push([e.lat, e.lon]);
 
-      novo.push({
-        id: novo.length,
-        codigo: cod,
-        endereco: end,
-        status: 'pendente',
-        timestamp: null,
-        nota: '',
-        lat: null,
-        lon: null,
-        geocodStatus: 'pendente'
-      });
-    }
-  } else {
-    // Modo tradicional linha por linha para planilhas CSV/TXT planos de texto contínuo
-    const linhas = texto.split(/\r?\n/);
-    for(const linha of linhas){
-      const l = linha.trim();
-      if(l.length < 5) continue;
+                if(e.status === 'pendente') {
+                    latlngsLinha.push([e.lat, e.lon]);
+                }
+            });
 
-      const m = l.match(regexCod);
-      if(!m) continue;
+            if(latlngsLinha.length > 1) {
+                mapPolyline = L.polyline(latlngsLinha, {color: '#3b82f6', weight: 4, opacity: 0.8}).addTo(map);
+            }
 
-      const cod = m[0].toUpperCase();
-      if(codVistos.has(cod)) continue;
-      codVistos.add(cod);
-
-      let end = l
-        .replace(new RegExp('\\b'+cod+'\\b','i'), '')
-        .replace(/[;\t|]+/g, ' ')
-        .replace(/\s{2,}/g, ' ')
-        .trim()
-        .replace(/^[,\-\s:]+|[,\-\s:]+$/g, '');
-
-      if(!end || end.length < 4) end = 'Endereço não informado';
-
-      novo.push({
-        id: novo.length,
-        codigo: cod,
-        endereco: end,
-        status: 'pendente',
-        timestamp: null,
-        nota: '',
-        lat: null,
-        lon: null,
-        geocodStatus: 'pendente'
-      });
-    }
-  }
-
-  if(novo.length === 0) return toast('⚠️ Nenhum código no padrão Shopee/Correios localizado');
-
-  bd = novo;
-  salvar();
-  mostrarApp();
-  toast(`✅ ${bd.length} paradas carregadas`);
-  // Executa mapeamento geográfico imediato em plano de fundo
-  setTimeout(()=>geocodificar(false), 300);
-}
-
-// ──────────────────────────────────────────────────────────
-//  INICIAR APP
-// ──────────────────────────────────────────────────────────
-function mostrarApp(){
-  document.getElementById('tela-setup').style.display = 'none';
-  document.getElementById('app').classList.add('ativo');
-  setTimeout(()=>{
-    criarMapa();
-    map.invalidateSize();
-    renderLista(); renderResumo(); plotar(); infoMenu();
-  }, 80);
-}
-
-function criarMapa(){
-  if(map) return;
-  // ── Carto Voyager — aparência limpa, sem dependência de chaves de API pagas ──
-  map = L.map('mapa', { zoomControl:false, attributionControl:false });
-  L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    { subdomains:'abcd', maxZoom:20 }
-  ).addTo(map);
-  L.control.attribution({ prefix:'© CartoDB © OSM' }).addTo(map);
-  layers = L.layerGroup().addTo(map);
-  map.setView([-23.5505,-46.6333],12);
-
-  if(navigator.geolocation){
-    navigator.geolocation.watchPosition(pos=>{
-      const {latitude:la, longitude:lo} = pos.coords;
-      if(!posMarker){
-        const ic = L.divIcon({className:'',html:`<div style="width:18px;height:18px;background:#2563eb;border:3px solid white;border-radius:50%;box-shadow:0 0 0 5px rgba(37,99,235,.22)"></div>`,iconSize:[18,18],iconAnchor:[9,9]});
-        posMarker = L.marker([la,lo],{icon:ic,zIndexOffset:1000}).addTo(map);
-      } else posMarker.setLatLng([la,lo]);
-    },{enableHighAccuracy:true,maximumAge:5000});
-  }
-}
-
-// ──────────────────────────────────────────────────────────
-//  PLOTAR MARCADORES NO MAPA
-// ──────────────────────────────────────────────────────────
-function plotar(){
-  if(!map||!layers) return;
-  layers.clearLayers();
-  const pts=[], pendPts=[];
-
-  bd.forEach((e,i)=>{
-    if(!e.lat||!e.lon) return;
-    const cor = e.status==='pendente'?'#2563eb':e.status==='entregue'?'#16a34a':e.status==='falhou'?'#dc2626':'#d97706';
-    const ativo = i===idxAtivo;
-    const ic = L.divIcon({
-      className:'',
-      html:`<div class="mp" style="background:${ativo?'#ea580c':cor};transform:${ativo?'scale(1.35)':'scale(1)'};z-index:${ativo?9999:1}">${i+1}</div>`,
-      iconSize:[32,32], iconAnchor:[16,16]
-    });
-    const mk = L.marker([e.lat,e.lon],{icon:ic}).addTo(layers);
-    mk.on('click',()=>ativar(i));
-    pts.push([e.lat,e.lon]);
-    if(e.status==='pendente') pendPts.push([e.lat,e.lon]);
-  });
-
-  if(pendPts.length>1){
-    L.polyline(pendPts,{color:'#2563eb',weight:3,opacity:.5,dashArray:'9,7'}).addTo(layers);
-  }
-  if(pts.length>0 && idxAtivo===null){
-    map.fitBounds(pts,{padding:[40,40],maxZoom:16});
-  }
-}
-
-function fitAll(){
-  const pts=bd.filter(e=>e.lat&&e.lon).map(e=>[e.lat,e.lon]);
-  if(pts.length>0) map.fitBounds(pts,{padding:[40,40],maxZoom:16});
-}
-
-function irGPS(){
-  if(posMarker) map.flyTo(posMarker.getLatLng(),17,{animate:true,duration:.8});
-  else {
-    navigator.geolocation&&navigator.geolocation.getCurrentPosition(
-      p=>map.flyTo([p.coords.latitude,p.coords.longitude],17),
-      ()=>toast('⚠️ GPS indisponível')
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────
-//  GEOCODIFICAÇÃO
-//  Estratégia híbrida: 1º Busca exata de CEP via BrasilAPI → 2º Indexador Geográfico Photon
-// ──────────────────────────────────────────────────────────
-async function geocodificar(silencioso=false){
-  const fila = bd.filter(e=>e.geocodStatus!=='ok');
-  if(fila.length===0){
-    if(!silencioso) toast('✅ Todos endereços já geocodificados');
-    return;
-  }
-
-  const ov = document.getElementById('geo-overlay');
-  const gtxt = document.getElementById('geo-txt');
-  const gsub = document.getElementById('geo-sub');
-  const gbar = document.getElementById('geo-bar');
-  ov.classList.add('vis');
-  let ok=0;
-
-  for(const e of fila){
-    gtxt.textContent = `Localizando parada ${e.id+1} de ${bd.length}`;
-    gsub.textContent  = e.endereco.substring(0,50)+'...';
-    gbar.style.width  = Math.round(ok/fila.length*100)+'%';
-
-    const cep = extrairCEP(e.endereco);
-    if(cep){
-      const res = await geocodCEP(cep);
-      if(res){ e.lat=res.lat; e.lon=res.lon; e.geocodStatus='ok'; ok++; salvar(); plotar(); renderLista(); continue; }
-    }
-
-    const res2 = await geocodPhoton(e.endereco);
-    if(res2){ e.lat=res2.lat; e.lon=res2.lon; e.geocodStatus='ok'; ok++; }
-    else { e.geocodStatus='erro'; }
-
-    salvar(); plotar(); renderLista();
-  }
-
-  ov.classList.remove('vis');
-  gbar.style.width='0%';
-  fitAll();
-  renderLista(); renderResumo();
-  toast(`🗺️ ${ok} de ${fila.length} endereços localizados`);
-}
-
-function regeocod(){
-  bd.forEach(e=>{ if(e.geocodStatus!=='ok'){ e.lat=null; e.lon=null; e.geocodStatus='pendente'; }});
-  geocodificar(false);
-}
-
-function extrairCEP(end){
-  const m = end.match(/\b(\d{5})-?(\d{3})\b/);
-  if(!m) return null;
-  return m[1]+m[2];
-}
-
-async function geocodCEP(cep){
-  try{
-    const r = await fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`,{signal:AbortSignal.timeout(5000)});
-    if(!r.ok) return null;
-    const d = await r.json();
-    if(d.location?.coordinates?.latitude){
-      return {lat: d.location.coordinates.latitude, lon: d.location.coordinates.longitude};
-    }
-    return null;
-  }catch(e){ return null; }
-}
-
-async function geocodPhoton(end){
-  try{
-    const q = encodeURIComponent(end.replace(/\s+/g,' ').trim()+', Brasil');
-    const r = await fetch(`https://photon.komoot.io/api/?q=${q}&limit=1&lang=pt`,{signal:AbortSignal.timeout(8000)});
-    if(!r.ok) return null;
-    const d = await r.json();
-    const f = d.features?.[0];
-    if(!f) return null;
-    const [lon,lat] = f.geometry.coordinates;
-    return {lat,lon};
-  }catch(e){ return null; }
-}
-
-const sleep = ms => new Promise(r=>setTimeout(r,ms));
-
-// ──────────────────────────────────────────────────────────
-//  OTIMIZAÇÃO DE ROTA — Nearest Neighbor + Algoritmo Heurístico 2-opt
-// ──────────────────────────────────────────────────────────
-function otimizar(){
-  const pen = bd.filter(e=>e.status==='pendente'&&e.lat&&e.lon);
-  const conc = bd.filter(e=>e.status!=='pendente');
-  const semCoord = bd.filter(e=>e.status==='pendente'&&(!e.lat||!e.lon));
-
-  if(pen.length<2) return toast('⚠️ Precisa de pelo menos 2 paradas com coordenadas');
-
-  let inicio = posMarker
-    ? {lat:posMarker.getLatLng().lat, lon:posMarker.getLatLng().lng}
-    : pen[0];
-
-  let pool=[...pen], rota=[];
-  let atual=inicio;
-  while(pool.length>0){
-    let best=0, bestD=Infinity;
-    pool.forEach((p,i)=>{ const d=geo(atual,p); if(d<bestD){bestD=d;best=i;} });
-    rota.push(pool.splice(best,1)[0]);
-    atual=rota[rota.length-1];
-  }
-
-  rota = doisOpt(rota);
-
-  bd = [...conc, ...semCoord, ...rota];
-  bd.forEach((e,i)=>e.id=i);
-  salvar(); idxAtivo=null;
-  renderLista(); renderResumo(); plotar();
-  toast(`⚡ Rota otimizada! ${rota.length} paradas reordenadas`);
-}
-
-function doisOpt(rota){
-  let melhora = true;
-  while(melhora){
-    melhora = false;
-    for(let i=0;i<rota.length-1;i++){
-      for(let j=i+2;j<rota.length;j++){
-        const antes = geo(rota[i],rota[i+1]) + geo(rota[j],rota[(j+1)%rota.length]);
-        const depois= geo(rota[i],rota[j])   + geo(rota[i+1],rota[(j+1)%rota.length]);
-        if(depois < antes - 1e-9){
-          rota.splice(i+1,j-i,...rota.slice(i+1,j+1).reverse());
-          melhora=true;
+            if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [30, 30] });
+            }
         }
-      }
-    }
-  }
-  return rota;
-}
 
-function geo(a,b){
-  return Math.sqrt((a.lat-b.lat)**2+(a.lon-b.lon)**2);
-}
+        function emitirBip() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(950, ctx.currentTime);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.12);
+            } catch (e) { console.log("Áudio indisponível."); }
+        }
 
-// ──────────────────────────────────────────────────────────
-//  RENDERIZAÇÃO — LISTA & RESUMO
-// ──────────────────────────────────────────────────────────
-function renderLista(){
-  const c = document.getElementById('body-p');
-  if(bd.length===0){ c.innerHTML=`<div style="text-align:center;padding:40px 20px;color:var(--sub)"><div style="font-size:48px">📭</div><p style="font-weight:700;color:var(--texto);margin:10px 0 4px">Sem paradas</p><span style="font-size:13px">Carregue um arquivo de rota</span></div>`; return; }
-  c.innerHTML='';
-  bd.forEach((e,i)=>{
-    const d=document.createElement('div');
-    const p=e.endereco.split(',');
-    const badges={pendente:'<span class="badge b-pend">● Pendente</span>',entregue:'<span class="badge b-ok">✓ Entregue</span>',falhou:'<span class="badge b-fail">✕ Não entregue</span>',ausente:'<span class="badge b-aus">⚠ Ausente</span>'};
-    const semC = !e.lat?'sem-coord':'';
-    const ativoC = i===idxAtivo?'ativo-card':'';
-    d.className=`sc ${e.status!=='pendente'?e.status:''} ${semC} ${ativoC}`;
-    d.innerHTML=`
-      <div class="sn">${i+1}</div>
-      <div class="si">
-        <div class="sr">${p[0]||e.endereco}</div>
-        <div class="se">${p.slice(1).join(',').trim()||''}</div>
-        <div class="sc-cod">${e.codigo} ${!e.lat?'<span style="color:#f97316">⚠ sem coord.</span>':''}</div>
-        ${badges[e.status]||''}
-        ${e.timestamp?`<div class="sc-hora">⏱ ${e.timestamp}${e.nota?' · '+e.nota:''}</div>`:''}
-      </div>`;
-    d.onclick=()=>ativar(i);
-    c.appendChild(d);
-  });
-}
+        function falarTexto(texto) {
+            try {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const fala = new SpeechSynthesisUtterance(texto);
+                    fala.lang = 'pt-BR';
+                    fala.rate = 1.0;
+                    fala.pitch = 1.0;
+                    window.speechSynthesis.speak(fala);
+                }
+            } catch (e) { console.log("Síntese de voz indisponível."); }
+        }
 
-function renderResumo(){
-  const total=bd.length;
-  const ok=bd.filter(e=>e.status==='entregue').length;
-  const fail=bd.filter(e=>e.status==='falhou').length;
-  const aus=bd.filter(e=>e.status==='ausente').length;
-  const pend=bd.filter(e=>e.status==='pendente').length;
-  const semC=bd.filter(e=>!e.lat).length;
-  const pct=total?Math.round((total-pend)/total*100):0;
-  document.getElementById('body-r').innerHTML=`
-    <div class="rg">
-      <div class="rc"><div class="rn" style="color:var(--azul)">${pend}</div><div class="rl">⏳ Pendentes</div></div>
-      <div class="rc"><div class="rn" style="color:var(--verde)">${ok}</div><div class="rl">✅ Entregues</div></div>
-      <div class="rc"><div class="rn" style="color:var(--vermelho)">${fail}</div><div class="rl">❌ Não entregues</div></div>
-      <div class="rc"><div class="rn" style="color:var(--amarelo)">${aus}</div><div class="rl">🚪 Ausentes</div></div>
-    </div>
-    <div style="background:white;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-        <span style="font-weight:700;font-size:14px">Progresso da Rota</span>
-        <span style="font-weight:800;color:var(--verde)">${pct}%</span>
-      </div>
-      <div class="pb-w"><div class="pb-i" style="width:${pct}%"></div></div>
-      <div class="pb-l">${total-pend} de ${total} paradas concluídas</div>
-    </div>
-    <div style="background:white;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:10px;">
-      <div style="font-weight:700;font-size:14px;margin-bottom:6px">Taxa de sucesso</div>
-      <div style="font-size:30px;font-weight:800;color:${ok>0?'var(--verde)':'var(--sub)'}">${(total-pend)>0?Math.round(ok/(total-pend)*100):0}%</div>
-      <div style="font-size:12px;color:var(--sub);margin-top:3px">das entregas finalizadas foram bem-sucedidas</div>
-    </div>
-    ${semC>0?`<div style="background:#fff7ed;border-radius:12px;padding:14px;border:1px solid #fdba74;font-size:13px;color:#c2410c">
-      ⚠️ <strong>${semC} endereço${semC>1?'s':''}</strong> sem coordenadas. Use <strong>🗺️ Geocodificar</strong> no menu para localizá-los no mapa.
-    </div>`:''}`;
-  document.getElementById('prog-map-inner').style.width = pct+'%';
-}
+        async function processarArquivoFisico() {
+            const input = document.getElementById('arquivoPlanilha');
+            if(input.files.length === 0) return alert("Selecione um arquivo de rota primeiro.");
+            const arquivo = input.files[0];
 
-function infoMenu(){
-  const p=bd.filter(e=>e.status==='pendente').length;
-  document.getElementById('dh-info').textContent=`${bd.length} paradas · ${p} pendentes`;
-}
+            document.querySelector('.btn-upload').innerText = "Processando arquivo...";
+            const nomeArquivo = arquivo.name.toLowerCase();
 
-function tab(t){
-  abaAtual=t;
-  document.getElementById('body-p').style.display = t==='p'?'block':'none';
-  document.getElementById('body-r').style.display = t==='r'?'block':'none';
-  document.getElementById('tab-p').classList.toggle('on',t==='p');
-  document.getElementById('tab-r').classList.toggle('on',t==='r');
-}
+            if (nomeArquivo.endsWith('.xlsx') || nomeArquivo.endsWith('.xls')) {
+                const leitor = new FileReader();
+                leitor.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                   
+                    let linhasTexto = [];
+                    json.forEach(row => {
+                        if (row && row.length > 0) {
+                            let linhaStr = row.map(cell => cell !== null && cell !== undefined ? String(cell).trim() : "").join(" ").trim();
+                            if (linhaStr.length > 5) {
+                                linhasTexto.push(linhaStr);
+                            }
+                        }
+                    });
+                    estruturarBancoDeDados(linhasTexto.join("\n"));
+                };
+                leitor.readAsArrayBuffer(arquivo);
 
-// ──────────────────────────────────────────────────────────
-//  PAINEL DE AÇÃO
-// ──────────────────────────────────────────────────────────
-function ativar(i){
-  idxAtivo=i;
-  const e=bd[i];
-  document.getElementById('pa-num').textContent=i+1;
-  const p=e.endereco.split(',');
-  document.getElementById('pa-rua').textContent=p[0]||e.endereco;
-  document.getElementById('pa-end').textContent=p.slice(1).join(',').trim()||e.endereco;
-  document.getElementById('pa-cod').textContent=e.codigo;
-  document.getElementById('pa-nota').value=e.nota||'';
-  document.getElementById('pa').classList.add('open');
-  if(e.lat&&e.lon) map.flyTo([e.lat,e.lon],17,{animate:true,duration:.8});
-  renderLista(); plotar();
-}
+            } else if (nomeArquivo.endsWith('.pdf')) {
+                const leitor = new FileReader();
+                leitor.onload = async function() {
+                    try {
+                        const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+                        let textoCompleto = "";
+                       
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const content = await page.getTextContent();
+                           
+                            let items = content.items.sort((a, b) => {
+                                if (Math.abs(a.transform[5] - b.transform[5]) < 5) return a.transform[4] - b.transform[4];
+                                return b.transform[5] - a.transform[5];
+                            });
+                           
+                            let textoPagina = "";
+                            let lastY = null;
+                           
+                            for (let item of items) {
+                                if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) textoPagina += "\n";
+                                textoPagina += item.str + " ";
+                                lastY = item.transform[5];
+                            }
+                            textoCompleto += textoPagina + "\n";
+                        }
+                        estruturarBancoDeDados(textoCompleto);
+                    } catch (err) {
+                        alert("Erro ao decodificar as tabelas do PDF.");
+                        document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+                    }
+                };
+                leitor.readAsArrayBuffer(arquivo);
 
-function fecharPA(){
-  document.getElementById('pa').classList.remove('open');
-  idxAtivo=null; renderLista(); plotar();
-}
+            } else {
+                const leitor = new FileReader();
+                leitor.onload = (e) => estruturarBancoDeDados(e.target.result);
+                leitor.readAsText(arquivo);
+            }
+        }
 
-function reg(status){
-  if(idxAtivo===null) return;
-  bd[idxAtivo].status=status;
-  bd[idxAtivo].timestamp=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  bd[idxAtivo].nota=document.getElementById('pa-nota').value.trim();
-  if(status==='entregue') bip();
-  salvar(); fecharPA();
-  renderLista(); renderResumo(); plotar(); infoMenu();
-  const msgs={entregue:'✅ Entrega registrada!',falhou:'❌ Não entregue registrado',ausente:'🚪 Ausente registrado'};
-  toast(msgs[status]);
-}
+        function estruturarBancoDeDados(texto) {
+            const linhas = texto.split(/\r?\n/);
+            let idCounter = 0;
+            bdRotas = [];
+           
+            linhas.forEach((linha) => {
+                if (linha.trim().length < 5) return;
 
-function navegar(){
-  if(idxAtivo===null) return;
-  const e=bd[idxAtivo];
-  let url;
-  if(e.lat && e.lon){
-    url = `https://www.google.com/maps/dir/?api=1&destination=${e.lat},${e.lon}&travelmode=driving`;
-  } else {
-    url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(e.endereco)}&travelmode=driving`;
-  }
-  window.open(url,'_blank');
-}
+                // Captura "BR" seguido de 11 dígitos permitindo espaços internos fragmentados pelo PDF
+                const match = linha.match(/(BR\s*(?:\d\s*){11})/i);
+                if (!match) return;
 
-// ──────────────────────────────────────────────────────────
-//  MENU / DRAWER
-// ──────────────────────────────────────────────────────────
-function abrirMenu(){ document.getElementById('drawer').classList.add('open'); document.getElementById('ov').style.display='block'; }
-function fecharMenu(){ document.getElementById('drawer').classList.remove('open'); document.getElementById('ov').style.display='none'; }
+                let codigoCru = match[1];
+                let codigo = codigoCru.replace(/\s/g, '').toUpperCase();
+                let endereco = linha.replace(codigoCru, '').replace(/[;\t\|]+/g, ' ').trim();
+                endereco = endereco.replace(/\s+/g, ' ');
 
-// ──────────────────────────────────────────────────────────
-//  SCANNER
-// ──────────────────────────────────────────────────────────
-function abrirScanner(){
-  document.getElementById('scanner-modal').style.display='flex';
-  document.getElementById('scan-fb').textContent='Aguardando leitura...';
-  document.getElementById('scan-fb').style.color='white';
-  if(!scanInst) scanInst=new Html5Qrcode('reader');
-  scanInst.start({facingMode:'environment'},{fps:15,qrbox:{width:280,height:150}},onScan)
-    .catch(()=>{ document.getElementById('scan-fb').textContent='❌ Câmera indisponível'; });
-}
+                bdRotas.push({
+                    id: idCounter++,
+                    codigo: codigo,
+                    endereco: endereco,
+                    status: 'pendente',
+                    timestamp: null,
+                    lat: -23.55 + (Math.random() - 0.5) * 0.15,
+                    lon: -46.63 + (Math.random() - 0.5) * 0.15
+                });
+            });
 
-function fecharScanner(){
-  document.getElementById('scanner-modal').style.display='none';
-  if(scanInst){ scanInst.stop().then(()=>scanInst=null).catch(()=>{}); }
-  scanBusy=false;
-}
+            if(bdRotas.length > 0) {
+                salvarBD();
+                document.getElementById('tela-setup').style.display = 'none';
+                map.invalidateSize();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+            } else {
+                alert("Nenhum código no padrão Shopee (BR + 11 dígitos) localizado.");
+                document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+            }
+        }
 
-function onScan(txt){
-  if(scanBusy) return; scanBusy=true;
-  const token=txt.trim().toUpperCase();
-  const idx=bd.findIndex(e=>token.includes(e.codigo)||e.codigo.includes(token));
-  const fb=document.getElementById('scan-fb');
-  if(idx!==-1){
-    bip();
-    fb.textContent=`✅ Parada #${idx+1} localizada!`;
-    fb.style.color='#4ade80';
-    ativar(idx);
-    setTimeout(()=>{ fb.textContent='Aguardando próximo...'; fb.style.color='white'; scanBusy=false; },2500);
-  } else {
-    fb.textContent='❌ Código não está nesta rota'; fb.style.color='#f87171';
-    setTimeout(()=>{ fb.textContent='Aguardando leitura...'; fb.style.color='white'; scanBusy=false; },2000);
-  }
-}
+        function renderizarLista() {
+            const container = document.getElementById('container-lista');
+            container.innerHTML = '';
+           
+            bdRotas.forEach((e, idx) => {
+                const div = document.createElement('div');
+                div.className = `item-lista ${e.status !== 'pendente' ? 'concluido' : ''}`;
+                div.onclick = () => ativarWidget(idx);
+               
+                div.innerHTML = `
+                    <div class="item-topo">
+                        <span class="parada-titulo">📌 Parada #${idx + 1}</span>
+                        <span class="parada-codigo">${e.codigo}</span>
+                    </div>
+                    <div class="parada-endereco">${e.endereco.substring(0, 65)}...</div>
+                    ${e.status !== 'pendente' ? `<div style="font-size:11px; color:#16a34a; font-weight:bold; margin-top:4px;">${e.status.toUpperCase()} às ${e.timestamp}</div>` : ''}
+                `;
+                container.appendChild(div);
+            });
+        }
 
-// ──────────────────────────────────────────────────────────
-//  UTILITÁRIOS
-// ──────────────────────────────────────────────────────────
-function digitarCodigo(){
-  const c=prompt('Digite o código da encomenda:');
-  if(!c||!c.trim()) return;
-  const i=bd.findIndex(e=>e.codigo.includes(c.trim().toUpperCase()));
-  if(i!==-1) ativar(i); else toast('❌ Código não encontrado');
-}
+        function atualizarContador() {
+            const pendentes = bdRotas.filter(r => r.status === 'pendente').length;
+            document.getElementById('contador-restantes').innerText = pendentes;
+        }
 
-function exportCSV(){
-  if(!bd.length) return toast('⚠️ Sem dados');
-  let csv='\uFEFFOrdem,Codigo,Endereco,Status,Horario,Observacao,Lat,Lon\n';
-  bd.forEach((e,i)=>{
-    csv+=`"${i+1}","${e.codigo}","${e.endereco.replace(/"/g,'""')}","${e.status.toUpperCase()}","${e.timestamp||''}","${(e.nota||'').replace(/"/g,'""')}","${e.lat||''}","${e.lon||''}"\n`;
-  });
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
-  a.download=`RotaFacil_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-}
+        function toggleMenu() {
+            const menu = document.getElementById('menu-opcoes');
+            menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+        }
+       
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('menu-opcoes');
+            const btn = document.querySelector('.btn-menu');
+            if (menu.style.display === 'flex' && !menu.contains(event.target) && event.target !== btn) {
+                menu.style.display = 'none';
+            }
+        });
 
-function novaRota(){
-  document.getElementById('tela-setup').style.display='flex';
-  document.getElementById('app').classList.remove('ativo');
-  if(layers) layers.clearLayers();
-}
+        function fecharWidget() { document.getElementById('widget-escuro').style.display = 'none'; }
+       
+        function minimizarWidget() {
+            const det = document.getElementById('wg-detalhe');
+            det.style.display = (det.style.display === 'none') ? 'block' : 'none';
+        }
 
-function limpar(){
-  if(!confirm('Apagar toda a rota atual?')) return;
-  localStorage.removeItem('rf3'); location.reload();
-}
+        function activarWidget(idx) {
+            indexAtivo = idx;
+            const e = bdRotas[idx];
+            document.getElementById('wg-num').innerText = String(idx + 1).padStart(2, '0');
+            document.getElementById('wg-badge').innerText = idx + 1;
+           
+            const partes = e.endereco.split(',');
+            document.getElementById('wg-rua').innerText = partes[0] || 'Endereço';
+            document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim()}`;
+           
+            document.getElementById('widget-escuro').style.display = 'block';
 
-function salvar(){ localStorage.setItem('rf3',JSON.stringify(bd)); }
+            map.flyTo([e.lat - 0.015, e.lon], 14, { animate: true, duration: 1 });
+        }
 
-let _toastT;
-function toast(msg){
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.classList.add('vis');
-  clearTimeout(_toastT); _toastT=setTimeout(()=>el.classList.remove('vis'),3200);
-}
+        function registrarAcaoFinal(status) {
+            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
+           
+            bdRotas[indexAtivo].status = status;
+            bdRotas[indexAtivo].timestamp = new Date().toLocaleTimeString();
+           
+            if (status === 'entregue') emitirBip();
+           
+            salvarBD();
+            renderizarLista();
+            atualizarContador();
+            plotarNoMapa();
+           
+            document.getElementById('widget-escuro').style.display = 'none';
+            indexAtivo = null;
+        }
 
-function bip(){
-  try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    const o=ctx.createOscillator(), g=ctx.createGain();
-    o.type='sine'; o.frequency.setValueAtTime(960,ctx.currentTime);
-    g.gain.setValueAtTime(.12,ctx.currentTime);
-    o.connect(g); g.connect(ctx.destination);
-    o.start(); o.stop(ctx.currentTime+.14);
-  }catch(e){}
-}
+        function navegarApp() {
+            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
+            const end = bdRotas[indexAtivo].endereco;
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`, '_blank');
+        }
 
-// ──────────────────────────────────────────────────────────
-//  BOOT
-// ──────────────────────────────────────────────────────────
-window.onload = () => {
-  if(bd.length > 0){
-    mostrarApp();
-    const p=bd.filter(e=>e.status==='pendente').length;
-    toast(`📦 Rota retomada · ${p} pendentes`);
-    const semCoord = bd.filter(e=>e.geocodStatus!=='ok').length;
-    if(semCoord>0) setTimeout(()=>geocodificar(true),500);
-  }
-};
-</script>
+        function executarOtimizacaoTSP() {
+            toggleMenu();
+            if(bdRotas.length <= 2) return alert("Quantidade de paradas insuficiente.");
+           
+            let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
+            let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
+           
+            if(rascunho.length === 0) return;
+           
+            let otimizado = [rascunho.shift()];
+           
+            while(rascunho.length > 0) {
+                let atual = otimizado[otimizado.length - 1];
+                let indexMaisProximo = 0;
+                let menorDist = Infinity;
+               
+                for(let i=0; i<rascunho.length; i++) {
+                    let d = Math.sqrt(Math.pow(atual.lat - rascunho[i].lat, 2) + Math.pow(atual.lon - rascunho[i].lon, 2));
+                    if(d < menorDist) { menorDist = d; indexMaisProximo = i; }
+                }
+                otimizado.push(rascunho.splice(indexMaisProximo, 1)[0]);
+            }
+           
+            bdRotas = [...concluidos, ...otimizado];
+            bdRotas.forEach((item, idx) => item.id = idx);
+           
+            salvarBD();
+            renderizarLista();
+            plotarNoMapa();
+            alert("Rota otimizada com sucesso via motor de proximidade TSP.");
+        }
+
+        function abrirScanner() {
+            toggleMenu();
+            document.getElementById('modalScanner').style.display = 'flex';
+            const feedback = document.getElementById('scannerFeedback');
+            feedback.innerText = "Aguardando leitura do código...";
+            feedback.style.color = "white";
+           
+            if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
+           
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 15, qrbox: { width: 280, height: 150 } },
+                processarLeituraDaCamera
+            ).catch(e => {
+                feedback.innerText = "Erro de hardware na câmera.";
+            });
+        }
+
+        function fecharScanner() {
+            document.getElementById('modalScanner').style.display = 'none';
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner = null;
+                }).catch(err => console.log("Erro ao parar scanner:", err));
+            }
+            processandoLeitura = false;
+        }
+
+        function processarLeituraDaCamera(textoLido) {
+            if (processandoLeitura) return;
+            processandoLeitura = true;
+           
+            const token = textoLido.trim().toUpperCase();
+            const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
+           
+            const feedback = document.getElementById('scannerFeedback');
+           
+            if (idx !== -1) {
+                emitirBip();
+               
+                const ultimosDigitos = bdRotas[idx].codigo.slice(-4);
+                falarTexto(`Parada ${idx + 1}. Final ${ultimosDigitos.split('').join(' ')}`);
+               
+                feedback.innerText = `✅ Parada #${idx + 1} Localizada!`;
+                feedback.style.color = "var(--cor-verde)";
+               
+                ativarWidget(idx);
+               
+                setTimeout(() => {
+                    feedback.innerText = "Aguardando leitura do próximo código...";
+                    feedback.style.color = "white";
+                    processandoLeitura = false;
+                }, 2500);
+            } else {
+                feedback.innerText = `❌ Código não listado nesta rota.`;
+                feedback.style.color = "var(--cor-vermelho)";
+                setTimeout(() => {
+                    feedback.innerText = "Aguardando leitura do código...";
+                    feedback.style.color = "white";
+                    processandoLeitura = false;
+                }, 2000);
+            }
+        }
+
+        function forcarBaixaManual() {
+            toggleMenu();
+            const cod = prompt("Digite o código identificador da encomenda:");
+            if(cod && cod.trim() !== "") {
+                const idx = bdRotas.findIndex(i => i.codigo.toUpperCase().includes(cod.trim().toUpperCase()));
+                if(idx !== -1) {
+                    ativarWidget(idx);
+                } else {
+                    alert("Código inexistente.");
+                }
+            }
+        }
+
+        function exportarRelatorioCSV() {
+            toggleMenu();
+            if(bdRotas.length === 0) return alert("Sem dados.");
+            let csv = "\uFEFFID,Codigo,Endereco,Status,Horario\n";
+            bdRotas.forEach(p => {
+                csv += `"${p.id + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}","${p.timestamp || 'N/A'}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Rota_Facil_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
+        function limparSessao() {
+            toggleMenu();
+            if(confirm("Deseja expurgar e limpar a rota ativa?")) {
+                localStorage.removeItem('rota_facil_db_oficial');
+                location.reload();
+            }
+        }
+
+        function salvarBD() {
+            localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
+        }
+    </script>
 </body>
 </html>
