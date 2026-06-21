@@ -36,6 +36,15 @@ export function buildLeafletHTML(stops: Stop[]): string {
   let markers = [];
   let routeLine = null;
 
+  function postToHost(payload) {
+    const msg = JSON.stringify(payload);
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(msg);
+    } else if (window.parent && window.parent !== window) {
+      window.parent.postMessage(msg, '*');
+    }
+  }
+
   function getColor(status) {
     if (status === 'entregue') return '#16a34a';
     if (status === 'falhou') return '#dc2626';
@@ -63,9 +72,7 @@ export function buildLeafletHTML(stops: Stop[]): string {
       });
       const marker = L.marker([s.lat, s.lon], { icon }).addTo(map);
       marker.on('click', () => {
-        if (window.ReactNativeWebView) {
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'stop_clicked', index: idx }));
-        }
+        postToHost({ type: 'stop_clicked', index: idx });
       });
       markers.push(marker);
       bounds.push([s.lat, s.lon]);
@@ -101,11 +108,9 @@ export function buildLeafletHTML(stops: Stop[]): string {
 
   // Initial render
   renderStops(STOPS);
-  // Notify RN that map is ready
+  // Notify host that map is ready
   setTimeout(() => {
-    if (window.ReactNativeWebView) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'map_ready' }));
-    }
+    postToHost({ type: 'map_ready' });
   }, 300);
 </script>
 </body>

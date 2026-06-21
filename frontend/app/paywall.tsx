@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -48,11 +48,16 @@ export default function Paywall() {
     setConfirming(true);
     try {
       await confirmPayment(userId, pixData.txid);
-      Alert.alert(
-        "Assinatura Ativada! 🎉",
-        "Bem-vindo ao Rota Fácil. Sua assinatura é válida por 30 dias.",
-        [{ text: "Começar", onPress: () => router.replace("/") }]
-      );
+      if (Platform.OS === "web") {
+        // RN-Web Alert callbacks don't fire reliably; navigate directly
+        router.replace("/");
+      } else {
+        Alert.alert(
+          "Assinatura Ativada! 🎉",
+          "Bem-vindo ao Rota Fácil. Sua assinatura é válida por 30 dias.",
+          [{ text: "Começar", onPress: () => router.replace("/") }]
+        );
+      }
     } catch {
       Alert.alert("Erro", "Não foi possível confirmar o pagamento.");
     } finally {

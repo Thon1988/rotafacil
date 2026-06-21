@@ -15,18 +15,17 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { WebView } from "react-native-webview";
 import * as Haptics from "expo-haptics";
 
 import { COLORS, RADIUS, SPACING } from "@/src/constants/theme";
-import { buildLeafletHTML } from "@/src/components/leaflet-map";
+import RouteMap, { MapHandle, MapMessage } from "@/src/components/route-map";
 import { clearRoute, loadRoute, saveRoute } from "@/src/lib/route-store";
 import { optimizeRoute } from "@/src/lib/api";
 import { Stop } from "@/src/types/stop";
 
 export default function RouteScreen() {
   const router = useRouter();
-  const webviewRef = useRef<WebView>(null);
+  const mapRef = useRef<MapHandle>(null);
   const [stops, setStops] = useState<Stop[]>([]);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -49,35 +48,30 @@ export default function RouteScreen() {
     }, [router])
   );
 
-  // Build map HTML once with initial stops; updates sent via postMessage
-  const initialHTML = useMemo(() => buildLeafletHTML(stops), []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Initial stops for map (snapshot). Live updates via postMessage.
+  const initialStops = useMemo(() => stops, [stops.length === 0 ? 0 : 1]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Update map when stops change
   useEffect(() => {
-    if (mapReady && webviewRef.current) {
-      webviewRef.current.postMessage(JSON.stringify({ type: "update_stops", stops }));
+    if (mapReady && mapRef.current) {
+      mapRef.current.updateStops(stops);
     }
   }, [stops, mapReady]);
 
-  const onWebMessage = (event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === "map_ready") {
-        setMapReady(true);
-        webviewRef.current?.postMessage(JSON.stringify({ type: "update_stops", stops }));
-      } else if (data.type === "stop_clicked") {
-        activateStop(data.index);
-      }
-    } catch {}
-  };
+  const onMapMessage = useCallback((data: MapMessage) => {
+    if (data.type === "map_ready") {
+      setMapReady(true);
+    } else if (data.type === "stop_clicked") {
+      activateStop(data.index);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stops]);
 
   const activateStop = (idx: number) => {
     setActiveIdx(idx);
     const s = stops[idx];
     if (s?.lat != null && s?.lon != null) {
-      webviewRef.current?.postMessage(
-        JSON.stringify({ type: "fly_to", lat: s.lat, lon: s.lon, zoom: 15 })
-      );
+      mapRef.current?.flyTo(s.lat, s.lon, 15);
     }
     if (Platform.OS !== "web") Haptics.selectionAsync();
   };
@@ -196,16 +190,10 @@ export default function RouteScreen() {
     <SafeAreaView style={styles.container} edges={["top"]} testID="route-screen">
       {/* MAP - top half */}
       <View style={styles.mapContainer}>
-        <WebView
-          ref={webviewRef}
-          originWhitelist={["*"]}
-          source={{ html: initialHTML }}
-          onMessage={onWebMessage}
-          style={styles.webview}
-          javaScriptEnabled
-          domStorageEnabled
-          androidLayerType="hardware"
-          testID="route-map-webview"
+        <RouteMap
+          ref={mapRef}
+          initialStops={initialStops}
+          onMessage={onMapMessage}
         />
 
         {/* Menu button overlay */}
@@ -475,7 +463,6 @@ function getStatusColor(status: string): string {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bgBase },
   mapContainer: { height: "42%", backgroundColor: COLORS.bgSurface, position: "relative" },
-  webview: { flex: 1, backgroundColor: COLORS.bgBase },
   menuBtn: {
     position: "absolute",
     top: SPACING.md,
