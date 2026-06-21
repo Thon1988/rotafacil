@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -52,8 +52,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 }
 .btn-go:active{transform:scale(.98);}
 .btn-go:disabled{opacity:.6;cursor:not-allowed;}
-
-
 
 /* ═══ APP LAYOUT ════════════════════════════════════════════ */
 #app{display:none;position:fixed;inset:0;flex-direction:column;}
@@ -135,6 +133,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .se{font-size:12px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sc-cod{font-size:10px;color:var(--sub);margin-top:3px;font-family:monospace;}
 .badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-top:4px;}
+.b-pend{background:#dbeafe;color:#1d4ed8;}.b-ok覆{background:#dcfce7;color:#15803d;}
 .b-pend{background:#dbeafe;color:#1d4ed8;}.b-ok{background:#dcfce7;color:#15803d;}
 .b-fail{background:#fee2e2;color:#b91c1c;}.b-aus{background:#fef3c7;color:#b45309;}
 .b-sem{background:#f1f5f9;color:#64748b;}
@@ -232,7 +231,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .mp{
   width:32px;height:32px;border-radius:50%;border:3px solid white;color:white;
   display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;
-  box-shadow:0 3px 10px rgba(0,0,0,.4);
+  box-shadow:0 3px 10px rgba(0,0,0,.4);transition: background .2s;
 }
 
 ::-webkit-scrollbar{width:3px;}
@@ -241,7 +240,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 </head>
 <body>
 
-<!-- ══ TELA SETUP ══════════════════════════════════════════ -->
 <div id="tela-setup">
   <div class="logo-wrap">
     <div class="logo-box">📦</div>
@@ -258,11 +256,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   </div>
 
   <button class="btn-go" id="btn-go" onclick="processar()">🚀 Carregar Rota</button>
-
-
 </div>
 
-<!-- ══ APP ═════════════════════════════════════════════════ -->
 <div id="app">
   <div id="mapa-wrap">
     <div id="mapa"></div>
@@ -270,7 +265,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
     <button class="fab" id="fab-gps" onclick="irGPS()">📍</button>
     <button class="fab" id="fab-fit" onclick="fitAll()">⊞</button>
     <div id="prog-map"><div id="prog-map-inner"></div></div>
-    <!-- Overlay de geocodificação -->
     <div id="geo-overlay">
       <div class="geo-spinner"></div>
       <div class="geo-txt" id="geo-txt">Localizando endereços...</div>
@@ -290,7 +284,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   </div>
 </div>
 
-<!-- Painel de ação -->
 <div id="pa">
   <div class="pa-h"></div>
   <div class="pa-top">
@@ -310,7 +303,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   <textarea class="pa-nota" id="pa-nota" placeholder="Ex: Deixei na portaria, vizinho recebeu..."></textarea>
 </div>
 
-<!-- Menu drawer -->
 <div id="ov" onclick="fecharMenu()"></div>
 <div id="drawer">
   <div class="dh">
@@ -328,7 +320,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   </div>
 </div>
 
-<!-- Scanner -->
 <div id="scanner-modal">
   <div class="sm-hd">
     <div class="sm-title">📷 Scanner</div>
@@ -338,7 +329,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
   <div id="scan-fb">Aguardando leitura do código...</div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
 <script>
@@ -361,7 +351,6 @@ document.getElementById('fileInput').addEventListener('change', function(){
   if(this.files[0]) document.getElementById('fname').textContent = '📄 ' + this.files[0].name;
 });
 
-// Drag & drop
 const dz = document.getElementById('drop-zone');
 ['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('over'); }));
 ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, () => dz.classList.remove('over')));
@@ -394,9 +383,8 @@ function lerExcel(f){ return new Promise(res=>{
     const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
     if(!rows.length){ toast('⚠️ Planilha vazia'); return; }
 
-    // ── Detecta colunas pelo cabeçalho (padrão Shopee) ──
     const header = rows[0].map(c=>String(c).toLowerCase());
-    const iCod  = header.findIndex(h=>h.includes('spx')||h.includes('tracking')||h.includes('tn'));
+    const iCod  = header.findIndex(h=>h.includes('spx')||h.includes('tracking')||h.includes('tn')||h.includes('codigo')||h.includes('código'));
     const iEnd  = header.findIndex(h=>h.includes('destination')||h.includes('address')||h.includes('endereco')||h.includes('endereço'));
     const iBairro = header.findIndex(h=>h.includes('bairro')||h.includes('district'));
     const iCidade = header.findIndex(h=>h.includes('city')||h.includes('cidade'));
@@ -404,11 +392,9 @@ function lerExcel(f){ return new Promise(res=>{
     const iLat   = header.findIndex(h=>h.includes('lat'));
     const iLon   = header.findIndex(h=>h.includes('lon')||h.includes('lng'));
 
-    // Se encontrou colunas Shopee, usa modo estruturado
     if(iCod>=0 && iEnd>=0){
       estruturarExcel(rows.slice(1), {iCod,iEnd,iBairro,iCidade,iCEP,iLat,iLon});
     } else {
-      // Fallback: une colunas como texto e usa regex
       const linhas=rows.map(row=>row.map(c=>String(c).trim()).join(' ').trim()).filter(l=>l.length>3);
       estruturar(linhas.join('\n'));
     }
@@ -424,11 +410,9 @@ function estruturarExcel(rows, {iCod,iEnd,iBairro,iCidade,iCEP,iLat,iLon}){
   for(const row of rows){
     const cod = String(row[iCod]||'').trim().toUpperCase();
     if(!cod || codVistos.has(cod)) continue;
-    // Valida padrão de código (2 letras + dígitos)
     if(!/^[A-Z]{2}\d{9,15}/.test(cod)) continue;
     codVistos.add(cod);
 
-    // Monta endereço: Rua, Bairro, Cidade, CEP
     const partes=[
       String(row[iEnd]||'').trim(),
       iBairro>=0 ? String(row[iBairro]||'').trim() : '',
@@ -437,7 +421,6 @@ function estruturarExcel(rows, {iCod,iEnd,iBairro,iCidade,iCEP,iLat,iLon}){
     ].filter(p=>p.length>0);
     const end = partes.join(', ');
 
-    // Lat/Lon já existentes no arquivo
     const lat = iLat>=0 && row[iLat]!=='' ? parseFloat(row[iLat]) : null;
     const lon = iLon>=0 && row[iLon]!=='' ? parseFloat(row[iLon]) : null;
     const temCoord = lat!==null && lon!==null && !isNaN(lat) && !isNaN(lon);
@@ -455,10 +438,10 @@ function estruturarExcel(rows, {iCod,iEnd,iBairro,iCidade,iCEP,iLat,iLon}){
     });
   }
 
-  if(novo.length===0) return toast('⚠️ Nenhum código Shopee localizado na planilha');
+  if(novo.length===0) return toast('⚠️ Nenhum código válido localizado na planilha');
   bd=novo; salvar(); mostrarApp();
   const semC=novo.filter(e=>!e.lat).length;
-  toast(`✅ ${novo.length} paradas carregadas${semC>0?' · '+semC+' sem coord.':''}`);
+  toast(`✅ ${novo.length} paradas carregadas`);
   if(semC>0) setTimeout(()=>geocodificar(true),500);
 }
 
@@ -489,59 +472,81 @@ function lerTexto(f){ return new Promise(res=>{
 });}
 
 // ──────────────────────────────────────────────────────────
-//  PARSING — ESTRUTURAÇÃO DO BANCO
+//  PARSING — EXTRAÇÃO AVANÇADA DO BANCO DE DADOS
 // ──────────────────────────────────────────────────────────
 function estruturar(texto){
-  const linhas = texto.split(/\r?\n/);
+  const textoLimpo = texto.replace(/\s+/g, ' ');
   const novo = [];
-  const codVistos = new Set(); // evita duplicatas
+  const codVistos = new Set();
 
-  for(const linha of linhas){
-    const l = linha.trim();
-    if(l.length < 5) continue;
+  // Etapa 1: Padrão exato estruturado do Circuit/Spoke nas notas
+  const regexEstruturado = /(BR\d{9,15}[A-Z0-9]?)\s*;\s*([^;]+)\s*;\s*([^;]+)\s*;\s*([^;]+)\s*;\s*(\d{5}-?\d{3})/gi;
+  let match;
 
-    // Regex: código Shopee/Correios — 2 letras + 9-13 dígitos + até 2 letras opcionais
-    const m = l.match(/\b([A-Z]{2}\d{9,13}[A-Z]{0,2})\b/i);
-    if(!m) continue;
-
-    const cod = m[1].toUpperCase();
-    if(codVistos.has(cod)) continue; // DEDUPLICAÇÃO
+  while ((match = regexEstruturado.exec(textoLimpo)) !== null) {
+    const cod = match[1].toUpperCase();
+    if (codVistos.has(cod)) continue;
     codVistos.add(cod);
 
-    // Remove o código e limpa o endereço
-    let end = l
-      .replace(new RegExp('\\b'+cod+'\\b','i'), '')
-      .replace(/[;\t|]+/g, ' ')
-      .replace(/\s{2,}/g, ' ')
-      .trim()
-      .replace(/^[,\-\s]+|[,\-\s]+$/g, '');
-
-    if(!end || end.length < 4) end = 'Endereço não informado';
+    const rua = match[2].trim();
+    const bairro = match[3].trim();
+    const cidade = match[4].trim();
+    const cep = match[5].trim();
 
     novo.push({
       id: novo.length,
       codigo: cod,
-      endereco: end,
+      endereco: `${rua}, ${bairro}, ${cidade} - SP, CEP ${cep}`,
       status: 'pendente',
       timestamp: null,
       nota: '',
       lat: null,
       lon: null,
-      geocodStatus: 'pendente' // 'ok' | 'erro' | 'pendente'
+      geocodStatus: 'pendente'
     });
   }
 
-  if(novo.length === 0) return toast('⚠️ Nenhum código no padrão Shopee/Correios localizado');
+  // Etapa 2 (Fallback): Caso o padrão perfeito falhe, varre por tokens soltos
+  const todosCodigos = [...textoLimpo.matchAll(/\b(BR\d{9,15}[A-Z0-9]?)\b/gi)];
+  if (novo.length < todosCodigos.length) {
+    for (let i = 0; i < todosCodigos.length; i++) {
+      const cod = todosCodigos[i][1].toUpperCase();
+      if (codVistos.has(cod)) continue;
+      codVistos.add(cod);
 
+      const startIdx = todosCodigos[i].index + todosCodigos[i][0].length;
+      const endIdx = (i + 1 < todosCodigos.length) ? todosCodigos[i+1].index : textoLimpo.length;
+      let trecho = textoLimpo.substring(startIdx, endIdx).trim();
+
+      trecho = trecho.replace(/^[\s;,\-]+/, '').trim();
+      if (trecho.includes('"')) trecho = trecho.split('"')[0].trim();
+
+      let end = trecho.replace(/[;\t|]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+      if (!end || end.length < 5) end = 'Endereço não informado';
+
+      novo.push({
+        id: novo.length,
+        codigo: cod,
+        endereco: end,
+        status: 'pendente',
+        timestamp: null,
+        nota: '',
+        lat: null,
+        lon: null,
+        geocodStatus: 'pendente'
+      });
+    }
+  }
+
+  if (novo.length === 0) return toast('⚠️ Nenhum código Shopee/Correios localizado.');
+
+  novo.forEach((e, i) => e.id = i);
   bd = novo;
   salvar();
   mostrarApp();
   toast(`✅ ${bd.length} paradas carregadas`);
-  // Geocodifica em background imediatamente
-  setTimeout(()=>geocodificar(false), 300);
+  setTimeout(() => geocodificar(false), 300);
 }
-
-
 
 // ──────────────────────────────────────────────────────────
 //  INICIAR APP
@@ -558,7 +563,6 @@ function mostrarApp(){
 
 function criarMapa(){
   if(map) return;
-  // ── Carto Voyager — aparência idêntica ao Google Maps, sem API key ──
   map = L.map('mapa', { zoomControl:false, attributionControl:false });
   L.tileLayer(
     'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
@@ -626,13 +630,26 @@ function irGPS(){
 }
 
 // ──────────────────────────────────────────────────────────
-//  GEOCODIFICAÇÃO — PRECISÃO MÁXIMA
-//  Estratégia: 1º CEP via BrasilAPI → 2º Photon (sem rate limit)
+//  GEOCODIFICAÇÃO MULTIETAPA RESILIENTE
 // ──────────────────────────────────────────────────────────
+function limparEnderecoParaBusca(end) {
+  let s = end;
+  s = s.split(/casa|bloco|ap|apto|atrás|prox|fundo|marmoraria|travessa|portao|portão/i)[0];
+  s = s.replace(/\([^)]*\)/g, '');
+  s = s.replace(/,[\s,]+/g, ', ').trim();
+  return s;
+}
+
+function extrairCEP(end){
+  const m = end.match(/\b(\d{5})-?(\d{3})\b/);
+  if(!m) return null;
+  return m[1]+m[2];
+}
+
 async function geocodificar(silencioso=false){
   const fila = bd.filter(e=>e.geocodStatus!=='ok');
   if(fila.length===0){
-    if(!silencioso) toast('✅ Todos endereços já geocodificados');
+    if(!silencioso) toast('✅ Todos os endereços já estão mapeados');
     return;
   }
 
@@ -643,61 +660,60 @@ async function geocodificar(silencioso=false){
   ov.classList.add('vis');
   let ok=0;
 
-  for(const e of fila){
-    gtxt.textContent = `Localizando parada ${e.id+1} de ${bd.length}`;
-    gsub.textContent  = e.endereco.substring(0,50)+'...';
-    gbar.style.width  = Math.round(ok/fila.length*100)+'%';
+  for(let i=0; i<fila.length; i++){
+    const e = fila[i];
+    gtxt.textContent = `A localizar parada ${i+1} de ${fila.length}`;
+    gsub.textContent  = e.endereco.substring(0,45)+'...';
+    gbar.style.width  = Math.round((i/fila.length)*100)+'%';
 
-    // — Tentativa 1: extrair CEP e usar BrasilAPI (mais preciso para BR) —
+    let coord = null;
     const cep = extrairCEP(e.endereco);
-    if(cep){
-      const res = await geocodCEP(cep);
-      if(res){ e.lat=res.lat; e.lon=res.lon; e.geocodStatus='ok'; ok++; salvar(); plotar(); renderLista(); continue; }
+
+    // TENTATIVA 1: CEP Direto via BrasilAPI
+    if(cep) coord = await geocodCEP(cep);
+
+    // TENTATIVA 2: Endereço Limpo via Photon
+    if(!coord) {
+      const limpo = limparEnderecoParaBusca(e.endereco);
+      coord = await geocodPhoton(`${limpo}, São Paulo, Brasil`);
     }
 
-    // — Tentativa 2: Photon geocoder (OSM, sem limite de taxa) —
-    const res2 = await geocodPhoton(e.endereco);
-    if(res2){ e.lat=res2.lat; e.lon=res2.lon; e.geocodStatus='ok'; ok++; }
-    else { e.geocodStatus='erro'; }
+    // TENTATIVA 3: Apenas CEP no Photon (Garante plotagem aproximada)
+    if(!coord && cep) coord = await geocodPhoton(`${cep}, Brasil`);
+
+    if(coord){
+      e.lat=coord.lat; e.lon=coord.lon; e.geocodStatus='ok'; ok++;
+    } else {
+      e.geocodStatus='erro';
+    }
 
     salvar(); plotar(); renderLista();
+    await new Promise(r=>setTimeout(r, 400)); // Evita bloqueio por taxa de requisição
   }
 
   ov.classList.remove('vis');
   gbar.style.width='0%';
   fitAll();
-  renderLista(); renderResumo();
-  toast(`🗺️ ${ok} de ${fila.length} endereços localizados`);
-}
-
-function regeocod(){
-  bd.forEach(e=>{ if(e.geocodStatus!=='ok'){ e.lat=null; e.lon=null; e.geocodStatus='pendente'; }});
-  geocodificar(false);
-}
-
-function extrairCEP(end){
-  const m = end.match(/\b(\d{5})-?(\d{3})\b/);
-  if(!m) return null;
-  return m[1]+m[2];
+  renderLista(); renderResumo(); infoMenu();
+  toast(`🗺️ Mapeamento concluído: ${ok} carregados.`);
 }
 
 async function geocodCEP(cep){
   try{
-    const r = await fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`,{signal:AbortSignal.timeout(5000)});
+    const r = await fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`,{signal:AbortSignal.timeout(4000)});
     if(!r.ok) return null;
     const d = await r.json();
     if(d.location?.coordinates?.latitude){
-      return {lat: d.location.coordinates.latitude, lon: d.location.coordinates.longitude};
+      return {lat: parseFloat(d.location.coordinates.latitude), lon: parseFloat(d.location.coordinates.longitude)};
     }
-    // Sem coordenadas: usa cidade/bairro para fallback
     return null;
   }catch(e){ return null; }
 }
 
 async function geocodPhoton(end){
   try{
-    const q = encodeURIComponent(end.replace(/\s+/g,' ').trim()+', Brasil');
-    const r = await fetch(`https://photon.komoot.io/api/?q=${q}&limit=1&lang=pt`,{signal:AbortSignal.timeout(8000)});
+    const q = encodeURIComponent(end.replace(/\s+/g,' ').trim());
+    const r = await fetch(`https://photon.komoot.io/api/?q=${q}&limit=1&lang=pt`,{signal:AbortSignal.timeout(5000)});
     if(!r.ok) return null;
     const d = await r.json();
     const f = d.features?.[0];
@@ -707,25 +723,28 @@ async function geocodPhoton(end){
   }catch(e){ return null; }
 }
 
-const sleep = ms => new Promise(r=>setTimeout(r,ms));
+function regeocod(){
+  bd.forEach(e=>{ e.lat=null; e.lon=null; e.geocodStatus='pendente'; });
+  geocodificar(false);
+}
 
 // ──────────────────────────────────────────────────────────
-//  OTIMIZAÇÃO DE ROTA — Nearest Neighbor + 2-opt
+//  OTIMIZAÇÃO DE ROTA (TSP OPEN-PATH REFINADO)
 // ──────────────────────────────────────────────────────────
 function otimizar(){
   const pen = bd.filter(e=>e.status==='pendente'&&e.lat&&e.lon);
   const conc = bd.filter(e=>e.status!=='pendente');
   const semCoord = bd.filter(e=>e.status==='pendente'&&(!e.lat||!e.lon));
 
-  if(pen.length<2) return toast('⚠️ Precisa de pelo menos 2 paradas com coordenadas');
+  if(pen.length<2) return toast('⚠️ Precisa de pelo menos 2 paradas com coordenadas para otimizar!');
 
-  // 1. Nearest Neighbor partindo da posição atual ou primeira parada
-  let inicio = posMarker
-    ? {lat:posMarker.getLatLng().lat, lon:posMarker.getLatLng().lng}
+  let inicio = posMarker 
+    ? {lat:posMarker.getLatLng().lat, lon:posMarker.getLatLng().lng} 
     : pen[0];
 
   let pool=[...pen], rota=[];
   let atual=inicio;
+
   while(pool.length>0){
     let best=0, bestD=Infinity;
     pool.forEach((p,i)=>{ const d=geo(atual,p); if(d<bestD){bestD=d;best=i;} });
@@ -733,27 +752,32 @@ function otimizar(){
     atual=rota[rota.length-1];
   }
 
-  // 2. Melhoria 2-opt
   rota = doisOpt(rota);
 
-  bd = [...conc, ...semCoord, ...rota];
+  bd = [...conc, ...rota, ...semCoord];
   bd.forEach((e,i)=>e.id=i);
   salvar(); idxAtivo=null;
   renderLista(); renderResumo(); plotar();
-  toast(`⚡ Rota otimizada! ${rota.length} paradas reordenadas`);
+  toast(`⚡ Rota reordenada e otimizada com sucesso!`);
 }
 
 function doisOpt(rota){
   let melhora = true;
-  while(melhora){
-    melhora = false;
-    for(let i=0;i<rota.length-1;i++){
-      for(let j=i+2;j<rota.length;j++){
-        const antes = geo(rota[i],rota[i+1]) + geo(rota[j],rota[(j+1)%rota.length]);
-        const depois= geo(rota[i],rota[j])   + geo(rota[i+1],rota[(j+1)%rota.length]);
+  let voltas = 0;
+  while(melhora && voltas < 100){
+    melhora = false; voltas++;
+    for(let i=0; i<rota.length-2; i++){
+      for(let j=i+2; j<rota.length; j++){
+        let antes = geo(rota[i], rota[i+1]);
+        let depois = geo(rota[i], rota[j]);
+        if(j + 1 < rota.length) {
+          antes += geo(rota[j], rota[j+1]);
+          depois += geo(rota[i+1], rota[j+1]);
+        }
         if(depois < antes - 1e-9){
-          rota.splice(i+1,j-i,...rota.slice(i+1,j+1).reverse());
-          melhora=true;
+          let sub = rota.slice(i+1, j+1).reverse();
+          rota.splice(i+1, j-i, ...sub);
+          melhora = true;
         }
       }
     }
@@ -761,7 +785,7 @@ function doisOpt(rota){
   return rota;
 }
 
-function geo(a,b){ // distância euclidiana em graus
+function geo(a,b){
   return Math.sqrt((a.lat-b.lat)**2+(a.lon-b.lon)**2);
 }
 
@@ -784,7 +808,7 @@ function renderLista(){
       <div class="si">
         <div class="sr">${p[0]||e.endereco}</div>
         <div class="se">${p.slice(1).join(',').trim()||''}</div>
-        <div class="sc-cod">${e.codigo} ${!e.lat?'<span style="color:#f97316">⚠ sem coord.</span>':''}</div>
+        <div class="sc-cod">${e.codigo} ${!e.lat?'<span style="color:#f97316">· Sem coord.</span>':''}</div>
         ${badges[e.status]||''}
         ${e.timestamp?`<div class="sc-hora">⏱ ${e.timestamp}${e.nota?' · '+e.nota:''}</div>`:''}
       </div>`;
@@ -822,7 +846,7 @@ function renderResumo(){
       <div style="font-size:12px;color:var(--sub);margin-top:3px">das entregas finalizadas foram bem-sucedidas</div>
     </div>
     ${semC>0?`<div style="background:#fff7ed;border-radius:12px;padding:14px;border:1px solid #fdba74;font-size:13px;color:#c2410c">
-      ⚠️ <strong>${semC} endereço${semC>1?'s':''}</strong> sem coordenadas. Use <strong>🗺️ Geocodificar</strong> no menu para localizá-los no mapa.
+      ⚠️ <strong>${semC} paradas</strong> sem coordenadas. O sistema tentará aproximar pelo CEP ou use regeocodificar.
     </div>`:''}`;
   document.getElementById('prog-map-inner').style.width = pct+'%';
 }
@@ -841,9 +865,9 @@ function tab(t){
 }
 
 // ──────────────────────────────────────────────────────────
-//  PAINEL DE AÇÃO
+//  PAINEL DE AÇÃO & NAVEGAÇÃO CORRIGIDA
 // ──────────────────────────────────────────────────────────
-function ativar(i){
+function activar(i){
   idxAtivo=i;
   const e=bd[i];
   document.getElementById('pa-num').textContent=i+1;
@@ -870,27 +894,22 @@ function reg(status){
   if(status==='entregue') bip();
   salvar(); fecharPA();
   renderLista(); renderResumo(); plotar(); infoMenu();
-  const msgs={entregue:'✅ Entrega registrada!',falhou:'❌ Não entregue registrado',ausente:'🚪 Ausente registrado'};
-  toast(msgs[status]);
+  toast('Status atualizado!');
 }
 
 function navegar(){
   if(idxAtivo===null) return;
   const e=bd[idxAtivo];
-  const q=encodeURIComponent(e.endereco);
-  // Google Maps com modo carro — deep link abre app nativo no celular
+  const q=encodeURIComponent(limparEnderecoParaBusca(e.endereco));
   window.open(`https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=driving`,'_blank');
 }
 
 // ──────────────────────────────────────────────────────────
-//  MENU / DRAWER
+//  MENU / DRAWER / SCANNER / CONFIGS
 // ──────────────────────────────────────────────────────────
 function abrirMenu(){ document.getElementById('drawer').classList.add('open'); document.getElementById('ov').style.display='block'; }
 function fecharMenu(){ document.getElementById('drawer').classList.remove('open'); document.getElementById('ov').style.display='none'; }
 
-// ──────────────────────────────────────────────────────────
-//  SCANNER
-// ──────────────────────────────────────────────────────────
 function abrirScanner(){
   document.getElementById('scanner-modal').style.display='flex';
   document.getElementById('scan-fb').textContent='Aguardando leitura...';
@@ -923,9 +942,6 @@ function onScan(txt){
   }
 }
 
-// ──────────────────────────────────────────────────────────
-//  UTILITÁRIOS
-// ──────────────────────────────────────────────────────────
 function digitarCodigo(){
   const c=prompt('Digite o código da encomenda:');
   if(!c||!c.trim()) return;
@@ -976,15 +992,11 @@ function bip(){
   }catch(e){}
 }
 
-// ──────────────────────────────────────────────────────────
-//  BOOT
-// ──────────────────────────────────────────────────────────
 window.onload = () => {
   if(bd.length > 0){
     mostrarApp();
     const p=bd.filter(e=>e.status==='pendente').length;
     toast(`📦 Rota retomada · ${p} pendentes`);
-    // Geocodifica os que ainda faltam
     const semCoord = bd.filter(e=>e.geocodStatus!=='ok').length;
     if(semCoord>0) setTimeout(()=>geocodificar(true),500);
   }
