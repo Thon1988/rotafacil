@@ -54,7 +54,21 @@ FAILED_ATTEMPTS_TO_TRIGGER_HONEYPOT = 3
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/admin/login", auto_error=False)
-limiter = Limiter(key_func=get_remote_address)
+def _ip_key(request):
+    """Use real client IP behind proxy for rate limiting."""
+    try:
+        xff = request.headers.get("x-forwarded-for", "")
+        if xff:
+            return xff.split(",")[0].strip()
+        xri = request.headers.get("x-real-ip", "")
+        if xri:
+            return xri.strip()
+    except Exception:
+        pass
+    return get_remote_address(request)
+
+
+limiter = Limiter(key_func=_ip_key)
 
 # Code detection
 CODE_PATTERNS = [
@@ -292,9 +306,22 @@ async def get_current_admin(token: Optional[str] = Depends(oauth2_scheme)) -> di
     return {"username": payload["sub"], "honeypot": bool(payload.get("hp", False))}
 
 
+def get_real_ip(request: Request) -> str:
+    """Get the real client IP behind K8s/proxy ingress.
+    Trusts X-Forwarded-For (first IP in the comma-separated chain),
+    falls back to X-Real-IP, then request.client.host."""
+    xff = request.headers.get("x-forwarded-for", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    xri = request.headers.get("x-real-ip", "")
+    if xri:
+        return xri.strip()
+    return request.client.host if request.client else "unknown"
+
+
 async def log_audit(request: Request, username: str, success: bool, note: str = ""):
     try:
-        ip = request.client.host if request.client else "unknown"
+        ip = get_real_ip(request)
         ua = request.headers.get("user-agent", "Unknown")
         await db.audit_logs.insert_one({
             "username_attempted": username,
@@ -553,7 +580,7 @@ async def get_stats(user_id: str):
 @api_router.post("/admin/login")
 @limiter.limit("5/10minute")
 async def admin_login(request: Request, form: OAuth2PasswordRequestForm = Depends()):
-    ip = request.client.host if request.client else "unknown"
+    ip = get_real_ip(request)
     # Russian-doll honeypot trigger: too many prior fails
     prior_fails = await count_failed_attempts(ip, minutes=60)
 
