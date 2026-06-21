@@ -1,0 +1,42 @@
+{
+  "summary": "Rota Fácil MVP first-round testing. Backend: 13/13 pytest tests PASS (100%) - root metadata, parse-text BR/MLB codes, parse-file CSV/TXT, geocode-batch (Nominatim ~1s/addr), optimize TSP (validated nearest-neighbor ordering), PIX generate (EMV-compliant BR Code with CNPJ 48223054000142, prefix 00020101021226, CRC16 footer 6304+hex), PIX confirm activates 30-day subscription persisted to MongoDB, subscription days_remaining ~29-30 verified. Frontend: Landing/Paywall/Upload/Route/Scanner screens render with all testIDs; manual route creation (BR + MLB codes) processed through /api/parse-text + /api/geocode-batch and navigated to /route; stop activation, active widget, menu modal (6 items), manual code locate, mark delivered (counter 2→1), optimize TSP, scanner web fallback all work. ISSUE: On RN Web, Alert.alert button onPress callback after confirmPayment never fires so router.replace('/') never runs — user is stranded on /paywall after clicking 'Já paguei' (API does succeed and subscription is activated server-side; works on native iOS/Android). ISSUE: react-native-webview shows 'React Native WebView does not support this platform.' on web preview — Leaflet map is invisible on web (works on native).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "paywall.tsx (handleConfirm)", "issue": "On RN Web, Alert.alert([{text:'Começar', onPress: ()=>router.replace('/')}]) does NOT invoke the onPress callback (RN Web maps Alert to window.alert which has no per-button callbacks). After successful confirmPayment, user stays on /paywall with no navigation. Subscription IS active on backend, but UX is broken on web. Fix: call router.replace('/') directly after await confirmPayment(...) and show Alert (or a Toast) separately, e.g. on native only.", "testID": "confirm-payment-button", "priority": "HIGH"},
+      {"component": "route.tsx (WebView map)", "issue": "react-native-webview is unsupported on web — page shows literal text 'React Native WebView does not support this platform.' near top of map area. Consider Platform.OS === 'web' fallback (iframe/leaflet directly, or a placeholder message styled as part of UI). On native this works; on web preview the map is missing.", "testID": "route-map-webview", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "global", "issues": ["Deprecated 'shadow*' style props warnings — use 'boxShadow' (RN 0.76+/Web).", "Deprecated 'props.pointerEvents' warning — use style.pointerEvents."]}
+    ],
+    "react_native_issues": [
+      {"component": "Expo SDK versions", "issue": "Package version mismatches reported by Expo on startup: expo@54.0.34 (expected ~54.0.35), expo-font@14.0.11 (expected ~14.0.12), expo-router@6.0.23 (expected ~6.0.24). Run `npx expo install --check` (or update package.json) for full compatibility."}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_rota_facil.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Fix paywall handleConfirm on web: navigate via router.replace('/') directly after await confirmPayment(); show Alert separately or only on native (Platform.OS !== 'web').",
+    "Add Platform.OS === 'web' fallback for the Leaflet map in route.tsx (e.g., embed Leaflet via an <iframe> or render the HTML inside a <View> using react-native-web's createElement, or show a styled placeholder). Currently web users see raw error text.",
+    "Update Expo packages to matching versions: `cd /app/frontend && npx expo install expo expo-font expo-router` (or pin versions in package.json).",
+    "Replace deprecated 'shadow*' style props with 'boxShadow' and 'props.pointerEvents' with 'style.pointerEvents' to silence warnings."
+  ],
+  "critical_code_review_comments": [
+    "server.py:218 — '6304' is hardcoded then CRC appended; this is correct EMV PIX construction. Validated in test_pix_brcode_emv_compliant.",
+    "server.py:308 — optimize endpoint correctly handles done vs pendente stops and re-indexes ids; validated.",
+    "server.py:281 — parse_text uses dict payload (no Pydantic model). Works but consider a TextRequest model for input validation/docs.",
+    "api.ts uses API constant from @/src/constants/theme — verify it concatenates EXPO_PUBLIC_BACKEND_URL with '/api' (not verified in this run, but all calls succeeded so it is correct).",
+    "paywall.tsx handleConfirm — Alert.alert button onPress is the only path to router.replace; on web this dead-ends the user (see ui_bugs).",
+    "route.tsx:53 — buildLeafletHTML(stops) memoized with empty deps & eslint-disable; intentional, updates via postMessage. OK."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "~92% (1 web-only nav bug after PIX confirm, 1 web-only WebView limitation; all other flows pass)"},
+  "seed_data_creation": "Test PIX transactions and subscriptions for TEST_user_* user IDs were inserted into MongoDB during pytest (test_pix_confirm_activates_subscription). They use TEST_ prefix and do not interfere with real data.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend is fully green; do not waste time re-validating PIX EMV string structure unless server.py changes. Focus next round on: (1) confirming router.replace('/') works on web after confirmPayment (the main agent should refactor Alert callback), (2) verifying the web map fallback once added, (3) verifying file upload via /api/parse-file with a real CSV picked via expo-document-picker (web filepicker flow not exercised here — DocumentPicker behavior on web is generally limited).",
+  "rca_of_issue": "Bug RCA — Paywall stuck after 'Já paguei' on web: react-native-web's Alert.alert is implemented as window.alert(message) — it ignores the buttons array entirely and never calls onPress. Therefore router.replace('/') inside the 'Começar' button callback never executes on web. Reproduction: open /paywall, click 'Já paguei — Ativar Assinatura', observe URL stays at /paywall and no Start Route button appears (although /api/pix/confirm returns 200 and subscription is active in DB). Mitigation: navigate first, then alert — e.g. `await confirmPayment(...); router.replace('/'); Alert.alert('Assinatura Ativada! 🎉', '...');` — or use a custom in-app success modal/toast for cross-platform parity."
+}

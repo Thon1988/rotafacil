@@ -33,6 +33,12 @@
           "resizeMode": "contain",
           "backgroundColor": "#000"
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Escanear códigos de entrega"
+        }
       ]
     ],
     "experiments": {
