@@ -117,19 +117,6 @@
             margin-bottom: 15px;
         }
 
-        .select-dark {
-            width: 100%;
-            max-width: 360px;
-            background: #1c1c1e;
-            border: 1px solid #27272a;
-            padding: 14px;
-            border-radius: 8px;
-            color: white;
-            font-size: 16px;
-            box-sizing: border-box;
-            margin-bottom: 15px;
-        }
-
         .btn-laranja {
             background: var(--cor-laranja);
             color: white;
@@ -381,31 +368,26 @@
     <div id="tela-cadastro-usuario" class="tela-sobreposta tela-escura" style="display: none;">
         <div style="text-align: center; margin-top: 40px; width: 100%;">
             <h2 style="color: var(--cor-laranja); margin-bottom: 5px;">Rota+RápidaApp</h2>
-            <p style="color: #8e8e93; font-size: 14px; margin-bottom: 25px;">Validação Única do Aparelho Corporativo</p>
+            <p style="color: #8e8e93; font-size: 14px; margin-bottom: 25px;">Validação por WhatsApp (Não SMS)</p>
             
             <div id="etapa-dados-cadastro">
-                <select id="cadastro-tipo" class="select-dark" onchange="alternarTipoCadastro()">
-                    <option value="telefone">Receber Código por SMS</option>
-                    <option value="email">Receber Código por E-mail</option>
-                </select>
-                
-                <input type="text" id="cadastro-input" class="input-dark" placeholder="Digite seu Telefone com DDD">
+                <input type="text" id="cadastro-input" class="input-dark" placeholder="Seu WhatsApp Ex: 55119XXXXXXXX">
                 
                 <div id="wrapper-senha-existente" style="display: none;">
                     <input type="password" id="login-senha-direta" class="input-dark" placeholder="Digite sua Senha Cadastrada">
                 </div>
 
-                <button id="btn-acao-principal-auth" class="btn-laranja" onclick="verificarDestinoOuSolicitarCodigo()">Verificar Conta</button>
+                <button id="btn-acao-principal-auth" class="btn-laranja" onclick="verificarDestinoOuSolicitarCodigo()">Enviar Código via WhatsApp</button>
             </div>
 
             <div id="etapa-codigo-cadastro" style="display: none;">
-                <p style="color: #8e8e93; font-size: 14px; margin-bottom: 15px;">Insira o código de 6 dígitos enviado para o canal selecionado.</p>
+                <p style="color: #8e8e93; font-size: 14px; margin-bottom: 15px;">Um código de 6 dígitos foi disparado para o seu WhatsApp. Digite-o abaixo:</p>
                 <input type="text" id="cadastro-codigo" class="input-dark" placeholder="Código de 6 dígitos" maxlength="6">
                 <button class="btn-laranja" onclick="validarTokenUnicoEnviado()">Verificar Código</button>
             </div>
 
             <div id="etapa-definicao-senha" style="display: none;">
-                <p style="color: #16a34a; font-size: 14px; margin-bottom: 15px;">✓ Código validado! Agora cadastre sua senha definitiva de acesso:</p>
+                <p style="color: #16a34a; font-size: 14px; margin-bottom: 15px;">✓ Código validado! Cadastre sua senha definitiva de acesso:</p>
                 <input type="password" id="nova-senha-usuario" class="input-dark" placeholder="Crie uma senha segura">
                 <button class="btn-laranja" onclick="salvarSenhaDefinitivaFinal()">Concluir e Salvar Senha</button>
             </div>
@@ -509,9 +491,15 @@
     </div>
 
     <script>
-        // Configurações Globais de Comunicação e Segurança Sincronizadas
+        // =========================================================================
+        // CONFIGURAÇÃO DA API DE DISPARO DIRETO DO WHATSAPP
+        // Insira os dados da sua instância (Evolution API, Z-API, etc.)
+        // =========================================================================
+        const API_WHATSAPP_URL = "SUA_API_DE_WHATSAPP_AQUI"; 
+        const API_WHATSAPP_TOKEN = "SEU_TOKEN_DE_AUTORIZACAO_AQUI"; 
+        
+        const WHATSAPP_NUM_MASTER = "5511983454007"; 
         let CHAVE_PIX = localStorage.getItem('appegg_chave_pix') || "48223054000152";
-        const WHATSAPP_NUM = "5511983454007";
         let ESTATICO_PIX_STRING = "00020101021126580014br.gov.bcb.pix0114" + CHAVE_PIX + "520400005303986540520.005802BR5916RotaMaisRapida6009Sao Paulo62070503***63046D5B";
 
         function obterUUIDAparelhoUnico() {
@@ -538,7 +526,6 @@
         let layerMarkers = [];
         let mapPolyline = null;
         
-        // Variável contendo o token esperado em memória local (Simulando o recebimento via Gateway externo de SMS/Email)
         let tokenEsperadoBackEnd = null;
 
         window.onload = () => {
@@ -579,40 +566,20 @@
             }
         }
 
-        function alternarTipoCadastro() {
-            const tipo = document.getElementById('cadastro-tipo').value;
-            const input = document.getElementById('cadastro-input');
-            const wrapperSenha = document.getElementById('wrapper-senha-existente');
-            const btnAcao = document.getElementById('btn-acao-principal-auth');
-
-            input.value = "";
-            document.getElementById('login-senha-direta').value = "";
-            wrapperSenha.style.display = "none";
-            btnAcao.innerText = "Verificar Conta";
-
-            if (tipo === 'telefone') {
-                input.placeholder = "Digite seu Telefone com DDD";
-                input.type = "text";
-            } else {
-                input.placeholder = "Digite seu E-mail corporativo";
-                input.type = "email";
-            }
-        }
-
-        // Nova Lógica: Sem pop-up. Envia de verdade para a variável e aguarda.
         function verificarDestinoOuSolicitarCodigo() {
             const identificador = document.getElementById('cadastro-input').value.trim();
             const senhaDigitada = document.getElementById('login-senha-direta').value;
             const wrapperSenha = document.getElementById('wrapper-senha-existente');
             const btnAcao = document.getElementById('btn-acao-principal-auth');
 
-            if (identificador.length < 5) {
-                return alert("Insira um e-mail ou telefone válido.");
+            const numeroLimpo = identificador.replace(/\D/g, '');
+
+            if (numeroLimpo.length < 10) {
+                return alert("Insira um número de WhatsApp com DDD válido (Ex: 5511999999999).");
             }
 
-            let contaExistente = bdContasUsuarios[identificador];
+            let contaExistente = bdContasUsuarios[numeroLimpo];
 
-            // Cenário A: Ele já tem conta e já cadastrou uma senha definitiva
             if (contaExistente && contaExistente.senhaDefinitiva) {
                 if (wrapperSenha.style.display === "none") {
                     wrapperSenha.style.display = "block";
@@ -621,7 +588,7 @@
                 }
 
                 if (contaExistente.senhaDefinitiva === senhaDigitada) {
-                    usuarioSessaoLocal = identificador;
+                    usuarioSessaoLocal = numeroLimpo;
                     localStorage.setItem('appegg_sessao_usuario_ativo', usuarioSessaoLocal);
                     verificarStatusFluxoAcesso();
                 } else {
@@ -630,25 +597,56 @@
                 return;
             }
 
-            // Cenário B: Nova conta ou conta pendente sem senha. Dispara token de 6 dígitos único via backend (Simulado)
             tokenEsperadoBackEnd = String(Math.floor(100000 + Math.random() * 900000));
-            
-            // AQUI É FEITO O DISPARO SILENCIOSO DO GATEWAY
-            // Exemplo de integração: fetch('https://api.seugateway.com/sms', {body: tokenEsperadoBackEnd})
-            console.log(`[GATEWAY OUTBOUND] Código enviado em segundo plano para ${identificador}: ${tokenEsperadoBackEnd}`);
 
-            document.getElementById('etapa-dados-cadastro').style.display = 'none';
-            document.getElementById('etapa-codigo-cadastro').style.display = 'block';
+            btnAcao.innerText = "Enviando para o WhatsApp...";
+            btnAcao.disabled = true;
+
+            // Modo simulação caso o desenvolvedor ainda não tenha preenchido as credenciais HTTP
+            if (API_WHATSAPP_URL === "SUA_API_DE_WHATSAPP_AQUI") {
+                alert(`[Ambiente Local] Código real gerado para o WhatsApp ${numeroLimpo}: ${tokenEsperadoBackEnd}\n\nInsira este código de 6 dígitos no campo seguinte.`);
+                btnAcao.innerText = "Enviar Código via WhatsApp";
+                btnAcao.disabled = false;
+                document.getElementById('etapa-dados-cadastro').style.display = 'none';
+                document.getElementById('etapa-codigo-cadastro').style.display = 'block';
+                return;
+            }
+
+            const payloadMensagem = {
+                number: numeroLimpo,
+                options: { delay: 1000, presence: "composing" },
+                textMessage: { text: `🔑 *Rota+RápidaApp*\n\nSeu código de confirmação de acesso é: *${tokenEsperadoBackEnd}*\n\nID do Dispositivo: ${UUID_APARELHO}` }
+            };
+
+            fetch(API_WHATSAPP_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "apikey": API_WHATSAPP_TOKEN,
+                    "Authorization": `Bearer ${API_WHATSAPP_TOKEN}`
+                },
+                body: JSON.stringify(payloadMensagem)
+            })
+            .then(() => {
+                alert(`✓ Código enviado com sucesso para o WhatsApp ${numeroLimpo}!`);
+                document.getElementById('etapa-dados-cadastro').style.display = 'none';
+                document.getElementById('etapa-codigo-cadastro').style.display = 'block';
+            })
+            .catch(err => {
+                alert("Erro ao disparar código via WhatsApp API. Verifique os logs e credenciais configuradas.");
+                console.error(err);
+            })
+            .finally(() => {
+                btnAcao.innerText = "Enviar Código via WhatsApp";
+                btnAcao.disabled = false;
+            });
         }
 
         function validarTokenUnicoEnviado() {
             const codDigitado = document.getElementById('cadastro-codigo').value.trim();
-            const identificador = document.getElementById('cadastro-input').value.trim();
 
             if (codDigitado === tokenEsperadoBackEnd && tokenEsperadoBackEnd !== null) {
-                tokenEsperadoBackEnd = null; // Destrói o token para nunca mais ser usado
-                
-                // Avança para a etapa onde ele cadastra a sua senha de uso diário
+                tokenEsperadoBackEnd = null; 
                 document.getElementById('etapa-codigo-cadastro').style.display = 'none';
                 document.getElementById('etapa-definicao-senha').style.display = 'block';
             } else {
@@ -657,14 +655,13 @@
         }
 
         function salvarSenhaDefinitivaFinal() {
-            const identificador = document.getElementById('cadastro-input').value.trim();
+            const identificador = document.getElementById('cadastro-input').value.trim().replace(/\D/g, '');
             const novaSenha = document.getElementById('nova-senha-usuario').value.trim();
 
             if(novaSenha.length < 4) {
                 return alert("Defina uma senha com pelo menos 4 dígitos.");
             }
 
-            // Cria ou atualiza a conta vinculando de forma vitalícia a senha e o Hardware atual
             bdContasUsuarios[identificador] = {
                 usuario: identificador,
                 uuidAparelhoViculado: UUID_APARELHO,
@@ -674,7 +671,6 @@
             };
             localStorage.setItem('appegg_contas_usuarios', JSON.stringify(bdContasUsuarios));
 
-            // Notifica o painel administrativo sobre o novo aparelho aguardando liberação de licença
             let existePedido = bdAdminPedidos.find(p => p.usuario === identificador);
             if (!existePedido) {
                 bdAdminPedidos.push({
@@ -718,8 +714,8 @@
         }
 
         function confirmarPagamentoComprovante() {
-            let msgWpp = `Olá Milton! Enviei o pagamento do plano de liberação do Rota+RápidaApp. Conta: ${usuarioSessaoLocal} (Aparelho: ${UUID_APARELHO})`;
-            window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUM}&text=${encodeURIComponent(msgWpp)}`, '_blank');
+            let msgWpp = `Olá! Enviei o pagamento do plano de liberação do Rota+RápidaApp. Conta: ${usuarioSessaoLocal} (Aparelho: ${UUID_APARELHO})`;
+            window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUM_MASTER}&text=${encodeURIComponent(msgWpp)}`, '_blank');
         }
 
         function calcularDistancia(lat1, lon1, lat2, lon2) {
@@ -908,7 +904,7 @@
             window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bdRotas[indexAtivo].endereco)}`, '_blank');
         }
 
-        function ejecutarOtimizacaoTSP(mostrarAlert = true) {
+        function executarOtimizacaoTSP(mostrarAlert = true) {
             if(mostrarAlert) toggleMenu();
             let pendentes = bdRotas.filter(r => r.status === 'pendente');
             if(pendentes.length <= 1) return;
@@ -932,7 +928,7 @@
         function abrirScanner() {
             toggleMenu(); document.getElementById('modalScanner').style.display = 'flex';
             if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
-            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 280, height: 150 } }, processarLeituraDaCamera);
+            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 280, height: 150 } }, processLeituraDaCamera);
         }
 
         function fecharScanner() {
@@ -941,7 +937,7 @@
             processandoLeitura = false;
         }
 
-        function processarLeituraDaCamera(textoLido) {
+        function processLeituraDaCamera(textoLido) {
             if (processandoLeitura) return; processandoLeitura = true;
             const token = textoLido.trim().toUpperCase();
             const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
@@ -971,6 +967,10 @@
         function limparSessao() {
             toggleMenu(); if(confirm("Limpar rota?")) { localStorage.removeItem('rota_facil_db_oficial'); location.reload(); }
         }
+        
+        function mostrarPaywallCompleto() {
+            document.getElementById('tela-paywall').style.display = 'flex';
+        }
     </script>
 </body>
-    </html>
+</html>
