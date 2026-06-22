@@ -250,14 +250,6 @@
             color: var(--cor-marca);
         }
 
-        .indigo-status {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 6px;
-        }
-        
         .indicador-status {
             display: inline-block;
             width: 8px;
@@ -376,7 +368,7 @@
         let marcadoresLeaflet = {};
         let indexEncomendaAtiva = null;
         let html5QrCodeScanner = null;
-        let tokenGeradoAtual = null; // PERSISTÊNCIA DO TOKEN EM RUNTIME PARA EVITAR QUEBRA NO FLUXO
+        let tokenGeradoAtual = null;
         
         // Coordenada Base Padrão de Inicialização (São Paulo)
         const coordenadaPadrao = [-23.55052, -46.633308];
@@ -429,10 +421,8 @@
             const whatsapp = document.getElementById('auth-whatsapp').value.trim();
             if (!whatsapp) return alert('Por favor, digite um número válido.');
             
-            // GERAÇÃO DO TOKEN REAL DE 6 DÍGITOS
             tokenGeradoAtual = Math.floor(100000 + Math.random() * 900000).toString();
             
-            // Exibição clara no alerta para que o entregador copie exatamente os dígitos gerados pela simulação
             alert(`[API Rota+Rápida] Seu código de verificação é: ${tokenGeradoAtual}\n\nDigite este valor no campo seguinte.`);
             document.getElementById('bloco-verificacao').classList.remove('escondido');
         }
@@ -440,7 +430,6 @@
         function validarTokenAcesso() {
             const tokenInserido = document.getElementById('auth-token').value.trim();
             
-            // Validação exata com o token gerado dinamicamente em memória
             if (tokenInserido === tokenGeradoAtual && tokenGeradoAtual !== null) {
                 const uuidDispositivo = gerarUUIDHardwareNavegador();
                 
@@ -509,7 +498,7 @@
             }
         }
 
-        // PILAR 2: PROCESSAMENTO, FILTRAGEM REGEX E IMPORTAÇÃO DE DOCUMENTOS
+        // PILAR 2: PROCESSAMENTO DE EXCEL E PDF LINHA POR LINHA (MANTENDO A ORDEM DO DOCUMENTO)
         async function processarArquivoImportado(input) {
             const arquivo = input.files[0];
             if (!arquivo) return;
@@ -524,6 +513,8 @@
                     const dadosArray = await arquivo.arrayBuffer();
                     const livroAbas = XLSX.read(dadosArray, { type: 'array' });
                     const primeiraAba = livroAbas.Sheets[livroAbas.SheetNames[0]];
+                    
+                    // Leitura estruturada linha por linha transformando a aba do Excel em texto corrido limpo
                     textoExtraidoBruto = XLSX.utils.sheet_to_txt(primeiraAba);
                 } else if (extensao === 'pdf') {
                     const dadosArray = await arquivo.arrayBuffer();
@@ -575,7 +566,7 @@
             resolverCoordenadasAssincronas(novasEncomendas);
         }
 
-        // PILAR 2: GEOCODIFICAÇÃO VIA NOMINATIM OPENSTREETMAP
+        // PILAR 2: GEOCODIFICAÇÃO ASSÍNCRONA PRESERVANDO A ORDEM SEQUENCIAL DAS PARADAS
         async function resolverCoordenadasAssincronas(listaEncomendas) {
             exibirAvisoNotificacao("Convertendo endereços em coordenadas...");
             
@@ -594,64 +585,22 @@
                 } catch (e) {
                     console.error("Falha ao geocodificar paragem: ", e);
                 }
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 600)); // Delay regulatório da API do OpenStreetMap
             }
 
+            // Filtra as que obtiveram sucesso nas coordenadas mantendo estritamente a ordem de leitura do documento
             const filtradasComCoordenadas = listaEncomendas.filter(e => e.lat !== null && e.lng !== null);
 
             if (filtradasComCoordenadas.length > 0) {
+                // A ordem das paradas agora é fixada conforme a listagem original do arquivo importado
                 bancoLocalRotas = filtradasComCoordenadas;
-                executarOtimizacaoTSP();
+                
+                localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bancoLocalRotas));
+                renderizarMarcadoresNoMapa();
+                exibirAvisoNotificacao("Sucesso: Ordem das paradas carregada!");
             } else {
                 exibirAvisoNotificacao("Impossível geocodificar as localizações.");
             }
-        }
-
-        // PILAR 3: OTIMIZAÇÃO DE ROTA VIA ALGORITMO TSP (NEAREST NEIGHBOR + HAVERSINE)
-        function calcularDistanciaHaversine(lat1, lon1, lat2, lon2) {
-            const RaioTerraKM = 6371; 
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = 
-                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return RaioTerraKM * c;
-        }
-
-        function executarOtimizacaoTSP() {
-            if (bancoLocalRotas.length === 0) return;
-
-            let listaPendentesApenas = [...bancoLocalRotas];
-            let rotaOtimizadaSequencial = [];
-            
-            let pontoAtual = listaPendentesApenas.shift();
-            rotaOtimizadaSequencial.push(pontoAtual);
-
-            while (listaPendentesApenas.length > 0) {
-                let indexMaisProximo = 0;
-                let menorDistanciaCalculada = Infinity;
-
-                for (let i = 0; i < listaPendentesApenas.length; i++) {
-                    let d = calcularDistanciaHaversine(
-                        pontoAtual.lat, pontoAtual.lng,
-                        listaPendentesApenas[i].lat, listaPendentesApenas[i].lng
-                    );
-                    if (d < menorDistanciaCalculada) {
-                        menorDistanciaCalculada = d;
-                        indexMaisProximo = i;
-                    }
-                }
-
-                pontoAtual = listaPendentesApenas.splice(indexMaisProximo, 1)[0];
-                rotaOtimizadaSequencial.push(pontoAtual);
-            }
-
-            bancoLocalRotas = rotaOtimizadaSequencial;
-            
-            localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bancoLocalRotas));
-            renderizarMarcadoresNoMapa();
-            exibirAvisoNotificacao("Algoritmo TSP aplicado: Rota otimizada!");
         }
 
         // PILAR 4: ATUALIZAÇÃO E INTERAÇÃO GRÁFICA DO MAPA
@@ -699,10 +648,10 @@
 
             document.getElementById('widget-id').innerText = `Encomenda: ${dados.id}`;
             document.getElementById('widget-endereco').innerText = dados.endereco;
-            document.getElementById('widget-complemento').innerText = `Status Operacional: ${dados.status}`;
+            document.getElementById('widget-complemento').innerText = `Status Operacional: ${dados.status} (Parada nº ${index + 1})`;
             document.getElementById('widget-marcador-cor').style.backgroundColor = varreCorPorStatus(dados.status);
 
-            // CORREÇÃO CRUCIAL DA TEMPLATE STRING DO MAPS EXTERNO
+            // Geração correta do link universal de navegação externa por coordenadas nativas
             const urlCoordenadasGPS = `https://www.google.com/maps/search/?api=1&query=${dados.lat},${dados.lng}`;
             document.getElementById('btn-link-gps').setAttribute('href', urlCoordenadasGPS);
 
@@ -754,17 +703,17 @@
                         exibirAvisoNotificacao("Código lido não consta nesta rota.");
                     }
                 },
-                (erroVarredura) => { /* Loop silencioso de frames */ }
+                (erroVarredura) => { /* Loop de frames silencioso */ }
             ).catch(err => console.error("Falha ao abrir hardware de vídeo.", err));
         }
 
         function exibirAvisoNotificacao(mensagem) {
             const caixaAlerta = document.createElement('div');
             caixaAlerta.className = 'toast-notificacao';
-            caixaAlerta.innerText = message = mensagem;
+            caixaAlerta.innerText = mensagem;
             document.body.appendChild(caixaAlerta);
             setTimeout(() => caixaAlerta.remove(), 3500);
         }
     </script>
 </body>
-</html>
+    </html>
