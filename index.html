@@ -498,7 +498,7 @@
             }
         }
 
-        // PILAR 2: PROCESSAMENTO DE EXCEL E PDF LINHA POR LINHA (MANTENDO A ORDEM DO DOCUMENTO)
+        // PILAR 2: PROCESSAMENTO DE EXCEL E PDF LINHA POR LINHA
         async function processarArquivoImportado(input) {
             const arquivo = input.files[0];
             if (!arquivo) return;
@@ -513,8 +513,6 @@
                     const dadosArray = await arquivo.arrayBuffer();
                     const livroAbas = XLSX.read(dadosArray, { type: 'array' });
                     const primeiraAba = livroAbas.Sheets[livroAbas.SheetNames[0]];
-                    
-                    // Leitura estruturada linha por linha transformando a aba do Excel em texto corrido limpo
                     textoExtraidoBruto = XLSX.utils.sheet_to_txt(primeiraAba);
                 } else if (extensao === 'pdf') {
                     const dadosArray = await arquivo.arrayBuffer();
@@ -566,40 +564,60 @@
             resolverCoordenadasAssincronas(novasEncomendas);
         }
 
-        // PILAR 2: GEOCODIFICAÇÃO ASSÍNCRONA PRESERVANDO A ORDEM SEQUENCIAL DAS PARADAS
+        // TRATAMENTO EXCLUSIVO DE LIMPEZA DE ENDEREÇOS E RESOLUÇÃO GEOCODIFICADA
         async function resolverCoordenadasAssincronas(listaEncomendas) {
             exibirAvisoNotificacao("Convertendo endereços em coordenadas...");
             
             for (let encomenda of listaEncomendas) {
                 try {
-                    const urlNominatim = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(encomenda.endereco)}&limit=1`;
+                    // LIMPEZA ADICIONAL CRUCIAL: Remove dados comuns de planilhas que quebram o Nominatim
+                    let enderecoFormatado = encomenda.endereco
+                        .replace(/(R\.?|Rua)\b/gi, 'Rua')
+                        .replace(/(Av\.?|Avenida)\b/gi, 'Avenida')
+                        .replace(/\b(casa|apto|apt|bloco|fundos|andar|travessa)\b.*/gi, '') // Remove complementos internos
+                        .replace(/\s+/g, ' ') // Remove espaços duplicados
+                        .trim();
+
+                    const urlNominatim = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoFormatado)}&limit=1`;
                     const resposta = await fetch(urlNominatim, {
-                        headers: { 'User-Agent': 'RotaRapida-Logistica-Engine' }
+                        headers: { 'User-Agent': 'RotaRapida-Logistica-Engine-v2' }
                     });
                     const dadosGeocodificados = await resposta.json();
 
                     if (dadosGeocodificados && dadosGeocodificados.length > 0) {
                         encomenda.lat = parseFloat(dadosGeocodificados[0].lat);
                         encomenda.lng = parseFloat(dadosGeocodificados[0].lon);
+                    } else {
+                        // TENTATIVA DE BACKUP: Tenta buscar usando apenas os primeiros termos (Rua + Número + Cidade) se a busca completa falhar
+                        let partes = enderecoFormatado.split(' ');
+                        if (partes.length > 4) {
+                            let endereçoReduzido = partes.slice(0, 5).join(' ');
+                            const respostaBackup = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereçoReduzido)}&limit=1`, {
+                                headers: { 'User-Agent': 'RotaRapida-Logistica-Engine-v2' }
+                            });
+                            const dadosBackup = await respostaBackup.json();
+                            if (dadosBackup && dadosBackup.length > 0) {
+                                encomenda.lat = parseFloat(dadosBackup[0].lat);
+                                encomenda.lng = parseFloat(dadosBackup[0].lon);
+                            }
+                        }
                     }
                 } catch (e) {
                     console.error("Falha ao geocodificar paragem: ", e);
                 }
-                await new Promise(r => setTimeout(r, 600)); // Delay regulatório da API do OpenStreetMap
+                await new Promise(r => setTimeout(r, 800)); // Delay seguro regulatório expandido de 800ms
             }
 
-            // Filtra as que obtiveram sucesso nas coordenadas mantendo estritamente a ordem de leitura do documento
             const filtradasComCoordenadas = listaEncomendas.filter(e => e.lat !== null && e.lng !== null);
 
             if (filtradasComCoordenadas.length > 0) {
-                // A ordem das paradas agora é fixada conforme a listagem original do arquivo importado
                 bancoLocalRotas = filtradasComCoordenadas;
                 
                 localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bancoLocalRotas));
                 renderizarMarcadoresNoMapa();
-                exibirAvisoNotificacao("Sucesso: Ordem das paradas carregada!");
+                exibirAvisoNotificacao(`Ordem carregada! ${bancoLocalRotas.length} paradas mapeadas.`);
             } else {
-                exibirAvisoNotificacao("Impossível geocodificar as localizações.");
+                alert("Erro: O Nominatim não conseguiu geocodificar nenhuma linha. Certifique-se de que o arquivo contém endereços válidos ou limpe dados extras de texto.");
             }
         }
 
@@ -651,7 +669,7 @@
             document.getElementById('widget-complemento').innerText = `Status Operacional: ${dados.status} (Parada nº ${index + 1})`;
             document.getElementById('widget-marcador-cor').style.backgroundColor = varreCorPorStatus(dados.status);
 
-            // Geração correta do link universal de navegação externa por coordenadas nativas
+            // PADRÃO UNIVERSAL DA URL DO GOOGLE MAPS DIRETO POR COORDENADAS
             const urlCoordenadasGPS = `https://www.google.com/maps/search/?api=1&query=${dados.lat},${dados.lng}`;
             document.getElementById('btn-link-gps').setAttribute('href', urlCoordenadasGPS);
 
@@ -716,4 +734,4 @@
         }
     </script>
 </body>
-    </html>
+</html>
