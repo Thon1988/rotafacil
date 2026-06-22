@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gerenciador de Rotas Inteligente</title>
+    <title>Rota+Rápida App</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -317,7 +317,7 @@
         // Coordenada Base Padrão de Inicialização (São Paulo)
         const coordenadaPadrao = [-23.55052, -46.633308];
 
-        // PILAR 1: ASSINATURA DE HARDWARE E VÍNCULO DE DISPOSITIVO (UUID)
+        // PILAR 1: ASSINATURA DE HARDWARE E VÍNCULO DE DISPOSITIVO (UUID CONFIGURADO)
         function gerarUUIDHardwareNavegador() {
             const componentesPlataforma = [
                 navigator.userAgent,
@@ -328,14 +328,13 @@
                 navigator.hardwareConcurrency
             ].join('||');
             
-            // Simulação de Hash Simples para gerar assinatura com base nas specs
             let hash = 0;
             for (let i = 0; i < componentesPlataforma.length; i++) {
                 const char = componentesPlataforma.charCodeAt(i);
                 hash = ((hash << 5) - hash) + char;
                 hash = hash & hash;
             }
-            return 'appegg-' + Math.abs(hash) + '-uuid-oficial';
+            return 'rota+rapidaapp-' + Math.abs(hash) + '-uuid-oficial';
         }
 
         // Execução Automática no Ciclo de Vida Inicial da SPA
@@ -346,8 +345,8 @@
 
         function verificarStatusEHardware() {
             const uuidDispositivoAtual = gerarUUIDHardwareNavegador();
-            const contaRegistrada = localStorage.getItem('appegg_conta_ativa');
-            const uuidVinculado = localStorage.getItem('appegg_device_uuid');
+            const contaRegistrada = localStorage.getItem('rota_rapida_conta_ativa');
+            const uuidVinculado = localStorage.getItem('rota+rapidaapp_device_uuid');
 
             if (contaRegistrada) {
                 // Bloqueio de Contas Compartilhadas se o UUID físico divergir
@@ -379,8 +378,8 @@
                 const uuidDispositivo = gerarUUIDHardwareNavegador();
                 
                 // Vincula estritamente o número da conta ao UUID físico do aparelho corrente
-                localStorage.setItem('appegg_conta_ativa', document.getElementById('auth-whatsapp').value);
-                localStorage.setItem('appegg_device_uuid', uuidDispositivo);
+                localStorage.setItem('rota_rapida_conta_ativa', document.getElementById('auth-whatsapp').value);
+                localStorage.setItem('rota+rapidaapp_device_uuid', uuidDispositivo);
                 
                 document.getElementById('tela-auth').classList.add('escondido');
                 carregarBancoLocalEPlotar();
@@ -446,16 +445,14 @@
             const linhas = texto.split('\n');
             const novasEncomendas = [];
             
-            // Padrões Regex estruturados para capturar códigos de etiquetas/rastreios comuns
             const regexCodigoRastreio = /([A-Z]{2}[0-9]{9}[A-Z]{2}|[0-9]{11,13})/i;
 
             linhas.forEach((linha, index) => {
                 if (linha.trim().length < 10) return;
 
-                let matchCodigo = java = linha.match(regexCodigoRastreio);
+                let matchCodigo = linha.match(regexCodigoRastreio);
                 let codigoIdentificado = matchCodigo ? matchCodigo[0] : `ID-${Date.now()}-${index}`;
                 
-                // Isolamento por expressão regular: remove o identificador para limpar a string de endereço
                 let enderecoLimpo = linha.replace(regexCodigoRastreio, '').replace(/[,;]/g, ' ').trim();
 
                 if (enderecoLimpo.length > 12) {
@@ -485,7 +482,7 @@
                 try {
                     const urlNominatim = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(encomenda.endereco)}&limit=1`;
                     const resposta = await fetch(urlNominatim, {
-                        headers: { 'User-Agent': 'NumeraRapido-Logistica-Engine' }
+                        headers: { 'User-Agent': 'RotaRapida-Logistica-Engine' }
                     });
                     const dadosGeocodificados = await resposta.json();
 
@@ -496,17 +493,13 @@
                 } catch (e) {
                     console.error("Falha ao geocodificar paragem: ", e);
                 }
-                // Delay controlado de respeito aos termos de uso do Nominatim API
                 await new Promise(r => setTimeout(r, 600));
             }
 
-            // Filtragem final contendo apenas os dados localizados geograficamente no mapa
             const filtradasComCoordenadas = listaEncomendas.filter(e => e.lat !== null && e.lng !== null);
 
             if (filtradasComCoordenadas.length > 0) {
                 bancoLocalRotas = filtradasComCoordenadas;
-                
-                // Executa automaticamente o pilar matemático de organização
                 executarOtimizacaoTSP();
             } else {
                 exibirAvisoNotificacao("Impossível geocodificar as localizações.");
@@ -525,13 +518,12 @@
             return RaioTerraKM * c;
         }
 
-        function ejecutarOtimizacaoTSP() {
+        function executarOtimizacaoTSP() {
             if (bancoLocalRotas.length === 0) return;
 
             let listaPendentesApenas = [...bancoLocalRotas];
             let rotaOtimizadaSequencial = [];
             
-            // Ponto de partida inicial assumido a partir do primeiro ponto capturado
             let pontoAtual = listaPendentesApenas.shift();
             rotaOtimizadaSequencial.push(pontoAtual);
 
@@ -550,14 +542,12 @@
                     }
                 }
 
-                // Desloca o ponteiro para o vizinho matemático mais perto
                 pontoAtual = listaPendentesApenas.splice(indexMaisProximo, 1)[0];
                 rotaOtimizadaSequencial.push(pontoAtual);
             }
 
             bancoLocalRotas = rotaOtimizadaSequencial;
             
-            // Salva os dados de persistência no LocalStorage
             localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bancoLocalRotas));
             renderizarMarcadoresNoMapa();
             exibirAvisoNotificacao("Algoritmo TSP aplicado: Rota otimizada!");
@@ -565,7 +555,6 @@
 
         // PILAR 4: ATUALIZAÇÃO E INTERAÇÃO GRÁFICA DO MAPA
         function renderizarMarcadoresNoMapa() {
-            // Limpa pins antigos
             for (let id in marcadoresLeaflet) {
                 instanciaMapa.removeLayer(marcadoresLeaflet[id]);
             }
@@ -578,7 +567,6 @@
             bancoLocalRotas.forEach((encomenda, index) => {
                 let corDoPin = varreCorPorStatus(encomenda.status);
 
-                // Customização do Pin Numérico
                 let iconeCustomizado = L.divIcon({
                     className: 'custom-marker-pin',
                     html: `<div style="background-color: ${corDoPin}; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">${index + 1}</div>`,
@@ -598,9 +586,9 @@
         }
 
         function varreCorPorStatus(status) {
-            if (status === 'Entregue') return '#22c55e'; // Verde
-            if (status === 'Falhou') return '#ef4444';   // Vermelho
-            return '#3b82f6';                            // Azul Pendente
+            if (status === 'Entregue') return '#22c55e';
+            if (status === 'Falhou') return '#ef4444';
+            return '#3b82f6';
         }
 
         // PILAR 4: OPERAÇÃO DO WIDGET DE DETALHES E INTEGRAÇÃO GPS EXTERNA
@@ -613,7 +601,7 @@
             document.getElementById('widget-complemento').innerText = `Status Operacional: ${dados.status}`;
             document.getElementById('widget-marcador-cor').style.backgroundColor = varreCorPorStatus(dados.status);
 
-            // Geração de Hiperligação Parametrizada Externa para Aplicativo Nativo de GPS (Template String corrigida)
+            // Geração de Hiperligação Parametrizada Externa Correta
             const urlCoordenadasGPS = `https://www.google.com/maps/search/?api=1&query=${dados.lat},${dados.lng}`;
             document.getElementById('btn-link-gps').setAttribute('href', urlCoordenadasGPS);
 
@@ -655,19 +643,17 @@
                 { facingMode: "environment" },
                 { fps: 15, qrbox: { width: 250, height: 150 } },
                 (textoCodigoBipado) => {
-                    // Executado imediatamente ao bipar um código de barras ou QR Code
                     const indexEncontrado = bancoLocalRotas.findIndex(e => e.id.toLowerCase() === textoCodigoBipado.trim().toLowerCase());
                     
                     if (indexEncontrado !== -1) {
                         alternarVisibilidadeScanner();
-                        // Centraliza automaticamente a visão no mapa e abre o widget operacional do pacote
                         instanciaMapa.setView([bancoLocalRotas[indexEncontrado].lat, bancoLocalRotas[indexEncontrado].lng], 16);
                         abrirPainelWidgetEncomenda(indexEncontrado);
                     } else {
                         exibirAvisoNotificacao("Código lido não consta nesta rota.");
                     }
                 },
-                (erroVarredura) => { /* Silencioso para não travar loop de frames */ }
+                (erroVarredura) => { /* Loop silencioso de frames */ }
             ).catch(err => console.error("Falha ao abrir hardware de vídeo.", err));
         }
 
