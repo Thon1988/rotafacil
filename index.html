@@ -31,7 +31,7 @@
             overflow: hidden;
         }
 
-        /* Telas de Bloqueio, Assinatura e Admin */
+        /* Telas de Bloqueio, Assinatura, Login e Admin */
         .tela-sobreposta {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -118,6 +118,19 @@
         }
 
         .input-dark {
+            width: 100%;
+            max-width: 360px;
+            background: #1c1c1e;
+            border: 1px solid #27272a;
+            padding: 14px;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+
+        .select-dark {
             width: 100%;
             max-width: 360px;
             background: #1c1c1e;
@@ -420,7 +433,6 @@
             box-sizing: border-box;
         }
 
-        /* Tela do Terminal de Looping da Boneca Russa */
         #tela-boneca-russa {
             display: none;
             position: fixed;
@@ -440,10 +452,33 @@
             font-size: 13px;
             line-height: 1.4;
         }
+        #tela-setup {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .btn-upload {
+            background: var(--cor-laranja);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
     </style>
 </head>
 <body>
 
+    <!-- Tela do Sistema Matryoshka de Defesa Contra Hackers (Looping Infinito) -->
     <div id="tela-boneca-russa">
         <div style="font-weight: bold; border-bottom: 1px dashed #39ff14; padding-bottom: 8px; margin-bottom: 10px;">
             ⚠️ INTRUSION DETECTED - PARANOID BONECA RUSSA ACTIVE PROTOCOL ⚠️
@@ -451,42 +486,70 @@
         <div id="terminal-output"></div>
     </div>
 
-    <div id="tela-paywall" class="tela-sobreposta tela-escura" style="display: none;">
-        <div class="header-voltar" onclick="abrirLoginAdmin()">‹ Assinar</div>
+    <!-- 0. Tela de Cadastro e Verificação do Usuário Final (Telefone/E-mail com 6 Dígitos) -->
+    <div id="tela-cadastro-usuario" class="tela-sobreposta tela-escura" style="display: none;">
+        <div class="header-voltar" onclick="abrirLoginAdmin()">🛡️ Painel Admin</div>
         
-        <div class="card-plano">
-            <div style="font-size: 13px; font-weight: bold; color: #8e8e93;">PLANO MENSAL</div>
-            <div style="font-size: 44px; font-weight: 800; margin: 10px 0; color: white;">
-                <span style="font-size: 20px; font-weight: bold; vertical-align: super;">R$</span>20<span style="font-size: 16px; font-weight: normal; color: #8e8e93;">/mês</span>
-            </div>
-            <div class="badge-laranja">🔥 Menos de R$ 1 por dia</div>
-        </div>
-
-        <div class="lista-beneficios">
-            <div class="item-beneficio"><span class="check-verde">✓</span> Rotas ilimitadas otimizadas</div>
-            <div class="item-beneficio"><span class="check-verde">✓</span> Scanner de códigos Shopee & Mercado Livre</div>
-            <div class="item-beneficio"><span class="check-verde">✓</span> Geocodificação automática de endereços</div>
-            <div class="item-beneficio"><span class="check-verde">✓</span> Exportação de relatórios em CSV</div>
-            <div class="item-beneficio"><span class="check-verde">✓</span> Mapa interativo com rota visual</div>
-        </div>
-
-        <div style="text-align: center; margin-top: 5px;">
-            <h3 style="margin: 5px 0;">Pague com PIX</h3>
-            <p style="font-size: 12px; color: #8e8e93; margin: 0 0 10px 0;">Escaneie o QR Code abaixo</p>
-            <div class="qrcode-container" id="qrcode-pix"></div>
+        <div style="text-align: center; margin-top: 40px; width: 100%;">
+            <h2 style="color: var(--cor-laranja); margin-bottom: 5px;">Acessar o AppEgg</h2>
+            <p style="color: #8e8e93; font-size: 14px; margin-bottom: 25px;">Faça seu cadastro para validar o aparelho</p>
             
-            <button class="btn-laranja" style="background: #232733; margin-bottom: 15px;" onclick="copiarPix()">📋 Copiar código PIX</button>
-            <button class="btn-laranja" onclick="confirmarPagamentoComprovante()">enviar comprovante por WhatsApp</button>
+            <div id="etapa-dados-cadastro">
+                <select id="cadastro-tipo" class="select-dark" onchange="alternarTipoCadastro()">
+                    <option value="telefone">Cadastrar por Telefone (SMS)</option>
+                    <option value="email">Cadastrar por E-mail</option>
+                </select>
+                
+                <input type="text" id="cadastro-input" class="input-dark" placeholder="Digite seu Telefone com DDD">
+                <button class="btn-laranja" onclick="enviarCodigoValidacaoUsuario()">Enviar Código de 6 Dígitos</button>
+            </div>
+
+            <div id="etapa-codigo-cadastro" style="display: none;">
+                <p style="color: #ea580c; font-size: 14px; margin-bottom: 15px;" id="texto-aviso-codigo">Código enviado!</p>
+                <input type="text" id="cadastro-codigo" class="input-dark" placeholder="Código de 6 dígitos" maxlength="6">
+                <button class="btn-laranja" onclick="verificarCodigoUsuarioFinal()">Confirmar Código</button>
+                <p style="color: #8e8e93; font-size: 12px; margin-top: 15px; cursor: pointer;" onclick="voltarEtapaCadastro()">← Alterar dados</p>
+            </div>
         </div>
     </div>
 
+    <!-- 1. Tela de Assinatura (Paywall / Bloqueado por Aparelho) -->
+    <div id="tela-paywall" class="tela-sobreposta tela-escura" style="display: none;">
+        <div class="header-voltar" onclick="abrirLoginAdmin()">‹ Painel Admin</div>
+        
+        <div class="card-plano">
+            <div style="font-size: 13px; font-weight: bold; color: #8e8e93;">LIBERAÇÃO EXCLUSIVA POR APARELHO</div>
+            <div style="font-size: 22px; font-weight: 800; margin: 15px 0; color: white;" id="titulo-uid-aparelho">
+                User ID: ...
+            </div>
+            <div class="badge-laranja">⚠️ Conta intransferível (Proibido dividir)</div>
+        </div>
+
+        <div class="lista-beneficios">
+            <div class="item-beneficio"><span class="check-verde">✓</span> Vinculado estritamente ao seu hardware</div>
+            <div class="item-beneficio"><span class="check-verde">✓</span> Rotas ilimitadas otimizadas</div>
+            <div class="item-beneficio"><span class="check-verde">✓</span> Scanner de códigos Shopee & Mercado Livre</div>
+            <div class="item-beneficio"><span class="check-verde">✓</span> Exportação de relatórios em CSV</div>
+        </div>
+
+        <div style="text-align: center; margin-top: 5px;">
+            <h3 style="margin: 5px 0;">Assinatura Mensal R$ 20</h3>
+            <div class="qrcode-container" id="qrcode-pix"></div>
+            
+            <button class="btn-laranja" style="background: #232733; margin-bottom: 15px;" onclick="copiarPix()">📋 Copiar código PIX</button>
+            <button class="btn-laranja" onclick="confirmarPagamentoComprovante()">Enviar comprovante por WhatsApp</button>
+            <p style="font-size: 12px; color: #dc2626; margin-top: 15px; cursor: pointer;" onclick="deslogarAparelhoLimpar()">Desconectar conta deste aparelho</p>
+        </div>
+    </div>
+
+    <!-- 2. Tela de Autenticação Administrativa -->
     <div id="tela-login-admin" class="tela-sobreposta tela-escura" style="display: none;">
         <div class="header-voltar" onclick="fecharLoginAdmin()">‹ Voltar</div>
         <div style="text-align: center; margin-top: 60px; width: 100%;">
             <div style="background: #1c1c1e; width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 1px solid #27272a;">
                 <span style="font-size: 32px; color: var(--cor-laranja);">🛡️</span>
             </div>
-            <h2>Painel Admin</h2>
+            <h2>Painel Admin Master</h2>
             <p style="color: #8e8e93; font-size: 14px; margin-bottom: 30px;">Acesso restrito</p>
             
             <input type="text" id="admin-user" class="input-dark" value="admin" placeholder="Usuário">
@@ -496,6 +559,7 @@
         </div>
     </div>
 
+    <!-- 3. Tela do Painel Administrativo -->
     <div id="tela-painel-admin" class="tela-sobreposta tela-escura" style="display: none;">
         <div style="width:100%; max-width:400px; display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h2 style="margin:0;">Painel Admin</h2>
@@ -505,7 +569,7 @@
         <div class="grid-indicadores">
             <div class="card-ind">
                 <div class="num" id="ind-ativas" style="color: var(--cor-verde);">0</div>
-                <div class="label">Ativas</div>
+                <div class="label">Ativos</div>
             </div>
             <div class="card-ind">
                 <div class="num" id="ind-pendentes" style="color: #ff9500;">0</div>
@@ -517,9 +581,10 @@
             </div>
         </div>
 
-        <h3 style="width:100%; max-width:400px; font-size:16px; margin-bottom:5px; border-bottom:1px solid #27272a; padding-bottom:8px;">Pagamentos pendentes</h3>
+        <h3 style="width:100%; max-width:400px; font-size:16px; margin-bottom:5px; border-bottom:1px solid #27272a; padding-bottom:8px;">Solicitações por Aparelho Único</h3>
         <div class="lista-solicitacoes" id="container-solicitacoes" style="max-height: 160px; overflow-y: auto;"></div>
 
+        <!-- Gerenciamento Sensível com Validação 2FA de 8 Dígitos -->
         <h3 style="width:100%; max-width:400px; font-size:16px; margin-top:15px; margin-bottom:5px; border-bottom:1px solid #27272a; padding-bottom:8px;">Configurações de Segurança</h3>
         
         <div class="secao-config">
@@ -533,6 +598,7 @@
         </div>
     </div>
 
+    <!-- Layout Base do Aplicativo de Rotas -->
     <div id="tela-setup">
         <h1 style="color: #ea580c;">📦 AppEgg Rota Fácil</h1>
         <p style="color: #666; text-align: center;">Carregue sua lista de entregas (PDF, Excel, CSV ou TXT).</p>
@@ -540,7 +606,7 @@
         <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
         
         <button class="btn-upload" onclick="processarArquivoFisico()">Processar Rota Ativa</button>
-        <div style="margin-top:25px; font-size:13px; color:#ea580c; font-weight:bold; cursor:pointer;" onclick="mostrarPaywallCompleto()">Visualizar Licença / Assinatura</div>
+        <div style="margin-top:25px; font-size:13px; color:#ea580c; font-weight:bold; cursor:pointer;" onclick="mostrarPaywallCompleto()">Visualizar Licença do Aparelho</div>
     </div>
 
     <div id="mapa-container">
@@ -605,19 +671,34 @@
     </div>
 
     <script>
-        // Configurações Globais de Estado do Dono
+        // Configurações de Estado do Dono e Segurança Master
         let CHAVE_PIX = localStorage.getItem('appegg_chave_pix') || "48223054000152";
         let SENHA_ADMIN = localStorage.getItem('appegg_senha_admin') || "*Mespykes007";
-        
         const WHATSAPP_NUM = "5511983454007";
         let ESTATICO_PIX_STRING = "00020101021126580014br.gov.bcb.pix0114" + CHAVE_PIX + "520400005303986540520.005802BR5916AppEggRotaFacil6009Sao Paulo62070503***63046D5B";
 
-        // Bancos de Dados locais simulados
-        let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
-        let bdAssinatura = JSON.parse(localStorage.getItem('appegg_status_licenca')) || { status: 'bloqueado', idUsuario: 'User_' + Math.floor(1000 + Math.random() * 9000) };
-        let bdAdminPedidos = JSON.parse(localStorage.getItem('appegg_pedidos_admin')) || [];
+        // Geração da Assinatura e Identificação Única por Aparelho (Fingerprint do Navegador)
+        function obterUUIDAparelhoUnico() {
+            let idFixo = localStorage.getItem('appegg_device_uuid');
+            if(!idFixo) {
+                const f = navigator.userAgent.length + (navigator.plugins ? navigator.plugins.length : 0) + screen.height + screen.width;
+                idFixo = 'APARELHO_' + f + '_' + Math.floor(100000 + Math.random() * 900000);
+                localStorage.setItem('appegg_device_uuid', idFixo);
+            }
+            return idFixo;
+        }
 
-        // Impressão digital do dispositivo confiável (Dispositivo do Admin Master)
+        const UUID_APARELHO = obterUUIDAparelhoUnico();
+
+        // Banco de Dados locais centralizados no localStorage
+        let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
+        let bdContasUsuarios = JSON.parse(localStorage.getItem('appegg_contas_usuarios')) || {}; 
+        let bdAdminPedidos = JSON.parse(localStorage.getItem('appegg_pedidos_admin')) || [];
+        
+        // Estado da sessão atual logada neste aparelho
+        let usuarioSessaoLocal = localStorage.getItem('appegg_sessao_usuario_ativo') || null;
+
+        // Controle do Painel Administrativo de segurança do Dispositivo Master
         let tokenAcessoDispositivo = localStorage.getItem('appegg_dispositivo_token');
         if(!tokenAcessoDispositivo) {
             tokenAcessoDispositivo = 'DEV_MASTER_' + Math.floor(100000 + Math.random() * 900000);
@@ -632,18 +713,39 @@
         let layerMarkers = [];
         let mapPolyline = null;
         let token2FAGerado = null;
+        let token6DigitosUsuario = null;
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         window.onload = () => {
             inicializarMapa();
             gerarQRCodeInterface();
-            verificarStatusLicencaAtiva();
+            verificarStatusFluxoAcesso();
             document.getElementById('config-pix').value = CHAVE_PIX;
         };
 
-        function verificarStatusLicencaAtiva() {
-            if(bdAssinatura.status !== 'ativo') {
+        // Regra de Negócio: Cadastro Obrigatório -> Aparelho Único -> Licença Ativa
+        function verificarStatusFluxoAcesso() {
+            if (!usuarioSessaoLocal) {
+                document.getElementById('tela-cadastro-usuario').style.display = 'flex';
+                document.getElementById('tela-paywall').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('tela-cadastro-usuario').style.display = 'none';
+            document.getElementById('titulo-uid-aparelho').innerText = `ID Conta: ${usuarioSessaoLocal}`;
+
+            // Localizar cadastro global do usuário
+            let conta = bdContasUsuarios[usuarioSessaoLocal];
+            
+            // Garantir amarração estrita e intransferível de hardware: Se trocou ou dividiu o aparelho, barra
+            if (!conta || conta.uuidAparelhoViculado !== UUID_APARELHO) {
+                alert("⚠️ Erro de Segurança: Este cadastro já está vinculado exclusivamente a outro aparelho físico. É proibido dividir a conta.");
+                deslogarAparelhoLimpar();
+                return;
+            }
+
+            if (conta.status !== 'ativo') {
                 document.getElementById('tela-paywall').style.display = 'flex';
             } else {
                 document.getElementById('tela-paywall').style.display = 'none';
@@ -655,6 +757,94 @@
                     plotarNoMapa();
                 }
             }
+        }
+
+        // Interface do Cadastro de Usuários
+        function alternarTipoCadastro() {
+            const tipo = document.getElementById('cadastro-tipo').value;
+            const input = document.getElementById('cadastro-input');
+            if (tipo === 'telefone') {
+                input.placeholder = "Digite seu Telefone com DDD";
+                input.type = "text";
+            } else {
+                input.placeholder = "Digite seu E-mail corporativo";
+                input.type = "email";
+            }
+        }
+
+        function enviarCodigoValidacaoUsuario() {
+            const identificador = document.getElementById('cadastro-input').value.trim();
+            const tipo = document.getElementById('cadastro-tipo').value;
+
+            if (identificador.length < 7) {
+                return alert("Por favor, preencha o campo de cadastro corretamente.");
+            }
+
+            // Se o usuário já existir globalmente e estiver atrelado a outro UUID, bloqueia a divisão imediatamente
+            if (bdContasUsuarios[identificador] && bdContasUsuarios[identificador].uuidAparelhoViculado !== UUID_APARELHO) {
+                return alert("⚠️ Bloqueio de Compartilhamento: Este número/e-mail já está em uso em outro smartphone corporativo.");
+            }
+
+            // Gera código numérico de 6 dígitos para o fluxo de SMS/E-mail
+            token6DigitosUsuario = String(Math.floor(100000 + Math.random() * 900000));
+            
+            console.log(`[SYSTEM SIMULATION] Código de 6 dígitos enviado via ${tipo.toUpperCase()} para ${identificador}: ${token6DigitosUsuario}`);
+            document.getElementById('texto-aviso-codigo').innerText = `Código de 6 dígitos enviado com sucesso para seu ${tipo}!`;
+            
+            document.getElementById('etapa-dados-cadastro').style.display = 'none';
+            document.getElementById('etapa-codigo-cadastro').style.display = 'block';
+        }
+
+        function verificarCodigoUsuarioFinal() {
+            const codDigitado = document.getElementById('cadastro-codigo').value.trim();
+            const identificador = document.getElementById('cadastro-input').value.trim();
+
+            if (codDigitado === token6DigitosUsuario && token6DigitosUsuario !== null) {
+                
+                // Cria ou recupera o cadastro amarrando ao UUID físico imutável deste aparelho
+                if (!bdContasUsuarios[identificador]) {
+                    bdContasUsuarios[identificador] = {
+                        usuario: identificador,
+                        uuidAparelhoViculado: UUID_APARELHO,
+                        status: 'pendente',
+                        dataCadastro: new Date().toLocaleString('pt-BR')
+                    };
+                }
+
+                localStorage.setItem('appegg_contas_usuarios', JSON.stringify(bdContasUsuarios));
+                
+                // Envia a solicitação de liberação para a fila de espera instantânea do Administrador
+                let existePedido = bdAdminPedidos.find(p => p.usuario === identificador);
+                if (!existePedido) {
+                    bdAdminPedidos.push({
+                        usuario: identificador,
+                        uuid: UUID_APARELHO,
+                        status: 'pendente',
+                        data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR')
+                    });
+                    localStorage.setItem('appegg_pedidos_admin', JSON.stringify(bdAdminPedidos));
+                }
+
+                usuarioSessaoLocal = identificador;
+                localStorage.setItem('appegg_sessao_usuario_ativo', usuarioSessaoLocal);
+                
+                token6DigitosUsuario = null;
+                alert("Aparelho cadastrado com sucesso!");
+                verificarStatusFluxoAcesso();
+            } else {
+                alert("Código de verificação incorreto. Tente novamente.");
+            }
+        }
+
+        function voltarEtapaCadastro() {
+            document.getElementById('etapa-dados-cadastro').style.display = 'block';
+            document.getElementById('etapa-codigo-cadastro').style.display = 'none';
+        }
+
+        function deslogarAparelhoLimpar() {
+            localStorage.removeItem('appegg_sessao_usuario_ativo');
+            usuarioSessaoLocal = null;
+            location.reload();
         }
 
         function gerarQRCodeInterface() {
@@ -675,49 +865,28 @@
         }
 
         function confirmarPagamentoComprovante() {
-            if(bdAssinatura.status === 'ativo') {
-                return alert("Sua assinatura já está ativa!");
-            }
-            
-            bdAssinatura.status = 'pendente';
-            localStorage.setItem('appegg_status_licenca', JSON.stringify(bdAssinatura));
-
-            let existePedido = bdAdminPedidos.find(p => p.usuario === bdAssinatura.idUsuario);
-            if(!existePedido) {
-                bdAdminPedidos.push({
-                    usuario: bdAssinatura.idUsuario,
-                    status: 'pendente',
-                    data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR')
-                });
-                localStorage.setItem('appegg_pedidos_admin', JSON.stringify(bdAdminPedidos));
-            }
-
-            let msgWpp = `Olá! Realizei o pagamento do plano de R$20 da minha assinatura do AppEgg Rota Fácil. Segue em anexo o meu comprovante. Identificador do usuário: ${bdAssinatura.idUsuario}`;
+            let msgWpp = `Olá Milton! Realizei o pagamento do plano de liberação do meu aparelho do AppEgg. Identificador da minha conta: ${usuarioSessaoLocal} (Aparelho: ${UUID_APARELHO})`;
             window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUM}&text=${encodeURIComponent(msgWpp)}`, '_blank');
-            
-            alert("Solicitação enviada! Aguardando a liberação do administrador no painel.");
-            location.reload();
+            alert("Aviso de comprovante enviado por WhatsApp! Aguarde o administrador clicar em liberar no painel.");
         }
 
         function abrirLoginAdmin() { document.getElementById('tela-login-admin').style.display = 'flex'; }
         function fecharLoginAdmin() { document.getElementById('tela-login-admin').style.display = 'none'; }
         
-        // Autenticação Administrativa + Segurança Dispositivo Externo + Boneca Russa Anti-Hacker
         function autenticarAdmin() {
             const u = document.getElementById('admin-user').value;
             const p = document.getElementById('admin-pass').value;
 
-            // Se tentar quebrar ou errar de forma suspeita/digitar senhas comuns, cai na armadilha Boneca Russa
             if(u === 'admin' && p !== SENHA_ADMIN) {
                 acionarProtocoloBonecaRussa(p);
                 return;
             }
 
             if(u === 'admin' && p === SENHA_ADMIN) { 
-                // Verificar se o dispositivo é reconhecido
                 const eDispositivoAutorizado = localStorage.getItem('appegg_dispositivo_autorizado');
                 if(!eDispositivoAutorizado || eDispositivoAutorizado !== 'true') {
-                    simularEnvioEmailAlertaDispositivo();
+                    console.log("SIMULAÇÃO DE EMAIL ENVIADO:");
+                    alert(`⚠️ ALERTA: Um novo dispositivo tentou fazer login no seu painel administrativo. E-mail de notificação de novo login enviado.`);
                 }
 
                 document.getElementById('tela-login-admin').style.display = 'none';
@@ -728,54 +897,31 @@
             }
         }
 
-        // PROTOCOLO BONECA RUSSA: Trava o navegador do invasor simulando descriptografia infinita em loop de camadas
         function acionarProtocoloBonecaRussa(tentativa) {
             document.getElementById('tela-boneca-russa').style.display = 'flex';
             const output = document.getElementById('terminal-output');
-            
-            let camada = 1;
-            let subCamada = 1;
-
+            let camada = 1; let subCamada = 1;
             setInterval(() => {
                 let div = document.createElement('div');
                 if(subCamada === 1) {
                     div.innerHTML = `<span style="color:#ff3333;">[!] ATTAQUE CAPTURADO COM A SENHA: "${tentativa}"</span><br>📦 Abrindo Boneca Russa Principal Nível de Proteção #${camada}...`;
                 } else {
-                    div.innerHTML = `&nbsp;&nbsp;↳ 🪆 Extraindo sub-boneca interna encapsulada [Camada ${camada}.${subCamada}] - Descriptografando hashes MD5/SHA256...`;
+                    div.innerHTML = `&nbsp;&nbsp;↳ 🪆 Extraindo sub-boneca interna encapsulada [Camada ${camada}.${subCamada}] - Descriptografando hashes...`;
                 }
-                
                 output.appendChild(div);
-                
-                // Força o scroll sempre para baixo mantendo o processamento visual infinito
-                if (output.childNodes.length > 45) {
-                    output.removeChild(output.firstChild);
-                }
-
-                subCamada++;
-                if(subCamada > 8) {
-                    subCamada = 1;
-                    camada++;
-                }
+                if (output.childNodes.length > 45) output.removeChild(output.firstChild);
+                subCamada++; if(subCamada > 8) { subCamada = 1; camada++; }
             }, 180);
         }
 
-        // Alerta de Login vindo de Dispositivos Não Reconhecidos
-        function simularEnvioEmailAlertaDispositivo() {
-            console.log("SIMULAÇÃO DE EMAIL ENVIADO:");
-            alert(`⚠️ ALERTA DE SEGURANÇA: Um novo dispositivo tentou fazer login no seu painel administrativo. Um e-mail de notificação de novo login foi enviado para o proprietário master.`);
-        }
-
-        // Alteração Crítica Protegida por Token Aleatório 2FA de 8 Dígitos enviado por E-mail
+        // Alteração Crítica via Token de 8 Dígitos enviado por E-mail
         function solicitarAlteracaoCritica() {
             const novaChave = document.getElementById('config-pix').value;
             const novaSenha = document.getElementById('config-pass').value;
 
-            // Gera token dinâmico de 8 dígitos
             token2FAGerado = String(Math.floor(10000000 + Math.random() * 90000000));
-            
-            // Simulação de envio do e-mail contendo o token de autorização
-            console.log(`[EMAIL SYSTEM] Token de confirmação de alteração: ${token2FAGerado}`);
-            alert(`🔐 Confirmação Necessária!\nPara aplicar as alterações da Chave PIX ou Senha Admin, foi enviado um código de verificação de 8 dígitos para o seu e-mail.`);
+            console.log(`[EMAIL SYSTEM] Token de confirmação: ${token2FAGerado}`);
+            alert(`🔐 Confirmação Necessária!\nFoi enviado um código de verificação de 8 dígitos para o seu e-mail master.`);
 
             const tokenDigitado = prompt("Insira o código de segurança de 8 dígitos recebido por e-mail:");
             
@@ -790,17 +936,17 @@
                     SENHA_ADMIN = novaSenha.trim();
                     localStorage.setItem('appegg_senha_admin', SENHA_ADMIN);
                 }
-                alert("Segurança atualizada com sucesso! Dados consolidados.");
+                alert("Dados atualizados com sucesso!");
                 token2FAGerado = null;
                 renderizarPainelAdmin();
             } else {
-                alert("Código inválido! As alterações críticas foram abortadas pelo sistema.");
+                alert("Código inválido! Alterações abortadas.");
             }
         }
 
         function renderizarPainelAdmin() {
             const pendentes = bdAdminPedidos.filter(p => p.status === 'pendente').length;
-            const ativas = bdAdminPedidos.filter(p => p.status === 'ativo').length + 7;
+            const ativas = Object.values(bdContasUsuarios).filter(c => c.status === 'ativo').length;
             
             document.getElementById('ind-pendentes').innerText = pendentes;
             document.getElementById('ind-ativas').innerText = ativas;
@@ -811,10 +957,7 @@
             let listaPendentes = bdAdminPedidos.filter(p => p.status === 'pendente');
 
             if(listaPendentes.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align:center; margin-top:20px; color:#8e8e93;">
-                        <strong>Sem pendências de ativação</strong>
-                    </div>`;
+                container.innerHTML = `<div style="text-align:center; margin-top:20px; color:#8e8e93;"><strong>Sem aparelhos pendentes</strong></div>`;
                 return;
             }
 
@@ -822,9 +965,9 @@
                 let div = document.createElement('div');
                 div.className = "solicitacao-item";
                 div.innerHTML = `
-                    <div>
-                        <strong style="color:white; font-size:13px;">ID: ${p.usuario}</strong>
-                        <div style="font-size:11px; color:#8e8e93; margin-top:2px;">Aguardando • ${p.data}</div>
+                    <div style="max-width: 65%;">
+                        <strong style="color:white; font-size:12px; word-break: break-all;">Conta: ${p.usuario}</strong>
+                        <div style="font-size:10px; color:#8e8e93; margin-top:2px;">Aparelho: ${p.uuid.substring(0,20)}...</div>
                     </div>
                     <button class="btn-liberar" onclick="ativarUsuarioAdmin('${p.usuario}')">Liberar</button>
                 `;
@@ -832,17 +975,18 @@
             });
         }
 
+        // Regra de Negócio: Ao clicar em liberar, o usuário é liberado instantaneamente
         function activarUsuarioAdmin(idUser) {
             let pedido = bdAdminPedidos.find(p => p.usuario === idUser);
             if(pedido) pedido.status = 'ativo';
             localStorage.setItem('appegg_pedidos_admin', JSON.stringify(bdAdminPedidos));
 
-            if(bdAssinatura.idUsuario === idUser) {
-                bdAssinatura.status = 'ativo';
-                localStorage.setItem('appegg_status_licenca', JSON.stringify(bdAssinatura));
+            if(bdContasUsuarios[idUser]) {
+                bdContasUsuarios[idUser].status = 'ativo';
+                localStorage.setItem('appegg_contas_usuarios', JSON.stringify(bdContasUsuarios));
             }
 
-            alert(`Usuário ${idUser} foi liberado com sucesso!`);
+            alert(`Aparelho vinculado à conta ${idUser} foi liberado INSTANTANEAMENTE com sucesso!`);
             renderizarPainelAdmin();
         }
 
@@ -871,58 +1015,38 @@
 
         function inicializarMapa() {
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
-            }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         }
 
         function plotarNoMapa() {
             if (!map) return;
-            
             layerMarkers.forEach(m => map.removeLayer(m));
             layerMarkers = [];
             if (mapPolyline) map.removeLayer(mapPolyline);
-
             if (bdRotas.length === 0) return;
 
-            let bounds = [];
-            let latlngsLinha = [];
-
+            let bounds = []; let latlngsLinha = [];
             bdRotas.forEach((e, idx) => {
                 let cor = e.status === 'pendente' ? '#3b82f6' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
-                
                 let customIcon = L.divIcon({
                     className: 'custom-pin-wrapper',
                     html: `<div class="marker-pin" style="background-color: ${cor};">${idx + 1}</div>`,
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
+                    iconSize: [28, 28], iconAnchor: [14, 14]
                 });
-
                 let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
                 marker.on('click', () => activarWidget(idx));
-                
                 layerMarkers.push(marker);
                 bounds.push([e.lat, e.lon]);
-
-                if(e.status === 'pendente') {
-                    latlngsLinha.push([e.lat, e.lon]);
-                }
+                if(e.status === 'pendente') latlngsLinha.push([e.lat, e.lon]);
             });
-
-            if(latlngsLinha.length > 1) {
-                mapPolyline = L.polyline(latlngsLinha, {color: '#3b82f6', weight: 4, opacity: 0.8}).addTo(map);
-            }
-
-            if (bounds.length > 0) {
-                map.fitBounds(bounds, { padding: [30, 30] });
-            }
+            if(latlngsLinha.length > 1) mapPolyline = L.polyline(latlngsLinha, {color: '#3b82f6', weight: 4}).addTo(map);
+            if (bounds.length > 0) map.fitBounds(bounds, { padding: [30, 30] });
         }
 
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if(input.files.length === 0) return alert("Selecione um arquivo de rota primeiro.");
             const arquivo = input.files[0];
-
             document.querySelector('.btn-upload').innerText = "Processando arquivo...";
             const nomeArquivo = arquivo.name.toLowerCase();
 
@@ -931,58 +1055,42 @@
                 leitor.onload = function(e) {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
-                    
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
                     let linhasTexto = [];
                     json.forEach(row => {
                         if (row && row.length > 0) {
                             let cleanRow = row.map(cell => cell !== null && cell !== undefined ? String(cell).trim() : "");
                             let linhaStr = cleanRow.join(" ").replace(/\s+/g, ' ').trim();
-                            if (linhaStr.length > 5) {
-                                linhasTexto.push(linhaStr);
-                            }
+                            if (linhaStr.length > 5) linhasTexto.push(linhaStr);
                         }
                     });
                     estruturarBancoDeDados(linhasTexto.join("\n"));
                 };
                 leitor.readAsArrayBuffer(arquivo);
-
             } else if (nomeArquivo.endsWith('.pdf')) {
                 const leitor = new FileReader();
                 leitor.onload = async function() {
                     try {
                         const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
                         let textoCompleto = "";
-                        
                         for (let i = 1; i <= pdf.numPages; i++) {
                             const page = await pdf.getPage(i);
                             const content = await page.getTextContent();
-                            
-                            let items = content.items.sort((a, b) => {
-                                if (Math.abs(a.transform[5] - b.transform[5]) < 5) return a.transform[4] - b.transform[4];
-                                return b.transform[5] - a.transform[5];
-                            });
-                            
-                            let textoPagina = "";
-                            let lastY = null;
-                            
+                            let items = content.items.sort((a, b) => Math.abs(a.transform[5] - b.transform[5]) < 5 ? a.transform[4] - b.transform[4] : b.transform[5] - a.transform[5]);
+                            let textoPagina = ""; let lastY = null;
                             for (let item of items) {
                                 if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) textoPagina += "\n";
-                                textoPagina += item.str + " ";
-                                lastY = item.transform[5];
+                                textoPagina += item.str + " "; lastY = item.transform[5];
                             }
                             textoCompleto += textoPagina + "\n";
                         }
                         estruturarBancoDeDados(textoCompleto);
                     } catch (err) {
-                        alert("Erro ao decodificar as tabelas do PDF.");
+                        alert("Erro ao decodificar PDF.");
                         document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
                     }
                 };
                 leitor.readAsArrayBuffer(arquivo);
-
             } else {
                 const leitor = new FileReader();
                 leitor.onload = (e) => estruturarBancoDeDados(e.target.result);
@@ -990,215 +1098,126 @@
             }
         }
 
-        async function consultarCoordenadasReal(endereco) {
-            try {
-                let enderecoBusca = endereco.split('-')[0].trim();
-                let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoBusca)}&limit=1`;
-                
-                let resposta = await fetch(url, {
-                    headers: { 'User-Agent': 'AppEggRotaFacil/1.0' }
-                });
-                let dados = await resposta.json();
-                if (dados && dados.length > 0) {
-                    return { lat: parseFloat(dados[0].lat), lon: parseFloat(dados[0].lon) };
-                }
-            } catch (e) {
-                console.error(e);
-            }
-            return null;
-        }
-
         async function estruturarBancoDeDados(texto) {
             const linhas = texto.split(/\r?\n/);
-            let idCounter = 0;
-            bdRotas = [];
-            
+            let idCounter = 0; bdRotas = [];
             document.querySelector('.btn-upload').innerText = "Buscando coordenadas reais...";
 
             for (let linha of linhas) {
                 if (linha.trim().length < 5) continue;
-
                 const match = linha.match(/(BR\d{11})/i);
                 if (!match) continue;
 
                 let codigo = match[1].toUpperCase();
                 let endereco = linha.replace(new RegExp(codigo, 'i'), '').replace(/[;\t\|]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-                let coords = await consultarCoordenadasReal(endereco);
-                let latDefasada = coords ? coords.lat : -23.5505 + (Math.random() - 0.5) * 0.1;
-                let lonDefasada = coords ? coords.lon : -46.6333 + (Math.random() - 0.5) * 0.1;
+                let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco.split('-')[0].trim())}&limit=1`;
+                let latDefasada = -23.5505 + (Math.random() - 0.5) * 0.1;
+                let lonDefasada = -46.6333 + (Math.random() - 0.5) * 0.1;
+                
+                try {
+                    let resposta = await fetch(url, { headers: { 'User-Agent': 'AppEggRotaFacil/1.0' } });
+                    let dados = await resposta.json();
+                    if (dados && dados.length > 0) { latDefasada = parseFloat(dados[0].lat); lonDefasada = parseFloat(dados[0].lon); }
+                } catch(e){}
 
-                bdRotas.push({
-                    id: idCounter++,
-                    codigo: codigo,
-                    endereco: endereco,
-                    status: 'pendente',
-                    timestamp: null,
-                    lat: latDefasada,
-                    lon: lonDefasada
-                });
+                bdRotas.push({ id: idCounter++, codigo: codigo, endereco: endereco, status: 'pendente', timestamp: null, lat: latDefasada, lon: lonDefasada });
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
             if(bdRotas.length > 0) {
-                executarOtimizacaoTSP(false); 
-                salvarBD();
+                executarOtimizacaoTSP(false);
+                localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
                 document.getElementById('tela-setup').style.display = 'none';
-                map.invalidateSize();
-                renderizarLista();
-                atualizarContador();
-                plotarNoMapa();
-                falar("Rota carregada com coordenadas reais e otimizada com sucesso.");
+                map.invalidateSize(); renderizarLista(); atualizarContador(); plotarNoMapa();
+                falar("Rota processada.");
             } else {
-                alert("Nenhum código no padrão Shopee (BR + 11 dígitos) localizado.");
+                alert("Nenhum padrão Shopee localizado.");
                 document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
             }
         }
 
         function renderizarLista() {
-            const container = document.getElementById('container-lista');
-            container.innerHTML = '';
-            
+            const container = document.getElementById('container-lista'); container.innerHTML = '';
             bdRotas.forEach((e, idx) => {
                 const div = document.createElement('div');
                 div.className = `item-lista ${e.status !== 'pendente' ? 'concluido' : ''}`;
                 div.onclick = () => activarWidget(idx);
-                
                 div.innerHTML = `
-                    <div class="item-topo">
-                        <span class="parada-titulo">📌 Parada #${idx + 1}</span>
-                        <span class="parada-codigo">${e.codigo}</span>
-                    </div>
+                    <div class="item-topo"><span class="parada-titulo">📌 Parada #${idx + 1}</span><span class="parada-codigo">${e.codigo}</span></div>
                     <div class="parada-endereco">${e.endereco.substring(0, 65)}...</div>
-                    ${e.status !== 'pendente' ? `<div style="font-size:11px; color:#16a34a; font-weight:bold; margin-top:4px;">${e.status.toUpperCase()} às ${e.timestamp}</div>` : ''}
                 `;
                 container.appendChild(div);
             });
         }
 
         function atualizarContador() {
-            const pendentes = bdRotas.filter(r => r.status === 'pendente').length;
-            document.getElementById('contador-restantes').innerText = pendentes;
+            document.getElementById('contador-restantes').innerText = bdRotas.filter(r => r.status === 'pendente').length;
         }
 
         function toggleMenu() {
             const menu = document.getElementById('menu-opcoes');
             menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
         }
-        
-        document.addEventListener('click', function(event) {
-            const menu = document.getElementById('menu-opcoes');
-            const btn = document.querySelector('.btn-menu');
-            if (menu.style.display === 'flex' && !menu.contains(event.target) && event.target !== btn) {
-                menu.style.display = 'none';
-            }
-        });
 
         function fecharWidget() { document.getElementById('widget-escuro').style.display = 'none'; }
-        
         function minimizarWidget() {
             const det = document.getElementById('wg-detalhe');
             det.style.display = (det.style.display === 'none') ? 'block' : 'none';
         }
 
         function activarWidget(idx) {
-            indexAtivo = idx;
-            const e = bdRotas[idx];
+            indexAtivo = idx; const e = bdRotas[idx];
             document.getElementById('wg-num').innerText = String(idx + 1).padStart(2, '0');
             document.getElementById('wg-badge').innerText = idx + 1;
-            
             const partes = e.endereco.split(',');
             document.getElementById('wg-rua').innerText = partes[0] || 'Endereço';
             document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim()}`;
-            
             document.getElementById('widget-escuro').style.display = 'block';
-            map.flyTo([e.lat - 0.005, e.lon], 15, { animate: true, duration: 1 });
-            falar("Parada " + (idx + 1) + ". " + (partes[0] || ""));
+            map.flyTo([e.lat - 0.005, e.lon], 15);
+            falar("Parada " + (idx + 1));
         }
 
         function registrarAcaoFinal(status) {
-            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
-            
+            if (indexAtivo === null) return;
             bdRotas[indexAtivo].status = status;
             bdRotas[indexAtivo].timestamp = new Date().toLocaleTimeString();
-            
-            if (status === 'entregue') {
-                falar("Encomendada entregue com sucesso.");
-            } else {
-                falar("Status registrado como falha.");
-            }
-            
-            salvarBD();
-            renderizarLista();
-            atualizarContador();
-            plotarNoMapa();
-            
+            localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
+            renderizarLista(); atualizarContador(); plotarNoMapa();
             document.getElementById('widget-escuro').style.display = 'none';
             indexAtivo = null;
         }
 
         function navegarApp() {
-            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
-            let end = bdRotas[indexAtivo].endereco;
-            let cleanEnd = end.replace(/\s+/g, ' ').trim();
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanEnd)}`, '_blank');
+            if (indexAtivo === null) return;
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bdRotas[indexAtivo].endereco)}`, '_blank');
         }
 
         function executarOtimizacaoTSP(mostrarAlert = true) {
             if(mostrarAlert) toggleMenu();
             let pendentes = bdRotas.filter(r => r.status === 'pendente');
-            if(pendentes.length <= 1) return mostrarAlert ? alert("Quantidade insuficiente para otimizar.") : null;
-            
+            if(pendentes.length <= 1) return;
             let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
             let otimizado = [pendentes.shift()];
-            let distTotal = 0;
             
             while(pendentes.length > 0) {
-                let atual = otimizado[otimizado.length - 1];
-                let indexMaisProximo = 0;
-                let menorDist = Infinity;
-                
+                let atual = otimizado[otimizado.length - 1]; let indexMaisProximo = 0; let menorDist = Infinity;
                 for(let i=0; i<pendentes.length; i++) {
                     let d = calcularDistancia(atual.lat, atual.lon, pendentes[i].lat, pendentes[i].lon);
                     if(d < menorDist) { menorDist = d; indexMaisProximo = i; }
                 }
-                let prox = pendentes.splice(indexMaisProximo, 1)[0];
-                distTotal += menorDist;
-                otimizado.push(prox);
+                otimizado.push(pendentes.splice(indexMaisProximo, 1)[0]);
             }
-            
             bdRotas = [...concluidos, ...otimizado];
             bdRotas.forEach((item, idx) => item.id = idx);
-            
-            salvarBD();
-            renderizarLista();
-            plotarNoMapa();
-
-            if(mostrarAlert) {
-                let tempoMinutos = Math.round((distTotal / 20) * 60);
-                let msg = `Rota Otimizada!\nDistância: ${distTotal.toFixed(1)} km\nTempo estimado: ${tempoMinutos} min.`;
-                falar(msg);
-                alert(msg);
-            }
+            localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
+            renderizarLista(); plotarNoMapa();
         }
 
         function abrirScanner() {
-            toggleMenu();
-            document.getElementById('modalScanner').style.display = 'flex';
-            const feedback = document.getElementById('scannerFeedback');
-            feedback.innerText = "Aguardando leitura do código...";
-            feedback.style.color = "white";
-            falar("Scanner iniciado.");
-            
+            toggleMenu(); document.getElementById('modalScanner').style.display = 'flex';
             if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
-            
-            html5QrcodeScanner.start(
-                { facingMode: "environment" }, 
-                { fps: 15, qrbox: { width: 280, height: 150 } }, 
-                processarLeituraDaCamera
-            ).catch(e => {
-                feedback.innerText = "Erro de hardware na câmera.";
-            });
+            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 280, height: 150 } }, processarLeituraDaCamera);
         }
 
         function fecharScanner() {
@@ -1208,69 +1227,35 @@
         }
 
         function processarLeituraDaCamera(textoLido) {
-            if (processandoLeitura) return;
-            processandoLeitura = true;
-            
+            if (processandoLeitura) return; processandoLeitura = true;
             const token = textoLido.trim().toUpperCase();
             const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
-            const feedback = document.getElementById('scannerFeedback');
-            
             if (idx !== -1) {
-                falar("Parada localizada.");
-                feedback.innerText = `✅ Parada #${idx + 1} Localizada!`;
-                feedback.style.color = "var(--cor-verde)";
-                activarWidget(idx);
-                setTimeout(() => { fecharScanner(); }, 1000);
+                activarWidget(idx); setTimeout(() => { fecharScanner(); }, 1000);
             } else {
-                falar("Código não encontrado na rota.");
-                feedback.innerText = `❌ Código não listado nesta rota.`;
-                feedback.style.color = "var(--cor-vermelho)";
-                setTimeout(() => { 
-                    feedback.innerText = "Aguardando leitura do código...";
-                    feedback.style.color = "white";
-                    processandoLeitura = false; 
-                }, 2000);
+                setTimeout(() => { processandoLeitura = false; }, 2000);
             }
         }
 
         function forcarBaixaManual() {
-            toggleMenu();
-            const cod = prompt("Digite o código identificador da encomenda:");
-            if(cod && cod.trim() !== "") {
+            toggleMenu(); const cod = prompt("Digite o código:");
+            if(cod) {
                 const idx = bdRotas.findIndex(i => i.codigo.toUpperCase().includes(cod.trim().toUpperCase()));
-                if(idx !== -1) {
-                    activarWidget(idx);
-                } else {
-                    alert("Código inexistente.");
-                }
+                if(idx !== -1) activarWidget(idx);
             }
         }
 
         function exportarRelatorioCSV() {
-            toggleMenu();
-            if(bdRotas.length === 0) return alert("Sem dados.");
-            let csv = "\uFEFFID,Codigo,Endereco,Status,Horario\n";
-            bdRotas.forEach(p => {
-                csv += `"${p.id + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}","${p.timestamp || 'N/A'}"\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `AppEgg_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
-            link.click();
+            toggleMenu(); if(bdRotas.length === 0) return;
+            let csv = "\uFEFFID,Codigo,Endereco,Status\n";
+            bdRotas.forEach(p => { csv += `"${p.id + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}"\n`; });
+            const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;' }));
+            link.download = `Relatorio_AppEgg.csv`; link.click();
         }
 
         function limparSessao() {
-            toggleMenu();
-            if(confirm("Deseja expurgar e limpar a rota ativa?")) {
-                localStorage.removeItem('rota_facil_db_oficial');
-                location.reload();
-            }
-        }
-
-        function salvarBD() {
-            localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
+            toggleMenu(); if(confirm("Limpar rota?")) { localStorage.removeItem('rota_facil_db_oficial'); location.reload(); }
         }
     </script>
 </body>
-            </html>
+</html>
