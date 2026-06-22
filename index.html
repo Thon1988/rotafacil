@@ -361,9 +361,45 @@
             width: 100%;
             max-width: 400px;
         }
+
+        /* Estilos do Painel de Administração */
+        .card-admin-usuario {
+            background: #1c1c1e;
+            border: 1px solid #27272a;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            width: 100%;
+            max-width: 450px;
+            box-sizing: border-box;
+            text-align: left;
+        }
+        .btn-admin-acao {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 13px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
+
+    <div id="tela-painel-admin" class="tela-sobreposta tela-escura" style="display: none;">
+        <div style="width: 100%; max-width: 450px; margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: var(--cor-laranja); margin: 0;">Painel de Controle Admin</h2>
+                <button onclick="fecharPainelAdmin()" style="background: #232733; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer;">Sair</button>
+            </div>
+            
+            <p style="color: #8e8e93; font-size: 14px; margin-bottom: 20px;">Gerencie aqui a liberação e os aparelhos físicos dos entregadores cadastrados.</p>
+            
+            <div id="lista-usuarios-admin" style="width: 100%;">
+                </div>
+        </div>
+    </div>
 
     <div id="tela-cadastro-usuario" class="tela-sobreposta tela-escura" style="display: none;">
         <div style="text-align: center; margin-top: 40px; width: 100%;">
@@ -391,6 +427,8 @@
                 <input type="password" id="nova-senha-usuario" class="input-dark" placeholder="Crie uma senha segura">
                 <button class="btn-laranja" onclick="salvarSenhaDefinitivaFinal()">Concluir e Salvar Senha</button>
             </div>
+            
+            <p style="margin-top: 50px; font-size: 12px; color: #3a3a3c; cursor: pointer;" onclick="solicitarAcessoAdmin()">Acesso Administrativo</p>
         </div>
     </div>
 
@@ -439,6 +477,7 @@
         <button class="menu-item" onclick="executarOtimizacaoTSP()">⚡ Otimizar Rota Atual</button>
         <button class="menu-item" onclick="exportarRelatorioCSV()">📥 Exportar Relatório</button>
         <button class="menu-item" onclick="forcarBaixaManual()">✍️ Digitar Código Manual</button>
+        <button class="menu-item" onclick="solicitarAcessoAdmin()">🔑 Área do Administrador</button>
         <button class="menu-item" style="color: #dc2626;" onclick="limparSessao()">🗑️ Apagar Rota</button>
     </div>
 
@@ -493,12 +532,13 @@
     <script>
         // =========================================================================
         // CONFIGURAÇÃO DA API DE DISPARO DIRETO DO WHATSAPP
-        // Insira os dados da sua instância (Evolution API, Z-API, etc.)
         // =========================================================================
         const API_WHATSAPP_URL = "SUA_API_DE_WHATSAPP_AQUI"; 
         const API_WHATSAPP_TOKEN = "SEU_TOKEN_DE_AUTORIZACAO_AQUI"; 
         
         const WHATSAPP_NUM_MASTER = "5511983454007"; 
+        const SENHA_MASTER_ADMIN = "admin123"; // Sua senha master para abrir o painel oculto
+        
         let CHAVE_PIX = localStorage.getItem('appegg_chave_pix') || "48223054000152";
         let ESTATICO_PIX_STRING = "00020101021126580014br.gov.bcb.pix0114" + CHAVE_PIX + "520400005303986540520.005802BR5916RotaMaisRapida6009Sao Paulo62070503***63046D5B";
 
@@ -516,7 +556,6 @@
 
         let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
         let bdContasUsuarios = JSON.parse(localStorage.getItem('appegg_contas_usuarios')) || {}; 
-        let bdAdminPedidos = JSON.parse(localStorage.getItem('appegg_pedidos_admin')) || [];
         let usuarioSessaoLocal = localStorage.getItem('appegg_sessao_usuario_ativo') || null;
 
         let html5QrcodeScanner = null;
@@ -566,6 +605,80 @@
             }
         }
 
+        // =========================================================================
+        // CONTROLE DO PAINEL ADMINISTRATIVO (ACESSO E GESTÃO)
+        // =========================================================================
+        function solicitarAcessoAdmin() {
+            const entrada = prompt("Digite a Senha Master do Administrador:");
+            if (entrada === SENHA_MASTER_ADMIN) {
+                document.getElementById('menu-opcoes').style.display = 'none';
+                document.getElementById('tela-painel-admin').style.display = 'flex';
+                renderizarUsuariosNoPainelAdmin();
+            } else if (entrada !== null) {
+                alert("Senha administrativa incorreta.");
+            }
+        }
+
+        function fecharPainelAdmin() {
+            document.getElementById('tela-painel-admin').style.display = 'none';
+            verificarStatusFluxoAcesso();
+        }
+
+        function renderizarUsuariosNoPainelAdmin() {
+            const container = document.getElementById('lista-usuarios-admin');
+            container.innerHTML = '';
+
+            const chaves = Object.keys(bdContasUsuarios);
+
+            if (chaves.length === 0) {
+                container.innerHTML = `<p style="color: #8e8e93; text-align: center; margin-top: 30px;">Nenhum entregador cadastrado no sistema ainda.</p>`;
+                return;
+            }
+
+            chaves.forEach(chave => {
+                const user = bdContasUsuarios[chave];
+                const card = document.createElement('div');
+                card.className = 'card-admin-usuario';
+                
+                const corStatus = user.status === 'ativo' ? '#16a34a' : '#ea580c';
+                
+                card.innerHTML = `
+                    <div style="font-weight: bold; font-size: 16px; color: white;">📱 WhatsApp: ${user.usuario}</div>
+                    <div style="font-size: 13px; color: #a1a1aa; margin-top: 4px;">ID Aparelho: <span style="font-family: monospace; color: #3b82f6;">${user.uuidAparelhoViculado}</span></div>
+                    <div style="font-size: 13px; color: #a1a1aa;">Data Reg: ${user.dataCadastro || 'N/A'}</div>
+                    <div style="margin-top: 8px; font-size: 14px; font-weight: bold; color: ${corStatus}">Status: ${user.status.toUpperCase()}</div>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-admin-acao" style="background: #16a34a; color: white;" onclick="alterarStatusUsuarioAdmin('${user.usuario}', 'ativo')">Ativar Licença</button>
+                        <button class="btn-admin-acao" style="background: #dc2626; color: white;" onclick="alterarStatusUsuarioAdmin('${user.usuario}', 'pendente')">Bloquear</button>
+                        <button class="btn-admin-acao" style="background: #3a3a3c; color: white;" onclick="removerUsuarioAdmin('${user.usuario}')">Excluir</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function alterarStatusUsuarioAdmin(whatsapp, novoStatus) {
+            if (bdContasUsuarios[whatsapp]) {
+                bdContasUsuarios[whatsapp].status = novoStatus;
+                localStorage.setItem('appegg_contas_usuarios', JSON.stringify(bdContasUsuarios));
+                alert(`Status do entregador ${whatsapp} alterado para ${novoStatus.toUpperCase()}!`);
+                renderizarUsuariosNoPainelAdmin();
+            }
+        }
+
+        function removerUsuarioAdmin(whatsapp) {
+            if (confirm(`Deseja realmente apagar em definitivo o cadastro de ${whatsapp}?`)) {
+                delete bdContasUsuarios[whatsapp];
+                localStorage.setItem('appegg_contas_usuarios', JSON.stringify(bdContasUsuarios));
+                alert("Cadastro removido com sucesso.");
+                renderizarUsuariosNoPainelAdmin();
+            }
+        }
+
+        // =========================================================================
+        // FLUXO DE AUTENTICAÇÃO DO ENTREGADOR VIA WHATSAPP
+        // =========================================================================
         function verificarDestinoOuSolicitarCodigo() {
             const identificador = document.getElementById('cadastro-input').value.trim();
             const senhaDigitada = document.getElementById('login-senha-direta').value;
@@ -602,7 +715,6 @@
             btnAcao.innerText = "Enviando para o WhatsApp...";
             btnAcao.disabled = true;
 
-            // Modo simulação caso o desenvolvedor ainda não tenha preenchido as credenciais HTTP
             if (API_WHATSAPP_URL === "SUA_API_DE_WHATSAPP_AQUI") {
                 alert(`[Ambiente Local] Código real gerado para o WhatsApp ${numeroLimpo}: ${tokenEsperadoBackEnd}\n\nInsira este código de 6 dígitos no campo seguinte.`);
                 btnAcao.innerText = "Enviar Código via WhatsApp";
@@ -670,17 +782,6 @@
                 dataCadastro: new Date().toLocaleString('pt-BR')
             };
             localStorage.setItem('appegg_contas_usuarios', JSON.stringify(bdContasUsuarios));
-
-            let existePedido = bdAdminPedidos.find(p => p.usuario === identificador);
-            if (!existePedido) {
-                bdAdminPedidos.push({
-                    usuario: identificador,
-                    uuid: UUID_APARELHO,
-                    status: 'pendente',
-                    data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR')
-                });
-                localStorage.setItem('appegg_pedidos_admin', JSON.stringify(bdAdminPedidos));
-            }
 
             usuarioSessaoLocal = identificador;
             localStorage.setItem('appegg_sessao_usuario_ativo', usuarioSessaoLocal);
@@ -901,10 +1002,10 @@
 
         function navegarApp() {
             if (indexAtivo === null) return;
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bdRotas[indexAtivo].endereco)}`, '_blank');
+            window.open(`http://maps.google.com/?q=${encodeURIComponent(bdRotas[indexAtivo].endereco)}`, '_blank');
         }
 
-        function executarOtimizacaoTSP(mostrarAlert = true) {
+        function ejecutarOtimizacaoTSP(mostrarAlert = true) {
             if(mostrarAlert) toggleMenu();
             let pendentes = bdRotas.filter(r => r.status === 'pendente');
             if(pendentes.length <= 1) return;
@@ -973,4 +1074,4 @@
         }
     </script>
 </body>
-</html>
+    </html>
