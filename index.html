@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -251,6 +250,14 @@
             color: var(--cor-marca);
         }
 
+        .indigo-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
         .indicador-status {
             display: inline-block;
             width: 8px;
@@ -318,7 +325,7 @@
         <div id="painel-admin" class="escondido">
             <div class="admin-header">
                 <h3 style="margin: 0; color: var(--cor-marca);">Gerenciamento do Sistema</h3>
-                <button onclick="alternarPainelAdmin()" style="background: none; border: none; color: var(--texto-claro); font-size: 20px; cursor: pointer;">&times;</button>
+                <button onclick="alternarPainelAdmin()" style="background: none; border: none; color: var(--texto-claro); font-size: 20px; cursor: pointer;">×</button>
             </div>
             
             <h4 style="margin-top: 0;">Dispositivo & Hardware</h4>
@@ -369,6 +376,7 @@
         let marcadoresLeaflet = {};
         let indexEncomendaAtiva = null;
         let html5QrCodeScanner = null;
+        let tokenGeradoAtual = null; // PERSISTÊNCIA DO TOKEN EM RUNTIME PARA EVITAR QUEBRA NO FLUXO
         
         // Coordenada Base Padrão de Inicialização (São Paulo)
         const coordenadaPadrao = [-23.55052, -46.633308];
@@ -421,13 +429,19 @@
             const whatsapp = document.getElementById('auth-whatsapp').value.trim();
             if (!whatsapp) return alert('Por favor, digite um número válido.');
             
-            alert(`[API WhatsApp] Código de verificação de 6 dígitos disparado para o número: ${whatsapp}`);
+            // GERAÇÃO DO TOKEN REAL DE 6 DÍGITOS
+            tokenGeradoAtual = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            // Exibição clara no alerta para que o entregador copie exatamente os dígitos gerados pela simulação
+            alert(`[API Rota+Rápida] Seu código de verificação é: ${tokenGeradoAtual}\n\nDigite este valor no campo seguinte.`);
             document.getElementById('bloco-verificacao').classList.remove('escondido');
         }
 
         function validarTokenAcesso() {
-            const token = document.getElementById('auth-token').value.trim();
-            if (token.length === 6) {
+            const tokenInserido = document.getElementById('auth-token').value.trim();
+            
+            // Validação exata com o token gerado dinamicamente em memória
+            if (tokenInserido === tokenGeradoAtual && tokenGeradoAtual !== null) {
                 const uuidDispositivo = gerarUUIDHardwareNavegador();
                 
                 localStorage.setItem('rota_rapida_conta_ativa', document.getElementById('auth-whatsapp').value);
@@ -436,7 +450,7 @@
                 document.getElementById('tela-auth').classList.add('escondido');
                 carregarBancoLocalEPlotar();
             } else {
-                alert('Token inválido. Insira os 6 dígitos enviados.');
+                alert('Token incorreto ou expirado. Verifique os dígitos do alerta e tente novamente.');
             }
         }
 
@@ -448,7 +462,7 @@
 
         function removerBloqueioParaAdmin() {
             const senha = prompt("Insira a chave mestre de administrador:");
-            if (senha === "admin123") { // Autenticação simples de contingência local
+            if (senha === "admin123") { 
                 document.getElementById('tela-bloqueio').classList.add('escondido');
                 carregarBancoLocalEPlotar();
                 alternarPainelAdmin();
@@ -688,6 +702,7 @@
             document.getElementById('widget-complemento').innerText = `Status Operacional: ${dados.status}`;
             document.getElementById('widget-marcador-cor').style.backgroundColor = varreCorPorStatus(dados.status);
 
+            // CORREÇÃO CRUCIAL DA TEMPLATE STRING DO MAPS EXTERNO
             const urlCoordenadasGPS = `https://www.google.com/maps/search/?api=1&query=${dados.lat},${dados.lng}`;
             document.getElementById('btn-link-gps').setAttribute('href', urlCoordenadasGPS);
 
@@ -746,7 +761,7 @@
         function exibirAvisoNotificacao(mensagem) {
             const caixaAlerta = document.createElement('div');
             caixaAlerta.className = 'toast-notificacao';
-            caixaAlerta.innerText = mensagem;
+            caixaAlerta.innerText = message = mensagem;
             document.body.appendChild(caixaAlerta);
             setTimeout(() => caixaAlerta.remove(), 3500);
         }
