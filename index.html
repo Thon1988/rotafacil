@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rota+Rápida App</title>
+    <title>Rota+Rápida App - Admin Panel</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -14,14 +15,16 @@
     
     <style>
         :root {
-            --bg-principal: #09090b;
-            --bg-card: #1c1c1e;
-            --bg-botoes: #27272a;
+            --bg-principal: #0f0f11;
+            --bg-card: #1e1e24;
+            --bg-botoes: #2d2d35;
+            --cor-marca: #f97316; /* Laranja Fluido */
+            --cor-marca-hover: #ea580c;
             --texto-claro: #ffffff;
             --texto-mutado: #a1a1aa;
-            --cor-pendente: #3b82f6; /* Azul */
-            --cor-entregue: #22c55e; /* Verde */
-            --cor-falha: #ef4444;    /* Vermelho */
+            --cor-pendente: #3b82f6; 
+            --cor-entregue: #22c55e; 
+            --cor-falha: #ef4444;    
         }
         
         body {
@@ -66,8 +69,8 @@
         }
 
         .btn-acao {
-            background: var(--texto-claro);
-            color: var(--bg-principal);
+            background: var(--cor-marca);
+            color: var(--texto-claro);
             border: none;
             padding: 16px;
             border-radius: 12px;
@@ -76,11 +79,11 @@
             width: 100%;
             max-width: 320px;
             cursor: pointer;
-            transition: opacity 0.2s;
+            transition: background 0.2s;
         }
 
         .btn-acao:active {
-            opacity: 0.8;
+            background: var(--cor-marca-hover);
         }
 
         /* Container Principal do App */
@@ -91,7 +94,7 @@
             position: relative;
         }
 
-        /* Cabeçalho de Controle e Importação (Pilar 2) */
+        /* Cabeçalho de Controle (Pilar 2) */
         header {
             background: var(--bg-card);
             padding: 12px 16px;
@@ -106,6 +109,7 @@
             font-size: 18px;
             font-weight: bold;
             margin: 0;
+            color: var(--cor-marca);
         }
 
         .grupo-controles {
@@ -123,12 +127,42 @@
             font-weight: 500;
             cursor: pointer;
         }
+        
+        .btn-admin-nav {
+            background: transparent;
+            border: 1px solid var(--cor-marca);
+            color: var(--cor-marca);
+        }
 
         /* Área do Mapa Dinâmico (Pilar 4) */
         #mapa {
             flex: 1;
             width: 100%;
             z-index: 1;
+        }
+
+        /* Painel Lateral / Modal de Administração */
+        #painel-admin {
+            position: fixed;
+            top: 0; right: 0; bottom: 0;
+            width: 100%;
+            max-width: 400px;
+            background: var(--bg-card);
+            z-index: 10000;
+            box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+            padding: 24px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+        
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--bg-botoes);
+            padding-bottom: 16px;
+            margin-bottom: 20px;
         }
 
         /* Scanner de Câmera Embutido */
@@ -162,7 +196,7 @@
             transform: translateX(-50%);
             width: 92%;
             max-width: 450px;
-            background: rgba(28, 28, 30, 0.95);
+            background: rgba(30, 30, 36, 0.95);
             backdrop-filter: blur(10px);
             border: 1px solid var(--bg-botoes);
             border-radius: 20px;
@@ -213,6 +247,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            border: 1px solid var(--cor-marca);
+            color: var(--cor-marca);
         }
 
         .indicador-status {
@@ -229,7 +265,7 @@
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(239, 68, 68, 0.9);
+            background: var(--cor-marca);
             color: white;
             padding: 12px 24px;
             border-radius: 30px;
@@ -243,7 +279,7 @@
 <body>
 
     <div id="tela-auth" class="tela-fixa">
-        <h2 style="margin-bottom: 8px;">Autenticação do Entregador</h2>
+        <h2 style="margin-bottom: 8px; color: var(--cor-marca);">Rota+Rápida</h2>
         <p style="color: var(--texto-mutado); text-align: center; margin-bottom: 24px; max-width: 280px; font-size: 14px;">
             Insira seu número registrado para receber o código de acesso via WhatsApp.
         </p>
@@ -252,7 +288,7 @@
         
         <div id="bloco-verificacao" class="escondido" style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 20px;">
             <input type="number" id="auth-token" class="input-padrao" placeholder="Digite o token de 6 dígitos">
-            <button class="btn-acao" style="background: var(--cor-pendente); color: white;" onclick="validarTokenAcesso()">Confirmar Token</button>
+            <button class="btn-acao" style="background: var(--cor-pendente);" onclick="validarTokenAcesso()">Confirmar Token</button>
         </div>
     </div>
 
@@ -262,20 +298,40 @@
             Esta conta de entrega está estritamente vinculada a outro dispositivo físico através de assinatura de hardware fixa.
         </p>
         <code id="exibicao-uuid" style="background: #27272a; padding: 10px; border-radius: 6px; margin: 15px 0; font-size: 11px; color: #f4f4f5;"></code>
-        <p style="font-size: 12px; color: var(--texto-mutado);">Para transferir de aparelho, contate o administrador do sistema.</p>
+        <p style="font-size: 12px; color: var(--texto-mutado); margin-bottom: 20px;">Para transferir de aparelho, contate o administrador.</p>
+        <button class="btn-icone btn-admin-nav" onclick="removerBloqueioParaAdmin()">Acessar como Admin</button>
     </div>
 
     <div id="app-container">
         <header>
-            <h1 class="titulo-app">Rotas Pendentes</h1>
+            <h1 class="titulo-app">Rota+Rápida</h1>
             <div class="grupo-controles">
+                <button class="btn-icone btn-admin-nav" onclick="alternarPainelAdmin()">⚙️ Painel Admin</button>
                 <input type="file" id="input-arquivo-logistica" accept=".pdf,.xlsx,.csv,.txt" style="display: none;" onchange="processarArquivoImportado(this)">
                 <button class="btn-icone" onclick="document.getElementById('input-arquivo-logistica').click()">📁 Importar</button>
-                <button class="btn-icone" style="background: var(--cor-pendente);" onclick="alternarVisibilidadeScanner()">📷 Bipar</button>
+                <button class="btn-icone" style="background: var(--cor-marca);" onclick="alternarVisibilidadeScanner()">📷 Bipar</button>
             </div>
         </header>
 
         <div id="mapa"></div>
+
+        <div id="painel-admin" class="escondido">
+            <div class="admin-header">
+                <h3 style="margin: 0; color: var(--cor-marca);">Gerenciamento do Sistema</h3>
+                <button onclick="alternarPainelAdmin()" style="background: none; border: none; color: var(--texto-claro); font-size: 20px; cursor: pointer;">&times;</button>
+            </div>
+            
+            <h4 style="margin-top: 0;">Dispositivo & Hardware</h4>
+            <p style="font-size: 13px; color: var(--texto-mutado);">UUID de assinatura física gerado para este navegador:</p>
+            <code id="admin-uuid-local" style="display: block; background: var(--bg-botoes); padding: 10px; border-radius: 6px; font-size: 11px; margin-bottom: 16px; word-break: break-all;"></code>
+            
+            <button class="btn-widget btn-erro" style="width: 100%; margin-bottom: 24px;" onclick="limparChavesHardware()">Limpar Vínculo de Hardware (Reset)</button>
+            
+            <hr style="border: 0; border-top: 1px solid var(--bg-botoes); margin-bottom: 20px;">
+            
+            <h4>Banco Local de Dados</h4>
+            <button class="btn-widget btn-navegar" style="width: 100%; margin-bottom: 10px;" onclick="limparBancoRotas()">Limpar Todas as Rotas</button>
+        </div>
 
         <div id="scanner-container" class="escondido">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -317,7 +373,7 @@
         // Coordenada Base Padrão de Inicialização (São Paulo)
         const coordenadaPadrao = [-23.55052, -46.633308];
 
-        // PILAR 1: ASSINATURA DE HARDWARE E VÍNCULO DE DISPOSITIVO (UUID CONFIGURADO)
+        // PILAR 1: ASSINATURA DE HARDWARE E VÍNCULO DE DISPOSITIVO
         function gerarUUIDHardwareNavegador() {
             const componentesPlataforma = [
                 navigator.userAgent,
@@ -337,10 +393,10 @@
             return 'rota+rapidaapp-' + Math.abs(hash) + '-uuid-oficial';
         }
 
-        // Execução Automática no Ciclo de Vida Inicial da SPA
         window.addEventListener('DOMContentLoaded', () => {
             verificarStatusEHardware();
             inicializarMapaLeaflet();
+            document.getElementById('admin-uuid-local').innerText = gerarUUIDHardwareNavegador();
         });
 
         function verificarStatusEHardware() {
@@ -349,7 +405,6 @@
             const uuidVinculado = localStorage.getItem('rota+rapidaapp_device_uuid');
 
             if (contaRegistrada) {
-                // Bloqueio de Contas Compartilhadas se o UUID físico divergir
                 if (uuidVinculado && uuidVinculado !== uuidDispositivoAtual) {
                     document.getElementById('tela-auth').classList.add('escondido');
                     document.getElementById('tela-bloqueio').classList.remove('escondido');
@@ -357,7 +412,6 @@
                     return;
                 }
                 
-                // Dispositivo validado com sucesso
                 document.getElementById('tela-auth').classList.add('escondido');
                 carregarBancoLocalEPlotar();
             }
@@ -367,7 +421,6 @@
             const whatsapp = document.getElementById('auth-whatsapp').value.trim();
             if (!whatsapp) return alert('Por favor, digite um número válido.');
             
-            // Simulação de Disparo de API Integrada para envio de Token numérico de 6 dígitos
             alert(`[API WhatsApp] Código de verificação de 6 dígitos disparado para o número: ${whatsapp}`);
             document.getElementById('bloco-verificacao').classList.remove('escondido');
         }
@@ -377,7 +430,6 @@
             if (token.length === 6) {
                 const uuidDispositivo = gerarUUIDHardwareNavegador();
                 
-                // Vincula estritamente o número da conta ao UUID físico do aparelho corrente
                 localStorage.setItem('rota_rapida_conta_ativa', document.getElementById('auth-whatsapp').value);
                 localStorage.setItem('rota+rapidaapp_device_uuid', uuidDispositivo);
                 
@@ -385,6 +437,41 @@
                 carregarBancoLocalEPlotar();
             } else {
                 alert('Token inválido. Insira os 6 dígitos enviados.');
+            }
+        }
+
+        // FUNÇÕES DO PAINEL ADMINISTRATIVO
+        function alternarPainelAdmin() {
+            const painel = document.getElementById('painel-admin');
+            painel.classList.toggle('escondido');
+        }
+
+        function removerBloqueioParaAdmin() {
+            const senha = prompt("Insira a chave mestre de administrador:");
+            if (senha === "admin123") { // Autenticação simples de contingência local
+                document.getElementById('tela-bloqueio').classList.add('escondido');
+                carregarBancoLocalEPlotar();
+                alternarPainelAdmin();
+            } else {
+                alert("Chave incorreta.");
+            }
+        }
+
+        function limparChavesHardware() {
+            if (confirm("Deseja revogar permanentemente a assinatura e os vínculos de hardware locais?")) {
+                localStorage.removeItem('rota_rapida_conta_ativa');
+                localStorage.removeItem('rota+rapidaapp_device_uuid');
+                window.location.reload();
+            }
+        }
+
+        function limparBancoRotas() {
+            if (confirm("Deseja apagar os dados salvos em rota_facil_db_oficial?")) {
+                localStorage.removeItem('rota_facil_db_oficial');
+                bancoLocalRotas = [];
+                renderizarMarcadoresNoMapa();
+                alternarPainelAdmin();
+                exibirAvisoNotificacao("Banco de dados limpo.");
             }
         }
 
@@ -601,7 +688,6 @@
             document.getElementById('widget-complemento').innerText = `Status Operacional: ${dados.status}`;
             document.getElementById('widget-marcador-cor').style.backgroundColor = varreCorPorStatus(dados.status);
 
-            // Geração de Hiperligação Parametrizada Externa Correta
             const urlCoordenadasGPS = `https://www.google.com/maps/search/?api=1&query=${dados.lat},${dados.lng}`;
             document.getElementById('btn-link-gps').setAttribute('href', urlCoordenadasGPS);
 
