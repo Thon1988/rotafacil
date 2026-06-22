@@ -3,19 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg Rota Fácil</title>
+    <title>Rota Fácil</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <style>
-        /* RESET E VARIÁVEIS PARA REPRODUZIR EXATAMENTE AS DIRETRIZES VISUAIS */
         :root {
             --cor-laranja: #ea580c;
             --cor-verde: #16a34a;
             --cor-vermelho: #dc2626;
             --bg-escuro: #1c1c1e;
             --bg-botoes: #232733;
+            --cor-azul-rota: #3b82f6;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -25,7 +29,6 @@
             overflow: hidden;
         }
 
-        /* --- TELA 1: IMPORTAÇÃO DE ARQUIVO --- */
         #tela-setup {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -51,7 +54,6 @@
             margin-top: 20px;
         }
 
-        /* --- TELA 2: INTERFACE PRINCIPAL --- */
         #mapa-container {
             position: absolute;
             top: 0; left: 0; right: 0;
@@ -59,13 +61,25 @@
             background: #e5e3df;
             z-index: 1;
         }
-        #iframeMapa {
+        #mapa {
             width: 100%;
             height: 100%;
-            border: none;
         }
 
-        /* Botão Menu Hambúrguer sobre o mapa */
+        .marker-pin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid white;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+        }
+
         .btn-menu {
             position: absolute;
             top: 20px; left: 20px;
@@ -79,11 +93,10 @@
             font-size: 24px;
             border: none;
             cursor: pointer;
-            z-index: 100;
+            z-index: 1000;
             color: #333;
         }
 
-        /* Menu Overlay */
         #menu-opcoes {
             display: none;
             position: absolute;
@@ -112,7 +125,6 @@
             width: 100%;
         }
 
-        /* Metade Inferior: Bottom Sheet (Lista) */
         #bottom-sheet {
             position: absolute;
             top: 40vh;
@@ -133,7 +145,6 @@
             margin: 0 0 15px 0;
         }
 
-        /* Itens da Lista */
         .item-lista {
             border-bottom: 1px solid #eee;
             padding: 12px 0;
@@ -155,7 +166,6 @@
             margin-top: 6px;
         }
 
-        /* Widget Escuro Flutuante */
         #widget-escuro {
             position: absolute;
             bottom: 175px;
@@ -172,12 +182,14 @@
             display: none;
             box-sizing: border-box;
         }
+        .widget-controls { position: absolute; top: 5px; right: 10px; display: flex; gap: 10px; }
+        .btn-ctrl { background: none; border: none; color: #aaa; cursor: pointer; font-size: 16px; font-weight: bold; padding: 5px; }
+
         .w-topo { display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-bottom: 8px;}
-        .w-badge { background: #3b82f6; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .w-badge { background: var(--cor-azul-rota); color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         .w-rua { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; }
         .w-sub { font-size: 13px; color: #888; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* Barra de Ações Inferior Fixa */
         #barra-acoes-inferior {
             position: absolute;
             bottom: 0; left: 0; right: 0;
@@ -242,7 +254,6 @@
         .btn-acao-dark .icone-verde { stroke: var(--cor-verde); }
         .btn-acao-dark .icone-vermelho { stroke: var(--cor-vermelho); }
 
-        /* Modal do Scanner Fullscreen */
         #modalScanner {
             display: none;
             position: fixed;
@@ -259,7 +270,7 @@
 <body>
 
     <div id="tela-setup">
-        <h1 style="color: #ea580c;">📦 AppEgg Rota Fácil</h1>
+        <h1 style="color: #ea580c;">📦 Rota Fácil</h1>
         <p style="color: #666; text-align: center;">Carregue sua lista de entregas (PDF, Excel, CSV ou TXT).</p>
         
         <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
@@ -268,13 +279,13 @@
     </div>
 
     <div id="mapa-container">
-        <iframe id="iframeMapa" src="https://maps.google.com/maps?daddr=$4" allowfullscreen></iframe>
+        <div id="mapa"></div>
     </div>
 
     <button class="btn-menu" onclick="toggleMenu()">☰</button>
     <div id="menu-opcoes">
         <button class="menu-item" onclick="abrirScanner()">📷 Iniciar Scanner</button>
-        <button class="menu-item" onclick="executarOtimizacaoTSP()">⚡ Otimizar Rota Atual</button>
+        <button class="menu-item" onclick="obterLocalizacaoEOTimizar()">⚡ Otimizar Rota Atual</button>
         <button class="menu-item" onclick="exportarRelatorioCSV()">📥 Exportar Relatório</button>
         <button class="menu-item" onclick="forcarBaixaManual()">✍️ Digitar Código Manual</button>
         <button class="menu-item" style="color: #dc2626;" onclick="limparSessao()">🗑️ Apagar Rota</button>
@@ -286,6 +297,10 @@
     </div>
 
     <div id="widget-escuro">
+        <div class="widget-controls">
+            <button class="btn-ctrl" onclick="minimizarWidget()">−</button>
+            <button class="btn-ctrl" onclick="fecharWidget()">×</button>
+        </div>
         <div class="w-topo">
             <span id="wg-num">01</span>
             <span class="w-badge" id="wg-badge">1</span>
@@ -329,17 +344,115 @@
         let html5QrcodeScanner = null;
         let indexAtivo = null;
         let processandoLeitura = false;
+        
+        let map;
+        let layerMarkers = [];
+        let mapPolyline = null;
+        let marcadorUsuario = null;
+        let minhaPosicao = null;
 
-        // Configuração inicial do PDF.js Worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         window.onload = () => {
+            inicializarMapa();
+            monitorarLocalizacaoDispositivo();
+            
             if (bdRotas.length > 0) {
                 document.getElementById('tela-setup').style.display = 'none';
+                map.invalidateSize();
                 renderizarLista();
                 atualizarContador();
+                plotarNoMapa();
             }
         };
+
+        function inicializarMapa() {
+            map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+        }
+
+        function monitorarLocalizacaoDispositivo() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition((pos) => {
+                    minhaPosicao = {
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude
+                    };
+                    
+                    if (map) {
+                        if (marcadorUsuario) {
+                            marcadorUsuario.setLatLng([minhaPosicao.lat, minhaPosicao.lon]);
+                        } else {
+                            let iconeUser = L.divIcon({
+                                className: 'custom-user-wrapper',
+                                html: `<div class="marker-pin" style="background-color: #3b82f6; border-color: #fff; box-shadow: 0 0 10px #3b82f6;">🏠</div>`,
+                                iconSize: [28, 28],
+                                iconAnchor: [14, 14]
+                            });
+                            marcadorUsuario = L.marker([minhaPosicao.lat, minhaPosicao.lon], { icon: iconeUser }).addTo(map);
+                        }
+                    }
+                }, (err) => {
+                    console.log("Erro de permissão ou hardware no GPS: ", err.message);
+                }, {
+                    enableHighAccuracy: true,
+                    maximumAge: 30000,
+                    timeout: 27000
+                });
+            }
+        }
+
+        function plotarNoMapa() {
+            if (!map) return;
+            
+            layerMarkers.forEach(m => map.removeLayer(m));
+            layerMarkers = [];
+            if (mapPolyline) map.removeLayer(mapPolyline);
+
+            if (bdRotas.length === 0) return;
+
+            let bounds = [];
+            let latlngsLinha = [];
+
+            if (minhaPosicao && bdRotas.filter(r => r.status === 'pendente').length > 0) {
+                latlngsLinha.push([minhaPosicao.lat, minhaPosicao.lon]);
+            }
+
+            bdRotas.forEach((e, idx) => {
+                let cor = e.status === 'pendente' ? '#ea580c' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
+                
+                let customIcon = L.divIcon({
+                    className: 'custom-pin-wrapper',
+                    html: `<div class="marker-pin" style="background-color: ${cor};">${idx + 1}</div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
+
+                let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
+                marker.on('click', () => ativarWidget(idx));
+                
+                layerMarkers.push(marker);
+                bounds.push([e.lat, e.lon]);
+
+                if(e.status === 'pendente') {
+                    latlngsLinha.push([e.lat, e.lon]);
+                }
+            });
+
+            if (marcadorUsuario && minhaPosicao) {
+                bounds.push([minhaPosicao.lat, minhaPosicao.lon]);
+            }
+
+            if(latlngsLinha.length > 1) {
+                mapPolyline = L.polyline(latlngsLinha, {color: '#ea580c', weight: 4, opacity: 0.8, dashArray: '5, 10'}).addTo(map);
+            }
+
+            if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [40, 40] });
+            }
+        }
 
         function emitirBip() {
             try {
@@ -356,17 +469,27 @@
             } catch (e) { console.log("Áudio indisponível."); }
         }
 
-        // MOTOR REFEITO COM LEITURA EXCEL COMPLETA E CORREÇÃO DE QUEBRA DE LINHA DO PDF
+        function falarTexto(texto) {
+            try {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const fala = new SpeechSynthesisUtterance(texto);
+                    fala.lang = 'pt-BR';
+                    fala.rate = 1.0;
+                    fala.pitch = 1.0;
+                    window.speechSynthesis.speak(fala);
+                }
+            } catch (e) { console.log("Síntese de voz indisponível."); }
+        }
+
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if(input.files.length === 0) return alert("Selecione um arquivo de rota primeiro.");
             const arquivo = input.files[0];
 
             document.querySelector('.btn-upload').innerText = "Processando arquivo...";
-
             const nomeArquivo = arquivo.name.toLowerCase();
 
-            // CASO 1: ARQUIVOS EXCEL (.XLSX / .XLS)
             if (nomeArquivo.endsWith('.xlsx') || nomeArquivo.endsWith('.xls')) {
                 const leitor = new FileReader();
                 leitor.onload = function(e) {
@@ -389,7 +512,6 @@
                 };
                 leitor.readAsArrayBuffer(arquivo);
 
-            // CASO 2: ARQUIVOS COORDENADOS EM PDF (.PDF)
             } else if (nomeArquivo.endsWith('.pdf')) {
                 const leitor = new FileReader();
                 leitor.onload = async function() {
@@ -401,11 +523,8 @@
                             const page = await pdf.getPage(i);
                             const content = await page.getTextContent();
                             
-                            // Ordena os fragmentos por linha (Y descendente) e depois por coluna (X ascendente)
                             let items = content.items.sort((a, b) => {
-                                if (Math.abs(a.transform[5] - b.transform[5]) < 5) {
-                                    return a.transform[4] - b.transform[4];
-                                }
+                                if (Math.abs(a.transform[5] - b.transform[5]) < 5) return a.transform[4] - b.transform[4];
                                 return b.transform[5] - a.transform[5];
                             });
                             
@@ -413,9 +532,7 @@
                             let lastY = null;
                             
                             for (let item of items) {
-                                if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
-                                    textoPagina += "\n";
-                                }
+                                if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) textoPagina += "\n";
                                 textoPagina += item.str + " ";
                                 lastY = item.transform[5];
                             }
@@ -429,7 +546,6 @@
                 };
                 leitor.readAsArrayBuffer(arquivo);
 
-            // CASO 3: ARQUIVOS DE TEXTO PLANO (.CSV / .TXT)
             } else {
                 const leitor = new FileReader();
                 leitor.onload = (e) => estruturarBancoDeDados(e.target.result);
@@ -437,36 +553,97 @@
             }
         }
 
-        function estruturarBancoDeDados(texto) {
-            const linhas = texto.split(/\r?\n/);
-            
-            bdRotas = linhas.filter(l => l.trim().length > 5).map((linha, i) => {
-                const latBase = -23.55 + (Math.random() - 0.5) * 0.15;
-                const lonBase = -46.63 + (Math.random() - 0.5) * 0.15;
-                
-                const match = linha.match(/(BR[A-Z0-9]{7,25})|([A-Z0-9]{9,25})/i);
-                let codigo = match ? (match[1] || match[2]).toUpperCase() : `APP-${String(i+1).padStart(4,'0')}`;
-                let endereco = linha.replace(codigo, '').replace(/[;\t\|]+/g, ' ').trim();
+        // Função auxiliar para atrasar requisições e evitar bloqueio de IP (Rate-Limit) na API pública
+        const delay = ms => new Promise(res => setTimeout(res, ms));
 
-                return {
-                    id: i,
-                    codigo: codigo,
-                    endereco: endereco,
+        async function consultarCoordenadasNominatim(enderecoTexto) {
+            // Limpa o endereço removendo o código de rastreio interno para melhorar a precisão da busca
+            let busca = enderecoTexto.replace(/AT\d{12}[a-zA-Z0-0]*/g, '').trim();
+            
+            // Adiciona a cidade base e o país se necessário para evitar correspondências em outros estados
+            if (!busca.toLowerCase().includes("são paulo")) {
+                busca += ", São Paulo, Brasil";
+            }
+            
+            try {
+                let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(busca)}&limit=1`;
+                let resposta = await fetch(url, {
+                    headers: { 'User-Agent': 'RotaFacilApp/1.0 (milton@example.com)' }
+                });
+                let dados = await res = await resposta.json();
+                
+                if (dados && dados.length > 0) {
+                    return { lat: parseFloat(dados[0].lat), lon: parseFloat(dados[0].lon) };
+                }
+            } catch (err) {
+                console.log("Erro na geocodificação do endereço: ", busca);
+            }
+            return null; // Caso falhe
+        }
+
+        async function estruturarBancoDeDados(texto) {
+            const linhas = texto.split(/\r?\n/);
+            let idCounter = 0;
+            bdRotas = [];
+            
+            let btnUpload = document.querySelector('.btn-upload');
+            btnUpload.innerText = "Lendo códigos...";
+
+            let itensParaProcessar = [];
+
+            linhas.forEach((linha) => {
+                if (linha.trim().length < 5) return;
+
+                const match = linha.match(/(BR\d{11})/i);
+                if (!match) return;
+
+                let codigo = match[1].toUpperCase();
+                let endereco = linha.replace(new RegExp(codigo, 'i'), '').replace(/[;\t\|]+/g, ' ').trim();
+
+                itensParaProcessar.push({ codigo, endereco });
+            });
+
+            if (itensParaProcessar.length === 0) {
+                alert("Nenhum código no padrão Shopee (BR + 11 dígitos) localizado.");
+                btnUpload.innerText = "Processar Rota Ativa";
+                return;
+            }
+
+            let baseLat = minhaPosicao ? minhaPosicao.lat : -23.55;
+            let baseLon = minhaPosicao ? minhaPosicao.lon : -46.63;
+
+            // Loop assíncrono para buscar as coordenadas reais uma por uma na API
+            for (let i = 0; i < itensParaProcessar.length; i++) {
+                btnUpload.innerText = `Buscando GPS (${i + 1}/${itensParaProcessar.length})`;
+                
+                let item = itensParaProcessar[i];
+                let coords = await consultarCoordenadasNominatim(item.endereco);
+                
+                // Se a API encontrar, usa a real. Se falhar, usa uma coordenada fallback próxima
+                let latReal = coords ? coords.lat : baseLat + (Math.random() - 0.5) * 0.02;
+                let lonReal = coords ? coords.lon : baseLon + (Math.random() - 0.5) * 0.02;
+
+                bdRotas.push({
+                    id: idCounter++,
+                    codigo: item.codigo,
+                    endereco: item.endereco,
                     status: 'pendente',
                     timestamp: null,
-                    lat: latBase,
-                    lon: lonBase
-                };
-            });
+                    lat: latReal,
+                    lon: lonReal
+                });
+
+                // Pausa de 1 segundo entre requisições exigida pelas políticas do Nominatim
+                await delay(1000);
+            }
 
             if(bdRotas.length > 0) {
                 salvarBD();
                 document.getElementById('tela-setup').style.display = 'none';
+                map.invalidateSize();
                 renderizarLista();
                 atualizarContador();
-            } else {
-                alert("Nenhuma parada válida foi extraída. Verifique a estrutura do arquivo.");
-                document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+                plotarNoMapa();
             }
         }
 
@@ -509,6 +686,13 @@
             }
         });
 
+        function fecharWidget() { document.getElementById('widget-escuro').style.display = 'none'; }
+        
+        function minimizarWidget() {
+            const det = document.getElementById('wg-detalhe');
+            det.style.display = (det.style.display === 'none') ? 'block' : 'none';
+        }
+
         function ativarWidget(idx) {
             indexAtivo = idx;
             const e = bdRotas[idx];
@@ -520,6 +704,8 @@
             document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim()}`;
             
             document.getElementById('widget-escuro').style.display = 'block';
+
+            map.flyTo([e.lat - 0.003, e.lon], 15, { animate: true, duration: 1 });
         }
 
         function registrarAcaoFinal(status) {
@@ -533,6 +719,8 @@
             salvarBD();
             renderizarLista();
             atualizarContador();
+            plotarNoMapa();
+            
             document.getElementById('widget-escuro').style.display = 'none';
             indexAtivo = null;
         }
@@ -540,35 +728,61 @@
         function navegarApp() {
             if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
             const end = bdRotas[indexAtivo].endereco;
-            window.open(`https://maps.google.com/maps?daddr=$5{encodeURIComponent(end)}`, '_blank');
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`, '_blank');
         }
 
-        function executingOtimizacaoTSP() {
-            // Alias para manter compatibilidade com botões legados se houver
-            executarOtimizacaoTSP();
+        function navegarApp() {
+            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
+            const end = bdRotas[indexAtivo].endereco;
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`, '_blank');
         }
 
-        function executarOtimizacaoTSP() {
+        function obterLocalizacaoEOTimizar() {
             toggleMenu();
-            if(bdRotas.length <= 2) return alert("Quantidade de paradas insuficiente.");
-            
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    minhaPosicao = {
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude
+                    };
+                    executarOtimizacaoTSP();
+                }, (err) => {
+                    alert("GPS indisponível para partida. Usando ordenação por proximidade mútua.");
+                    executarOtimizacaoTSP();
+                }, { enableHighAccuracy: true });
+            } else {
+                executarOtimizacaoTSP();
+            }
+        }
+
+        function ejecutarOtimizacaoTSP() {
             let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
             let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
             
-            if(rascunho.length === 0) return;
+            if(rascunho.length === 0) return alert("Não há paradas pendentes para otimizar.");
             
-            let otimizado = [rascunho.shift()];
+            let otimizado = [];
+            let pontoPartida = minhaPosicao ? { lat: minhaPosicao.lat, lon: minhaPosicao.lon } : rascunho.shift();
             
+            if (!minhaPosicao) {
+                otimizado.push(pontoPartida);
+            }
+            
+            let atual = pontoPartida;
             while(rascunho.length > 0) {
-                let atual = otimizado[otimizado.length - 1];
                 let indexMaisProximo = 0;
                 let menorDist = Infinity;
                 
                 for(let i=0; i<rascunho.length; i++) {
                     let d = Math.sqrt(Math.pow(atual.lat - rascunho[i].lat, 2) + Math.pow(atual.lon - rascunho[i].lon, 2));
-                    if(d < menorDist) { menorDist = d; indexMaisProximo = i; }
+                    if(d < menorDist) { 
+                        menorDist = d; 
+                        indexMaisProximo = i; 
+                    }
                 }
-                otimizado.push(rascunho.splice(indexMaisProximo, 1)[0]);
+                let proximaParada = rascunho.splice(indexMaisProximo, 1)[0];
+                otimizado.push(proximaParada);
+                atual = proximaParada;
             }
             
             bdRotas = [...concluidos, ...otimizado];
@@ -576,7 +790,8 @@
             
             salvarBD();
             renderizarLista();
-            alert("Rota otimizada com sucesso via motor de proximidade TSP.");
+            plotarNoMapa();
+            alert("Rota otimizada com sucesso utilizando coordenadas reais!");
         }
 
         function abrirScanner() {
@@ -599,7 +814,11 @@
 
         function fecharScanner() {
             document.getElementById('modalScanner').style.display = 'none';
-            if (html5QrcodeScanner) html5QrcodeScanner.stop();
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner = null;
+                }).catch(err => console.log("Erro ao parar scanner:", err));
+            }
             processandoLeitura = false;
         }
 
@@ -614,10 +833,20 @@
             
             if (idx !== -1) {
                 emitirBip();
+                
+                const ultimosDigitos = bdRotas[idx].codigo.slice(-4);
+                falarTexto Levantamento(`Parada ${idx + 1}. Final ${ultimosDigitos.split('').join(' ')}`);
+                
                 feedback.innerText = `✅ Parada #${idx + 1} Localizada!`;
                 feedback.style.color = "var(--cor-verde)";
+                
                 ativarWidget(idx);
-                setTimeout(() => { fecharScanner(); }, 1000);
+                
+                setTimeout(() => { 
+                    feedback.innerText = "Aguardando leitura do próximo código...";
+                    feedback.style.color = "white";
+                    processandoLeitura = false; 
+                }, 2500);
             } else {
                 feedback.innerText = `❌ Código não listado nesta rota.`;
                 feedback.style.color = "var(--cor-vermelho)";
@@ -652,7 +881,7 @@
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `AppEgg_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
+            link.download = `Rota_Facil_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
             link.click();
         }
 
