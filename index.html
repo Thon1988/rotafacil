@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg Rota Fácil</title>
+    <title>Rota+RápidaApp</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -491,7 +491,7 @@
         <div class="header-voltar" onclick="abrirLoginAdmin()">🛡️ Painel Admin</div>
         
         <div style="text-align: center; margin-top: 40px; width: 100%;">
-            <h2 style="color: var(--cor-laranja); margin-bottom: 5px;">Acessar o AppEgg</h2>
+            <h2 style="color: var(--cor-laranja); margin-bottom: 5px;">Acessar o Rota+RápidaApp</h2>
             <p style="color: #8e8e93; font-size: 14px; margin-bottom: 25px;">Faça seu cadastro para validar o aparelho</p>
             
             <div id="etapa-dados-cadastro">
@@ -505,7 +505,7 @@
             </div>
 
             <div id="etapa-codigo-cadastro" style="display: none;">
-                <p style="color: #ea580c; font-size: 14px; margin-bottom: 15px;" id="texto-aviso-codigo">Código enviado!</p>
+                <p style="color: #ea580c; font-size: 14px; margin-bottom: 15px;" id="texto-aviso-codigo">Código gerado!</p>
                 <input type="text" id="cadastro-codigo" class="input-dark" placeholder="Código de 6 dígitos" maxlength="6">
                 <button class="btn-laranja" onclick="verificarCodigoUsuarioFinal()">Confirmar Código</button>
                 <p style="color: #8e8e93; font-size: 12px; margin-top: 15px; cursor: pointer;" onclick="voltarEtapaCadastro()">← Alterar dados</p>
@@ -600,7 +600,7 @@
 
     <!-- Layout Base do Aplicativo de Rotas -->
     <div id="tela-setup">
-        <h1 style="color: #ea580c;">📦 AppEgg Rota Fácil</h1>
+        <h1 style="color: #ea580c;">📦 Rota+RápidaApp</h1>
         <p style="color: #666; text-align: center;">Carregue sua lista de entregas (PDF, Excel, CSV ou TXT).</p>
         
         <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
@@ -675,7 +675,7 @@
         let CHAVE_PIX = localStorage.getItem('appegg_chave_pix') || "48223054000152";
         let SENHA_ADMIN = localStorage.getItem('appegg_senha_admin') || "*Mespykes007";
         const WHATSAPP_NUM = "5511983454007";
-        let ESTATICO_PIX_STRING = "00020101021126580014br.gov.bcb.pix0114" + CHAVE_PIX + "520400005303986540520.005802BR5916AppEggRotaFacil6009Sao Paulo62070503***63046D5B";
+        let ESTATICO_PIX_STRING = "00020101021126580014br.gov.bcb.pix0114" + CHAVE_PIX + "520400005303986540520.005802BR5916RotaMaisRapida6009Sao Paulo62070503***63046D5B";
 
         // Geração da Assinatura e Identificação Única por Aparelho (Fingerprint do Navegador)
         function obterUUIDAparelhoUnico() {
@@ -780,16 +780,16 @@
                 return alert("Por favor, preencha o campo de cadastro corretamente.");
             }
 
-            // Se o usuário já existir globalmente e estiver atrelado a outro UUID, bloqueia a divisão imediatamente
             if (bdContasUsuarios[identificador] && bdContasUsuarios[identificador].uuidAparelhoViculado !== UUID_APARELHO) {
                 return alert("⚠️ Bloqueio de Compartilhamento: Este número/e-mail já está em uso em outro smartphone corporativo.");
             }
 
-            // Gera código numérico de 6 dígitos para o fluxo de SMS/E-mail
+            // Correção de envio: Exibe em tela via Alert para que você saiba na hora qual é o código
             token6DigitosUsuario = String(Math.floor(100000 + Math.random() * 900000));
             
-            console.log(`[SYSTEM SIMULATION] Código de 6 dígitos enviado via ${tipo.toUpperCase()} para ${identificador}: ${token6DigitosUsuario}`);
-            document.getElementById('texto-aviso-codigo').innerText = `Código de 6 dígitos enviado com sucesso para seu ${tipo}!`;
+            alert(`[TESTE LOCAL] Código de 6 dígitos: ${token6DigitosUsuario}\n\n(Use este número para prosseguir no ambiente de homologação atual).`);
+            
+            document.getElementById('texto-aviso-codigo').innerHTML = `Código temporário gerado para o ambiente de testes!<br><strong style="font-size:18px; color:white;">${token6DigitosUsuario}</strong>`;
             
             document.getElementById('etapa-dados-cadastro').style.display = 'none';
             document.getElementById('etapa-codigo-cadastro').style.display = 'block';
@@ -801,7 +801,6 @@
 
             if (codDigitado === token6DigitosUsuario && token6DigitosUsuario !== null) {
                 
-                // Cria ou recupera o cadastro amarrando ao UUID físico imutável deste aparelho
                 if (!bdContasUsuarios[identificador]) {
                     bdContasUsuarios[identificador] = {
                         usuario: identificador,
@@ -813,7 +812,6 @@
 
                 localStorage.setItem('appegg_contas_usuarios', JSON.stringify(bdContasUsuarios));
                 
-                // Envia a solicitação de liberação para a fila de espera instantânea do Administrador
                 let existePedido = bdAdminPedidos.find(p => p.usuario === identificador);
                 if (!existePedido) {
                     bdAdminPedidos.push({
@@ -865,7 +863,7 @@
         }
 
         function confirmarPagamentoComprovante() {
-            let msgWpp = `Olá Milton! Realizei o pagamento do plano de liberação do meu aparelho do AppEgg. Identificador da minha conta: ${usuarioSessaoLocal} (Aparelho: ${UUID_APARELHO})`;
+            let msgWpp = `Olá Milton! Realizei o pagamento do plano de liberação do meu aparelho do Rota+RápidaApp. Identificador da minha conta: ${usuarioSessaoLocal} (Aparelho: ${UUID_APARELHO})`;
             window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUM}&text=${encodeURIComponent(msgWpp)}`, '_blank');
             alert("Aviso de comprovante enviado por WhatsApp! Aguarde o administrador clicar em liberar no painel.");
         }
@@ -885,8 +883,7 @@
             if(u === 'admin' && p === SENHA_ADMIN) { 
                 const eDispositivoAutorizado = localStorage.getItem('appegg_dispositivo_autorizado');
                 if(!eDispositivoAutorizado || eDispositivoAutorizado !== 'true') {
-                    console.log("SIMULAÇÃO DE EMAIL ENVIADO:");
-                    alert(`⚠️ ALERTA: Um novo dispositivo tentou fazer login no seu painel administrativo. E-mail de notificação de novo login enviado.`);
+                    alert(`⚠️ ALERTA: Um novo dispositivo tentou fazer login no seu painel administrativo.`);
                 }
 
                 document.getElementById('tela-login-admin').style.display = 'none';
@@ -914,33 +911,30 @@
             }, 180);
         }
 
-        // Alteração Crítica via Token de 8 Dígitos enviado por E-mail
         function solicitarAlteracaoCritica() {
             const novaChave = document.getElementById('config-pix').value;
             const novaSenha = document.getElementById('config-pass').value;
 
             token2FAGerado = String(Math.floor(10000000 + Math.random() * 90000000));
-            console.log(`[EMAIL SYSTEM] Token de confirmação: ${token2FAGerado}`);
-            alert(`🔐 Confirmação Necessária!\nFoi enviado um código de verificação de 8 dígitos para o seu e-mail master.`);
-
-            const tokenDigitado = prompt("Insira o código de segurança de 8 dígitos recebido por e-mail:");
+            // Facilitando a captura do token crítico administrativo via prompt direto para evitar bloqueio
+            const tokenDigitado = prompt(`🔐 Confirmação Necessária!\nInsira o código de segurança exibido abaixo:\n\n${token2FAGerado}`);
             
             if(tokenDigitado === token2FAGerado && token2FAGerado !== null) {
                 if(novaChave.trim() !== "") {
                     CHAVE_PIX = novaChave.trim();
                     localStorage.setItem('appegg_chave_pix', CHAVE_PIX);
-                    ESTATICO_PIX_STRING = "00020101021126580014br.gov.bcb.pix0114" + CHAVE_PIX + "520400005303986540520.005802BR5916AppEggRotaFacil6009Sao Paulo62070503***63046D5B";
+                    ESTATICO_PIX_STRING = "00020101021126580014br.gov.bcb.pix0114" + CHAVE_PIX + "520400005303986540520.005802BR5916RotaMaisRapida6009Sao Paulo62070503***63046D5B";
                     gerarQRCodeInterface();
                 }
                 if(novaSenha.trim() !== "") {
                     SENHA_ADMIN = novaSenha.trim();
                     localStorage.setItem('appegg_senha_admin', SENHA_ADMIN);
                 }
-                alert("Dados atualizados com sucesso!");
+                alert("Dados updated!");
                 token2FAGerado = null;
                 renderizarPainelAdmin();
             } else {
-                alert("Código inválido! Alterações abortadas.");
+                alert("Código inválido!");
             }
         }
 
@@ -975,7 +969,6 @@
             });
         }
 
-        // Regra de Negócio: Ao clicar em liberar, o usuário é liberado instantaneamente
         function activarUsuarioAdmin(idUser) {
             let pedido = bdAdminPedidos.find(p => p.usuario === idUser);
             if(pedido) pedido.status = 'ativo';
@@ -990,20 +983,10 @@
             renderizarPainelAdmin();
         }
 
-        function sairAdmin() {
-            document.getElementById('tela-painel-admin').style.display = 'none';
-            location.reload();
-        }
-
-        function mostrarPaywallCompleto() {
-            document.getElementById('tela-paywall').style.display = 'flex';
-        }
-
-        function falar(texto) {
-            const msg = new SpeechSynthesisUtterance(texto);
-            msg.lang = 'pt-BR';
-            window.speechSynthesis.speak(msg);
-        }
+        // Funções de Mapa e Rota permanecem intactas
+        function sairAdmin() { document.getElementById('tela-painel-admin').style.display = 'none'; location.reload(); }
+        function mostrarPaywallCompleto() { document.getElementById('tela-paywall').style.display = 'flex'; }
+        function falar(texto) { const msg = new SpeechSynthesisUtterance(texto); msg.lang = 'pt-BR'; window.speechSynthesis.speak(msg); }
 
         function calcularDistancia(lat1, lon1, lat2, lon2) {
             const R = 6371;
@@ -1116,7 +1099,7 @@
                 let lonDefasada = -46.6333 + (Math.random() - 0.5) * 0.1;
                 
                 try {
-                    let resposta = await fetch(url, { headers: { 'User-Agent': 'AppEggRotaFacil/1.0' } });
+                    let resposta = await fetch(url, { headers: { 'User-Agent': 'RotaMaisRapida/1.0' } });
                     let dados = await resposta.json();
                     if (dados && dados.length > 0) { latDefasada = parseFloat(dados[0].lat); lonDefasada = parseFloat(dados[0].lon); }
                 } catch(e){}
@@ -1250,7 +1233,7 @@
             let csv = "\uFEFFID,Codigo,Endereco,Status\n";
             bdRotas.forEach(p => { csv += `"${p.id + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}"\n`; });
             const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;' }));
-            link.download = `Relatorio_AppEgg.csv`; link.click();
+            link.download = `Relatorio_RotaMaisRapida.csv`; link.click();
         }
 
         function limparSessao() {
