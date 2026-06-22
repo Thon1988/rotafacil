@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Rota+RápidaApp</title>
+    <style>
+        :root {
+            --cor-laranja: #ea580c;
+            --cor-verde: #16a34a;
+            --cor-vermelho: #dc2626;
+            --bg-escuro: #1c1c1e;
+            --bg-card: #121214;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #000;
+            color: #fff;
+            margin: 0; padding: 20px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .container { width: 100%; max-width: 500px; box-sizing: border-box; }
+        .input-dark {
+            width: 100%; background: #1c1c1e; border: 1px solid #27272a;
+            padding: 14px; border-radius: 8px; color: white;
+            font-size: 16px; box-sizing: border-box; margin-bottom: 15px;
+        }
+        .btn-laranja {
+            background: var(--cor-laranja); color: white; border: none;
+            padding: 14px; border-radius: 8px; font-size: 16px;
+            font-weight: bold; width: 100%; cursor: pointer;
+        }
+        .grid-indicadores { display: flex; gap: 10px; margin-bottom: 20px; width: 100%; }
+        .card-ind { flex: 1; background: #1c1c1e; border: 1px solid #27272a; padding: 12px; border-radius: 8px; text-align: center; }
+        .card-ind .num { font-size: 20px; font-weight: bold; }
+        .card-ind .label { font-size: 11px; color: #8e8e93; margin-top: 4px; }
+        .solicitacao-item {
+            background: #1c1c1e; border: 1px solid #27272a; border-radius: 8px;
+            padding: 12px; margin-bottom: 10px; display: flex;
+            justify-content: space-between; align-items: center;
+        }
+        .btn-liberar {
+            background: var(--cor-verde); color: white; border: none;
+            padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;
+        }
+        .secao-config { background: #1c1c1e; border: 1px solid #27272a; border-radius: 8px; padding: 15px; margin-top: 15px; }
+        
+        #tela-boneca-russa {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: #050505; color: #39ff14; font-family: monospace;
+            z-index: 1000000; padding: 20px; flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="tela-boneca-russa">
+        <div style="font-weight: bold; border-bottom: 1px dashed #39ff14; padding-bottom: 8px; margin-bottom: 10px;">
+            ⚠️ INTRUSION DETECTED - PROTOCOLO PARANOID BONECA RUSSA ATIVO ⚠️
+        </div>
+        <div id="terminal-output"></div>
+    </div>
+
+    <div id="login-admin" class="container" style="margin-top: 60px;">
+        <h2 style="text-align: center; color: var(--cor-laranja);">🛡️ Admin Master</h2>
+        <input type="text" id="admin-user" class="input-dark" value="admin">
+        <input type="password" id="admin-pass" class="input-dark" placeholder="Senha Master">
+        <button class="btn-laranja" onclick="autenticarAdminMaster()">Acessar Painel</button>
+    </div>
+
+    <div id="painel-admin" class="container" style="display: none;">
+        <h2>Painel de Licenças</h2>
+        
+        <div class="grid-indicadores">
+            <div class="card-ind">
+                <div class="num" id="ind-ativas" style="color: var(--cor-verde);">0</div>
+                <div class="label">Contas Ativas</div>
+            </div>
+            <div class="card-ind">
+                <div class="num" id="ind-pendentes" style="color: #ff9500;">0</div>
+                <div class="label">Aparelhos Pendentes</div>
+            </div>
+        </div>
+
+        <h3>Aparelhos Solicitando Liberação</h3>
+        <div id="container-solicitacoes" style="max-height: 250px; overflow-y: auto; margin-bottom: 25px;"></div>
+
+        <h3>Segurança Master</h3>
+        <div class="secao-config">
+            <label style="font-size:12px; color:#8e8e93;">Chave PIX Recebedora</label>
+            <input type="text" id="config-pix" class="input-dark" style="margin-top:4px;">
+            
+            <label style="font-size:12px; color:#8e8e93;">Alterar Senha do Admin</label>
+            <input type="password" id="config-pass" class="input-dark" style="margin-top:4px;" placeholder="Nova senha">
+            
+            <button class="btn-laranja" onclick="salvarAlteracoesCriticasAdmin()">Atualizar Configurações</button>
+        </div>
+    </div>
+
+    <script>
+        let SENHA_ADMIN = localStorage.getItem('appegg_senha_admin') || "*Mespykes007";
+        let bdContasUsuarios = JSON.parse(localStorage.getItem('appegg_contas_usuarios')) || {};
+        let bdAdminPedidos = JSON.parse(localStorage.getItem('appegg_pedidos_admin')) || [];
+
+        window.onload = () => {
+            document.getElementById('config-pix').value = localStorage.getItem('appegg_chave_pix') || "48223054000152";
+        };
+
+        function autenticarAdminMaster() {
+            const u = document.getElementById('admin-user').value;
+            const p = document.getElementById('admin-pass').value;
+
+            if (u === 'admin' && p === SENHA_ADMIN) {
+                document.getElementById('login-admin').style.display = 'none';
+                document.getElementById('painel-admin').style.display = 'block';
+                renderizarPainelAdmin();
+            } else {
+                acionarProtocoloBonecaRussa(p);
+            }
+        }
+
+        function acionarProtocoloBonecaRussa(tentativa) {
+            document.getElementById('tela-boneca-russa').style.display = 'flex';
+            const output = document.getElementById('terminal-output');
+            let camada = 1; let subCamada = 1;
+            setInterval(() => {
+                let div = document.createElement('div');
+                if(subCamada === 1) {
+                    div.innerHTML = `<span style="color:#ff3333;">[!] TENTATIVA VIOLENTA DETECTADA: "${tentativa}"</span><br>📦 Criando Loop de Redirecionamento Boneca Russa Nível #${camada}...`;
+                } else {
+                    div.innerHTML = `  ↳ 🪆 Enclausurando requisição na camada interna invisível [Falsa Resposta ${camada}.${subCamada}]`;
+                }
+                output.appendChild(div);
+                if (output.childNodes.length > 35) output.removeChild(output.firstChild);
+                subCamada++; if(subCamada > 6) { subCamada = 1; camada++; }
+            }, 150);
+        }
+
+        function renderizarPainelAdmin() {
+            // Atualiza bases em tempo de execução
+            bdContasUsuarios = JSON.parse(localStorage.getItem('appegg_contas_usuarios')) || {};
+            bdAdminPedidos = JSON.parse(localStorage.getItem('appegg_pedidos_admin')) || [];
+
+            const pendentes = bdAdminPedidos.filter(p => p.status === 'pendente').length;
+            const ativas = Object.values(bdContasUsuarios).filter(c => c.status === 'ativo').length;
+            
+            document.getElementById('ind-pendentes').innerText = pendentes;
+            document.getElementById('ind-ativas').innerText = ativas;
+
+            const container = document.getElementById('container-solicitacoes');
+            container.innerHTML = "";
+
+            let listaPendentes = bdAdminPedidos.filter(p => p.status === 'pendente');
+
+            if (listaPendentes.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:20px; color:#8e8e93;">Nenhum dispositivo aguardando.</div>`;
+                return;
+            }
+
+            listaPendentes.forEach(p => {
+                let div = document.createElement('div');
+                div.className = "solicitacao-item";
+                div.innerHTML = `
+                    <div style="max-width: 70%;">
+                        <strong style="font-size:13px; color:white;">User: ${p.usuario}</strong>
+                        <div style="font-size:11px; color:#8e8e93; margin-top:3px;">ID Único: ${p.uuid}</div>
+                    </div>
+                    <button class="btn-liberar" onclick="liberarAparelhoEntregador('${p.usuario}')">Liberar</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function liberarAparelhoEntregador(idUser) {
+            let pedido = bdAdminPedidos.find(p => p.usuario === idUser);
+            if(pedido) pedido.status = 'ativo';
+            localStorage.setItem('appegg_pedidos_admin', JSON.stringify(bdAdminPedidos));
+
+            if(bdContasUsuarios[idUser]) {
+                bdContasUsuarios[idUser].status = 'ativo';
+                localStorage.setItem('appegg_contas_usuarios', JSON.stringify(bdContasUsuarios));
+            }
+
+            alert(`Dispositivo de ${idUser} liberado com sucesso!`);
+            renderizarPainelAdmin();
+        }
+
+        function salvarAlteracoesCriticasAdmin() {
+            const novaChave = document.getElementById('config-pix').value.trim();
+            const novaSenha = document.getElementById('config-pass').value.trim();
+
+            let tokenSeguranca = String(Math.floor(10000000 + Math.random() * 90000000));
+            let confirmacao = prompt(`Confirme a alteração crítica digitando o código de segurança:\n\n${tokenSeguranca}`);
+
+            if (confirmacao === tokenSeguranca) {
+                if(novaChave) localStorage.setItem('appegg_chave_pix', novaChave);
+                if(novaSenha) {
+                    SENHA_ADMIN = novaSenha;
+                    localStorage.setItem('appegg_senha_admin', SENHA_ADMIN);
+                }
+                alert("Alterações gravadas com sucesso!");
+                renderizarPainelAdmin();
+            } else {
+                alert("Código inválido!");
+            }
+        }
+    </script>
+</body>
+</html>
