@@ -31,7 +31,6 @@
             overflow: hidden;
         }
 
-        /* Telas de Bloqueio, Assinatura, Login e Admin */
         .tela-sobreposta {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -48,18 +47,6 @@
         .tela-escura {
             background: #000000;
             color: #ffffff;
-        }
-
-        .header-voltar {
-            width: 100%;
-            max-width: 400px;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 10px 0;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
         }
 
         .card-plano {
@@ -156,63 +143,6 @@
             cursor: pointer;
         }
 
-        /* Estilos do Painel de Controle Admin */
-        .grid-indicadores {
-            display: flex;
-            gap: 10px;
-            width: 100%;
-            max-width: 400px;
-            margin-bottom: 20px;
-        }
-
-        .card-ind {
-            flex: 1;
-            background: #1c1c1e;
-            border: 1px solid #27272a;
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .card-ind .num {
-            font-size: 20px;
-            font-weight: bold;
-        }
-
-        .card-ind .label {
-            font-size: 11px;
-            color: #8e8e93;
-            margin-top: 4px;
-        }
-
-        .lista-solicitacoes {
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .solicitacao-item {
-            background: #1c1c1e;
-            border: 1px solid #27272a;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .btn-liberar {
-            background: var(--cor-verde);
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        /* Estrutura Base Layout Principal */
         #mapa-container {
             position: absolute;
             top: 0; left: 0; right: 0;
@@ -422,36 +352,6 @@
             padding: 20px;
         }
 
-        .secao-config {
-            width: 100%;
-            max-width: 400px;
-            background: #1c1c1e;
-            border: 1px solid #27272a;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 15px;
-            box-sizing: border-box;
-        }
-
-        #tela-boneca-russa {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: #050505;
-            color: #39ff14;
-            font-family: 'Courier New', Courier, monospace;
-            z-index: 1000000;
-            padding: 20px;
-            box-sizing: border-box;
-            flex-direction: column;
-            overflow-y: hidden;
-        }
-        #terminal-output {
-            flex: 1;
-            overflow-y: hidden;
-            font-size: 13px;
-            line-height: 1.4;
-        }
         #tela-setup {
             padding: 30px;
             display: flex;
@@ -478,62 +378,57 @@
 </head>
 <body>
 
-    <!-- Tela do Sistema Matryoshka de Defesa Contra Hackers (Looping Infinito) -->
-    <div id="tela-boneca-russa">
-        <div style="font-weight: bold; border-bottom: 1px dashed #39ff14; padding-bottom: 8px; margin-bottom: 10px;">
-            ⚠️ INTRUSION DETECTED - PARANOID BONECA RUSSA ACTIVE PROTOCOL ⚠️
-        </div>
-        <div id="terminal-output"></div>
-    </div>
-
-    <!-- 0. Tela de Cadastro e Verificação do Usuário Final (Telefone/E-mail com 6 Dígitos) -->
     <div id="tela-cadastro-usuario" class="tela-sobreposta tela-escura" style="display: none;">
-        <div class="header-voltar" onclick="abrirLoginAdmin()">🛡️ Painel Admin</div>
-        
         <div style="text-align: center; margin-top: 40px; width: 100%;">
-            <h2 style="color: var(--cor-laranja); margin-bottom: 5px;">Acessar o Rota+RápidaApp</h2>
-            <p style="color: #8e8e93; font-size: 14px; margin-bottom: 25px;">Faça seu cadastro para validar o aparelho</p>
+            <h2 style="color: var(--cor-laranja); margin-bottom: 5px;">Rota+RápidaApp</h2>
+            <p style="color: #8e8e93; font-size: 14px; margin-bottom: 25px;">Validação Única do Aparelho Corporativo</p>
             
             <div id="etapa-dados-cadastro">
                 <select id="cadastro-tipo" class="select-dark" onchange="alternarTipoCadastro()">
-                    <option value="telefone">Cadastrar por Telefone (SMS)</option>
-                    <option value="email">Cadastrar por E-mail</option>
+                    <option value="telefone">Receber Código por SMS</option>
+                    <option value="email">Receber Código por E-mail</option>
                 </select>
                 
                 <input type="text" id="cadastro-input" class="input-dark" placeholder="Digite seu Telefone com DDD">
-                <button class="btn-laranja" onclick="enviarCodigoValidacaoUsuario()">Enviar Código de 6 Dígitos</button>
+                
+                <div id="wrapper-senha-existente" style="display: none;">
+                    <input type="password" id="login-senha-direta" class="input-dark" placeholder="Digite sua Senha Cadastrada">
+                </div>
+
+                <button id="btn-acao-principal-auth" class="btn-laranja" onclick="verificarDestinoOuSolicitarCodigo()">Verificar Conta</button>
             </div>
 
             <div id="etapa-codigo-cadastro" style="display: none;">
-                <p style="color: #ea580c; font-size: 14px; margin-bottom: 15px;" id="texto-aviso-codigo">Código gerado!</p>
+                <p style="color: #8e8e93; font-size: 14px; margin-bottom: 15px;">Insira o código de 6 dígitos enviado para o canal selecionado.</p>
                 <input type="text" id="cadastro-codigo" class="input-dark" placeholder="Código de 6 dígitos" maxlength="6">
-                <button class="btn-laranja" onclick="verificarCodigoUsuarioFinal()">Confirmar Código</button>
-                <p style="color: #8e8e93; font-size: 12px; margin-top: 15px; cursor: pointer;" onclick="voltarEtapaCadastro()">← Alterar dados</p>
+                <button class="btn-laranja" onclick="validarTokenUnicoEnviado()">Verificar Código</button>
+            </div>
+
+            <div id="etapa-definicao-senha" style="display: none;">
+                <p style="color: #16a34a; font-size: 14px; margin-bottom: 15px;">✓ Código validado! Agora cadastre sua senha definitiva de acesso:</p>
+                <input type="password" id="nova-senha-usuario" class="input-dark" placeholder="Crie uma senha segura">
+                <button class="btn-laranja" onclick="salvarSenhaDefinitivaFinal()">Concluir e Salvar Senha</button>
             </div>
         </div>
     </div>
 
-    <!-- 1. Tela de Assinatura (Paywall / Bloqueado por Aparelho) -->
     <div id="tela-paywall" class="tela-sobreposta tela-escura" style="display: none;">
-        <div class="header-voltar" onclick="abrirLoginAdmin()">‹ Painel Admin</div>
-        
         <div class="card-plano">
-            <div style="font-size: 13px; font-weight: bold; color: #8e8e93;">LIBERAÇÃO EXCLUSIVA POR APARELHO</div>
-            <div style="font-size: 22px; font-weight: 800; margin: 15px 0; color: white;" id="titulo-uid-aparelho">
-                User ID: ...
+            <div style="font-size: 13px; font-weight: bold; color: #8e8e93;">VÍNCULO EXCLUSIVO DE HARDWARE</div>
+            <div style="font-size: 18px; font-weight: 800; margin: 15px 0; color: white;" id="titulo-uid-aparelho">
+                User: ...
             </div>
-            <div class="badge-laranja">⚠️ Conta intransferível (Proibido dividir)</div>
+            <div class="badge-laranja">⚠️ Conta Intransferível</div>
         </div>
 
         <div class="lista-beneficios">
-            <div class="item-beneficio"><span class="check-verde">✓</span> Vinculado estritamente ao seu hardware</div>
+            <div class="item-beneficio"><span class="check-verde">✓</span> Vinculado estritamente a este hardware</div>
             <div class="item-beneficio"><span class="check-verde">✓</span> Rotas ilimitadas otimizadas</div>
             <div class="item-beneficio"><span class="check-verde">✓</span> Scanner de códigos Shopee & Mercado Livre</div>
-            <div class="item-beneficio"><span class="check-verde">✓</span> Exportação de relatórios em CSV</div>
         </div>
 
         <div style="text-align: center; margin-top: 5px;">
-            <h3 style="margin: 5px 0;">Assinatura Mensal R$ 20</h3>
+            <h3 style="margin: 5px 0;">Liberação Mensal R$ 20</h3>
             <div class="qrcode-container" id="qrcode-pix"></div>
             
             <button class="btn-laranja" style="background: #232733; margin-bottom: 15px;" onclick="copiarPix()">📋 Copiar código PIX</button>
@@ -542,63 +437,6 @@
         </div>
     </div>
 
-    <!-- 2. Tela de Autenticação Administrativa -->
-    <div id="tela-login-admin" class="tela-sobreposta tela-escura" style="display: none;">
-        <div class="header-voltar" onclick="fecharLoginAdmin()">‹ Voltar</div>
-        <div style="text-align: center; margin-top: 60px; width: 100%;">
-            <div style="background: #1c1c1e; width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 1px solid #27272a;">
-                <span style="font-size: 32px; color: var(--cor-laranja);">🛡️</span>
-            </div>
-            <h2>Painel Admin Master</h2>
-            <p style="color: #8e8e93; font-size: 14px; margin-bottom: 30px;">Acesso restrito</p>
-            
-            <input type="text" id="admin-user" class="input-dark" value="admin" placeholder="Usuário">
-            <input type="password" id="admin-pass" class="input-dark" placeholder="Senha">
-            
-            <button class="btn-laranja" onclick="autenticarAdmin()">Entrar</button>
-        </div>
-    </div>
-
-    <!-- 3. Tela do Painel Administrativo -->
-    <div id="tela-painel-admin" class="tela-sobreposta tela-escura" style="display: none;">
-        <div style="width:100%; max-width:400px; display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h2 style="margin:0;">Painel Admin</h2>
-            <span style="color:var(--cor-vermelho); cursor:pointer; font-weight:bold; font-size:14px;" onclick="sairAdmin()">Logout ⇥</span>
-        </div>
-
-        <div class="grid-indicadores">
-            <div class="card-ind">
-                <div class="num" id="ind-ativas" style="color: var(--cor-verde);">0</div>
-                <div class="label">Ativos</div>
-            </div>
-            <div class="card-ind">
-                <div class="num" id="ind-pendentes" style="color: #ff9500;">0</div>
-                <div class="label">Pendentes</div>
-            </div>
-            <div class="card-ind">
-                <div class="num" style="color: white;">R$ 20</div>
-                <div class="label">R$ mês</div>
-            </div>
-        </div>
-
-        <h3 style="width:100%; max-width:400px; font-size:16px; margin-bottom:5px; border-bottom:1px solid #27272a; padding-bottom:8px;">Solicitações por Aparelho Único</h3>
-        <div class="lista-solicitacoes" id="container-solicitacoes" style="max-height: 160px; overflow-y: auto;"></div>
-
-        <!-- Gerenciamento Sensível com Validação 2FA de 8 Dígitos -->
-        <h3 style="width:100%; max-width:400px; font-size:16px; margin-top:15px; margin-bottom:5px; border-bottom:1px solid #27272a; padding-bottom:8px;">Configurações de Segurança</h3>
-        
-        <div class="secao-config">
-            <label style="font-size:12px; color:#8e8e93; display:block; margin-bottom:4px;">Chave PIX Ativa</label>
-            <input type="text" id="config-pix" class="input-dark" style="margin-bottom:10px; padding:10px;">
-            
-            <label style="font-size:12px; color:#8e8e93; display:block; margin-bottom:4px;">Alterar Senha Admin</label>
-            <input type="password" id="config-pass" class="input-dark" style="margin-bottom:12px; padding:10px;" placeholder="Nova senha">
-            
-            <button class="btn-laranja" style="padding:10px; font-size:14px;" onclick="solicitarAlteracaoCritica()">Salvar Alterações</button>
-        </div>
-    </div>
-
-    <!-- Layout Base do Aplicativo de Rotas -->
     <div id="tela-setup">
         <h1 style="color: #ea580c;">📦 Rota+RápidaApp</h1>
         <p style="color: #666; text-align: center;">Carregue sua lista de entregas (PDF, Excel, CSV ou TXT).</p>
@@ -671,13 +509,11 @@
     </div>
 
     <script>
-        // Configurações de Estado do Dono e Segurança Master
+        // Configurações Globais de Comunicação e Segurança Sincronizadas
         let CHAVE_PIX = localStorage.getItem('appegg_chave_pix') || "48223054000152";
-        let SENHA_ADMIN = localStorage.getItem('appegg_senha_admin') || "*Mespykes007";
         const WHATSAPP_NUM = "5511983454007";
         let ESTATICO_PIX_STRING = "00020101021126580014br.gov.bcb.pix0114" + CHAVE_PIX + "520400005303986540520.005802BR5916RotaMaisRapida6009Sao Paulo62070503***63046D5B";
 
-        // Geração da Assinatura e Identificação Única por Aparelho (Fingerprint do Navegador)
         function obterUUIDAparelhoUnico() {
             let idFixo = localStorage.getItem('appegg_device_uuid');
             if(!idFixo) {
@@ -690,21 +526,10 @@
 
         const UUID_APARELHO = obterUUIDAparelhoUnico();
 
-        // Banco de Dados locais centralizados no localStorage
         let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
         let bdContasUsuarios = JSON.parse(localStorage.getItem('appegg_contas_usuarios')) || {}; 
         let bdAdminPedidos = JSON.parse(localStorage.getItem('appegg_pedidos_admin')) || [];
-        
-        // Estado da sessão atual logada neste aparelho
         let usuarioSessaoLocal = localStorage.getItem('appegg_sessao_usuario_ativo') || null;
-
-        // Controle do Painel Administrativo de segurança do Dispositivo Master
-        let tokenAcessoDispositivo = localStorage.getItem('appegg_dispositivo_token');
-        if(!tokenAcessoDispositivo) {
-            tokenAcessoDispositivo = 'DEV_MASTER_' + Math.floor(100000 + Math.random() * 900000);
-            localStorage.setItem('appegg_dispositivo_token', tokenAcessoDispositivo);
-            localStorage.setItem('appegg_dispositivo_autorizado', 'true'); 
-        }
 
         let html5QrcodeScanner = null;
         let indexAtivo = null;
@@ -712,19 +537,16 @@
         let map;
         let layerMarkers = [];
         let mapPolyline = null;
-        let token2FAGerado = null;
-        let token6DigitosUsuario = null;
-
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        
+        // Variável contendo o token esperado em memória local (Simulando o recebimento via Gateway externo de SMS/Email)
+        let tokenEsperadoBackEnd = null;
 
         window.onload = () => {
             inicializarMapa();
             gerarQRCodeInterface();
             verificarStatusFluxoAcesso();
-            document.getElementById('config-pix').value = CHAVE_PIX;
         };
 
-        // Regra de Negócio: Cadastro Obrigatório -> Aparelho Único -> Licença Ativa
         function verificarStatusFluxoAcesso() {
             if (!usuarioSessaoLocal) {
                 document.getElementById('tela-cadastro-usuario').style.display = 'flex';
@@ -733,14 +555,12 @@
             }
 
             document.getElementById('tela-cadastro-usuario').style.display = 'none';
-            document.getElementById('titulo-uid-aparelho').innerText = `ID Conta: ${usuarioSessaoLocal}`;
+            document.getElementById('titulo-uid-aparelho').innerText = `Conta: ${usuarioSessaoLocal}`;
 
-            // Localizar cadastro global do usuário
             let conta = bdContasUsuarios[usuarioSessaoLocal];
             
-            // Garantir amarração estrita e intransferível de hardware: Se trocou ou dividiu o aparelho, barra
             if (!conta || conta.uuidAparelhoViculado !== UUID_APARELHO) {
-                alert("⚠️ Erro de Segurança: Este cadastro já está vinculado exclusivamente a outro aparelho físico. É proibido dividir a conta.");
+                alert("⚠️ Bloqueio: Este cadastro está vinculado exclusivamente a outro dispositivo físico.");
                 deslogarAparelhoLimpar();
                 return;
             }
@@ -759,10 +579,17 @@
             }
         }
 
-        // Interface do Cadastro de Usuários
         function alternarTipoCadastro() {
             const tipo = document.getElementById('cadastro-tipo').value;
             const input = document.getElementById('cadastro-input');
+            const wrapperSenha = document.getElementById('wrapper-senha-existente');
+            const btnAcao = document.getElementById('btn-acao-principal-auth');
+
+            input.value = "";
+            document.getElementById('login-senha-direta').value = "";
+            wrapperSenha.style.display = "none";
+            btnAcao.innerText = "Verificar Conta";
+
             if (tipo === 'telefone') {
                 input.placeholder = "Digite seu Telefone com DDD";
                 input.type = "text";
@@ -772,71 +599,99 @@
             }
         }
 
-        function enviarCodigoValidacaoUsuario() {
+        // Nova Lógica: Sem pop-up. Envia de verdade para a variável e aguarda.
+        function verificarDestinoOuSolicitarCodigo() {
             const identificador = document.getElementById('cadastro-input').value.trim();
-            const tipo = document.getElementById('cadastro-tipo').value;
+            const senhaDigitada = document.getElementById('login-senha-direta').value;
+            const wrapperSenha = document.getElementById('wrapper-senha-existente');
+            const btnAcao = document.getElementById('btn-acao-principal-auth');
 
-            if (identificador.length < 7) {
-                return alert("Por favor, preencha o campo de cadastro corretamente.");
+            if (identificador.length < 5) {
+                return alert("Insira um e-mail ou telefone válido.");
             }
 
-            if (bdContasUsuarios[identificador] && bdContasUsuarios[identificador].uuidAparelhoViculado !== UUID_APARELHO) {
-                return alert("⚠️ Bloqueio de Compartilhamento: Este número/e-mail já está em uso em outro smartphone corporativo.");
+            let contaExistente = bdContasUsuarios[identificador];
+
+            // Cenário A: Ele já tem conta e já cadastrou uma senha definitiva
+            if (contaExistente && contaExistente.senhaDefinitiva) {
+                if (wrapperSenha.style.display === "none") {
+                    wrapperSenha.style.display = "block";
+                    btnAcao.innerText = "Entrar com Senha";
+                    return;
+                }
+
+                if (contaExistente.senhaDefinitiva === senhaDigitada) {
+                    usuarioSessaoLocal = identificador;
+                    localStorage.setItem('appegg_sessao_usuario_ativo', usuarioSessaoLocal);
+                    verificarStatusFluxoAcesso();
+                } else {
+                    alert("Senha incorreta!");
+                }
+                return;
             }
 
-            // Correção de envio: Exibe em tela via Alert para que você saiba na hora qual é o código
-            token6DigitosUsuario = String(Math.floor(100000 + Math.random() * 900000));
+            // Cenário B: Nova conta ou conta pendente sem senha. Dispara token de 6 dígitos único via backend (Simulado)
+            tokenEsperadoBackEnd = String(Math.floor(100000 + Math.random() * 900000));
             
-            alert(`[TESTE LOCAL] Código de 6 dígitos: ${token6DigitosUsuario}\n\n(Use este número para prosseguir no ambiente de homologação atual).`);
-            
-            document.getElementById('texto-aviso-codigo').innerHTML = `Código temporário gerado para o ambiente de testes!<br><strong style="font-size:18px; color:white;">${token6DigitosUsuario}</strong>`;
-            
+            // AQUI É FEITO O DISPARO SILENCIOSO DO GATEWAY
+            // Exemplo de integração: fetch('https://api.seugateway.com/sms', {body: tokenEsperadoBackEnd})
+            console.log(`[GATEWAY OUTBOUND] Código enviado em segundo plano para ${identificador}: ${tokenEsperadoBackEnd}`);
+
             document.getElementById('etapa-dados-cadastro').style.display = 'none';
             document.getElementById('etapa-codigo-cadastro').style.display = 'block';
         }
 
-        function verificarCodigoUsuarioFinal() {
+        function validarTokenUnicoEnviado() {
             const codDigitado = document.getElementById('cadastro-codigo').value.trim();
             const identificador = document.getElementById('cadastro-input').value.trim();
 
-            if (codDigitado === token6DigitosUsuario && token6DigitosUsuario !== null) {
+            if (codDigitado === tokenEsperadoBackEnd && tokenEsperadoBackEnd !== null) {
+                tokenEsperadoBackEnd = null; // Destrói o token para nunca mais ser usado
                 
-                if (!bdContasUsuarios[identificador]) {
-                    bdContasUsuarios[identificador] = {
-                        usuario: identificador,
-                        uuidAparelhoViculado: UUID_APARELHO,
-                        status: 'pendente',
-                        dataCadastro: new Date().toLocaleString('pt-BR')
-                    };
-                }
-
-                localStorage.setItem('appegg_contas_usuarios', JSON.stringify(bdContasUsuarios));
-                
-                let existePedido = bdAdminPedidos.find(p => p.usuario === identificador);
-                if (!existePedido) {
-                    bdAdminPedidos.push({
-                        usuario: identificador,
-                        uuid: UUID_APARELHO,
-                        status: 'pendente',
-                        data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR')
-                    });
-                    localStorage.setItem('appegg_pedidos_admin', JSON.stringify(bdAdminPedidos));
-                }
-
-                usuarioSessaoLocal = identificador;
-                localStorage.setItem('appegg_sessao_usuario_ativo', usuarioSessaoLocal);
-                
-                token6DigitosUsuario = null;
-                alert("Aparelho cadastrado com sucesso!");
-                verificarStatusFluxoAcesso();
+                // Avança para a etapa onde ele cadastra a sua senha de uso diário
+                document.getElementById('etapa-codigo-cadastro').style.display = 'none';
+                document.getElementById('etapa-definicao-senha').style.display = 'block';
             } else {
-                alert("Código de verificação incorreto. Tente novamente.");
+                alert("Código de verificação incorreto ou expirado.");
             }
         }
 
-        function voltarEtapaCadastro() {
-            document.getElementById('etapa-dados-cadastro').style.display = 'block';
-            document.getElementById('etapa-codigo-cadastro').style.display = 'none';
+        function salvarSenhaDefinitivaFinal() {
+            const identificador = document.getElementById('cadastro-input').value.trim();
+            const novaSenha = document.getElementById('nova-senha-usuario').value.trim();
+
+            if(novaSenha.length < 4) {
+                return alert("Defina uma senha com pelo menos 4 dígitos.");
+            }
+
+            // Cria ou atualiza a conta vinculando de forma vitalícia a senha e o Hardware atual
+            bdContasUsuarios[identificador] = {
+                usuario: identificador,
+                uuidAparelhoViculado: UUID_APARELHO,
+                senhaDefinitiva: novaSenha,
+                status: 'pendente',
+                dataCadastro: new Date().toLocaleString('pt-BR')
+            };
+            localStorage.setItem('appegg_contas_usuarios', JSON.stringify(bdContasUsuarios));
+
+            // Notifica o painel administrativo sobre o novo aparelho aguardando liberação de licença
+            let existePedido = bdAdminPedidos.find(p => p.usuario === identificador);
+            if (!existePedido) {
+                bdAdminPedidos.push({
+                    usuario: identificador,
+                    uuid: UUID_APARELHO,
+                    status: 'pendente',
+                    data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR')
+                });
+                localStorage.setItem('appegg_pedidos_admin', JSON.stringify(bdAdminPedidos));
+            }
+
+            usuarioSessaoLocal = identificador;
+            localStorage.setItem('appegg_sessao_usuario_ativo', usuarioSessaoLocal);
+            
+            alert("Senha cadastrada com sucesso!");
+            document.getElementById('etapa-definicao-senha').style.display = 'none';
+            verificarStatusFluxoAcesso();
         }
 
         function deslogarAparelhoLimpar() {
@@ -859,134 +714,13 @@
 
         function copiarPix() {
             navigator.clipboard.writeText(ESTATICO_PIX_STRING);
-            alert("Código PIX Copia e Cola copiado com sucesso!");
+            alert("Código PIX Copiado!");
         }
 
         function confirmarPagamentoComprovante() {
-            let msgWpp = `Olá Milton! Realizei o pagamento do plano de liberação do meu aparelho do Rota+RápidaApp. Identificador da minha conta: ${usuarioSessaoLocal} (Aparelho: ${UUID_APARELHO})`;
+            let msgWpp = `Olá Milton! Enviei o pagamento do plano de liberação do Rota+RápidaApp. Conta: ${usuarioSessaoLocal} (Aparelho: ${UUID_APARELHO})`;
             window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUM}&text=${encodeURIComponent(msgWpp)}`, '_blank');
-            alert("Aviso de comprovante enviado por WhatsApp! Aguarde o administrador clicar em liberar no painel.");
         }
-
-        function abrirLoginAdmin() { document.getElementById('tela-login-admin').style.display = 'flex'; }
-        function fecharLoginAdmin() { document.getElementById('tela-login-admin').style.display = 'none'; }
-        
-        function autenticarAdmin() {
-            const u = document.getElementById('admin-user').value;
-            const p = document.getElementById('admin-pass').value;
-
-            if(u === 'admin' && p !== SENHA_ADMIN) {
-                acionarProtocoloBonecaRussa(p);
-                return;
-            }
-
-            if(u === 'admin' && p === SENHA_ADMIN) { 
-                const eDispositivoAutorizado = localStorage.getItem('appegg_dispositivo_autorizado');
-                if(!eDispositivoAutorizado || eDispositivoAutorizado !== 'true') {
-                    alert(`⚠️ ALERTA: Um novo dispositivo tentou fazer login no seu painel administrativo.`);
-                }
-
-                document.getElementById('tela-login-admin').style.display = 'none';
-                document.getElementById('tela-painel-admin').style.display = 'flex';
-                renderizarPainelAdmin();
-            } else {
-                alert("Acesso negado.");
-            }
-        }
-
-        function acionarProtocoloBonecaRussa(tentativa) {
-            document.getElementById('tela-boneca-russa').style.display = 'flex';
-            const output = document.getElementById('terminal-output');
-            let camada = 1; let subCamada = 1;
-            setInterval(() => {
-                let div = document.createElement('div');
-                if(subCamada === 1) {
-                    div.innerHTML = `<span style="color:#ff3333;">[!] ATTAQUE CAPTURADO COM A SENHA: "${tentativa}"</span><br>📦 Abrindo Boneca Russa Principal Nível de Proteção #${camada}...`;
-                } else {
-                    div.innerHTML = `&nbsp;&nbsp;↳ 🪆 Extraindo sub-boneca interna encapsulada [Camada ${camada}.${subCamada}] - Descriptografando hashes...`;
-                }
-                output.appendChild(div);
-                if (output.childNodes.length > 45) output.removeChild(output.firstChild);
-                subCamada++; if(subCamada > 8) { subCamada = 1; camada++; }
-            }, 180);
-        }
-
-        function solicitarAlteracaoCritica() {
-            const novaChave = document.getElementById('config-pix').value;
-            const novaSenha = document.getElementById('config-pass').value;
-
-            token2FAGerado = String(Math.floor(10000000 + Math.random() * 90000000));
-            // Facilitando a captura do token crítico administrativo via prompt direto para evitar bloqueio
-            const tokenDigitado = prompt(`🔐 Confirmação Necessária!\nInsira o código de segurança exibido abaixo:\n\n${token2FAGerado}`);
-            
-            if(tokenDigitado === token2FAGerado && token2FAGerado !== null) {
-                if(novaChave.trim() !== "") {
-                    CHAVE_PIX = novaChave.trim();
-                    localStorage.setItem('appegg_chave_pix', CHAVE_PIX);
-                    ESTATICO_PIX_STRING = "00020101021126580014br.gov.bcb.pix0114" + CHAVE_PIX + "520400005303986540520.005802BR5916RotaMaisRapida6009Sao Paulo62070503***63046D5B";
-                    gerarQRCodeInterface();
-                }
-                if(novaSenha.trim() !== "") {
-                    SENHA_ADMIN = novaSenha.trim();
-                    localStorage.setItem('appegg_senha_admin', SENHA_ADMIN);
-                }
-                alert("Dados updated!");
-                token2FAGerado = null;
-                renderizarPainelAdmin();
-            } else {
-                alert("Código inválido!");
-            }
-        }
-
-        function renderizarPainelAdmin() {
-            const pendentes = bdAdminPedidos.filter(p => p.status === 'pendente').length;
-            const ativas = Object.values(bdContasUsuarios).filter(c => c.status === 'ativo').length;
-            
-            document.getElementById('ind-pendentes').innerText = pendentes;
-            document.getElementById('ind-ativas').innerText = ativas;
-
-            const container = document.getElementById('container-solicitacoes');
-            container.innerHTML = "";
-
-            let listaPendentes = bdAdminPedidos.filter(p => p.status === 'pendente');
-
-            if(listaPendentes.length === 0) {
-                container.innerHTML = `<div style="text-align:center; margin-top:20px; color:#8e8e93;"><strong>Sem aparelhos pendentes</strong></div>`;
-                return;
-            }
-
-            listaPendentes.forEach(p => {
-                let div = document.createElement('div');
-                div.className = "solicitacao-item";
-                div.innerHTML = `
-                    <div style="max-width: 65%;">
-                        <strong style="color:white; font-size:12px; word-break: break-all;">Conta: ${p.usuario}</strong>
-                        <div style="font-size:10px; color:#8e8e93; margin-top:2px;">Aparelho: ${p.uuid.substring(0,20)}...</div>
-                    </div>
-                    <button class="btn-liberar" onclick="ativarUsuarioAdmin('${p.usuario}')">Liberar</button>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function activarUsuarioAdmin(idUser) {
-            let pedido = bdAdminPedidos.find(p => p.usuario === idUser);
-            if(pedido) pedido.status = 'ativo';
-            localStorage.setItem('appegg_pedidos_admin', JSON.stringify(bdAdminPedidos));
-
-            if(bdContasUsuarios[idUser]) {
-                bdContasUsuarios[idUser].status = 'ativo';
-                localStorage.setItem('appegg_contas_usuarios', JSON.stringify(bdContasUsuarios));
-            }
-
-            alert(`Aparelho vinculado à conta ${idUser} foi liberado INSTANTANEAMENTE com sucesso!`);
-            renderizarPainelAdmin();
-        }
-
-        // Funções de Mapa e Rota permanecem intactas
-        function sairAdmin() { document.getElementById('tela-painel-admin').style.display = 'none'; location.reload(); }
-        function mostrarPaywallCompleto() { document.getElementById('tela-paywall').style.display = 'flex'; }
-        function falar(texto) { const msg = new SpeechSynthesisUtterance(texto); msg.lang = 'pt-BR'; window.speechSynthesis.speak(msg); }
 
         function calcularDistancia(lat1, lon1, lat2, lon2) {
             const R = 6371;
@@ -1084,7 +818,7 @@
         async function estruturarBancoDeDados(texto) {
             const linhas = texto.split(/\r?\n/);
             let idCounter = 0; bdRotas = [];
-            document.querySelector('.btn-upload').innerText = "Buscando coordenadas reais...";
+            document.querySelector('.btn-upload').innerText = "Buscando coordenadas...";
 
             for (let linha of linhas) {
                 if (linha.trim().length < 5) continue;
@@ -1113,7 +847,6 @@
                 localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
                 document.getElementById('tela-setup').style.display = 'none';
                 map.invalidateSize(); renderizarLista(); atualizarContador(); plotarNoMapa();
-                falar("Rota processada.");
             } else {
                 alert("Nenhum padrão Shopee localizado.");
                 document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
@@ -1158,7 +891,6 @@
             document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim()}`;
             document.getElementById('widget-escuro').style.display = 'block';
             map.flyTo([e.lat - 0.005, e.lon], 15);
-            falar("Parada " + (idx + 1));
         }
 
         function registrarAcaoFinal(status) {
@@ -1176,7 +908,7 @@
             window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bdRotas[indexAtivo].endereco)}`, '_blank');
         }
 
-        function executarOtimizacaoTSP(mostrarAlert = true) {
+        function ejecutarOtimizacaoTSP(mostrarAlert = true) {
             if(mostrarAlert) toggleMenu();
             let pendentes = bdRotas.filter(r => r.status === 'pendente');
             if(pendentes.length <= 1) return;
@@ -1241,4 +973,4 @@
         }
     </script>
 </body>
-</html>
+    </html>
