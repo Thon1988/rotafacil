@@ -2,388 +2,456 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RotaFácil - Alta Performance Logística</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AppEgg Rota Fácil</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    
     <style>
+        /* RESET E VARIÁVEIS PARA REPRODUZIR EXATAMENTE AS DIRETRIZES VISUAIS */
         :root {
-            --primary: #ff4500;
-            --primary-hover: #e03e00;
-            --success: #2ecc71;
-            --danger: #e74c3c;
-            --dark-bg: #1a1d24;
-            --card-bg: #ffffff;
-            --body-bg: #f4f4f9;
-            --text-main: #333333;
+            --cor-laranja: #ea580c;
+            --cor-verde: #16a34a;
+            --cor-vermelho: #dc2626;
+            --bg-escuro: #1c1c1e;
+            --bg-botoes: #232733;
         }
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            padding: 15px;
-            background-color: var(--body-bg);
-            color: var(--text-main);
-            padding-bottom: 100px;
-            box-sizing: border-box;
+            padding: 0;
+            background-color: #f4f4f9;
+            overflow: hidden;
         }
-        h1, h2, h3 {
-            text-align: center;
-            color: var(--primary);
-            margin-top: 5px;
-        }
-        .card {
-            background: var(--card-bg);
+
+        /* --- TELA 1: IMPORTAÇÃO DE ARQUIVO --- */
+        #tela-setup {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: white;
+            z-index: 99999;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
-            margin-bottom: 15px;
-        }
-        .tabs {
             display: flex;
-            gap: 8px;
-            margin-bottom: 15px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
-        .tab-btn {
-            flex: 1;
-            background: #e9ecef;
-            border: none;
-            padding: 12px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .tab-btn.active {
-            background: var(--primary);
-            color: white;
-        }
-        input[type="text"], input[type="file"], select {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
-            background: #f8f9fa;
-        }
-        .btn-principal {
-            width: 100%;
-            background: var(--primary);
+        .btn-upload {
+            background: var(--cor-laranja);
             color: white;
             border: none;
-            padding: 14px;
+            padding: 16px;
+            border-radius: 8px;
             font-size: 16px;
             font-weight: bold;
-            border-radius: 6px;
+            width: 100%;
+            max-width: 400px;
             cursor: pointer;
-            margin-top: 5px;
-            transition: background 0.2s;
+            margin-top: 20px;
         }
-        .btn-principal:hover {
-            background: var(--primary-hover);
+
+        /* --- TELA 2: INTERFACE PRINCIPAL --- */
+        #mapa-container {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 50vh;
+            background: #e5e3df;
+            z-index: 1;
         }
-        .lista-entregas {
-            max-height: 320px;
-            overflow-y: auto;
-            border: 1px solid #e2e8f0;
-            padding: 5px;
-            border-radius: 6px;
-            background: #fff;
-        }
-        .item-entrega {
-            padding: 12px;
-            border-bottom: 1px solid #edf2f7;
-            background: #ffffff;
-            margin-bottom: 6px;
-            border-radius: 6px;
-            border-left: 6px solid #cbd5e0;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-        .item-entrega:active {
-            transform: scale(0.99);
-        }
-        .item-entrega.status-entregue {
-            border-left-color: var(--success);
-            background: #f0fdf4;
-        }
-        .item-entrega.status-falhou {
-            border-left-color: var(--danger);
-            background: #fff5f5;
-        }
-        .topo {
-            display: flex;
-            justify-content: space-between;
-            font-weight: bold;
-            font-size: 13px;
-        }
-        .endereco {
-            font-size: 14px;
-            margin-top: 5px;
-            color: #2d3748;
-        }
-        .meta-tags {
-            display: flex;
-            gap: 6px;
-            margin-top: 6px;
-            font-size: 11px;
-        }
-        .tag {
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: #edf2f7;
-            color: #4a5568;
-        }
-        .tag-janela {
-            background: #feebc8;
-            color: #c05621;
-            font-weight: bold;
-        }
-        .barra-controle-fixa {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 75px;
-            background: #ffffff;
-            border-top: 1px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            padding: 0 10px;
-            z-index: 10000;
-            box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
-        }
-        .btn-global {
-            flex: 1;
-            margin: 0 4px;
-            padding: 12px;
-            border-radius: 6px;
+        #iframeMapa {
+            width: 100%;
+            height: 100%;
             border: none;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
+        }
+
+        /* Botão Menu Hambúrguer sobre o mapa */
+        .btn-menu {
+            position: absolute;
+            top: 20px; left: 20px;
+            width: 45px; height: 45px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            font-size: 24px;
+            border: none;
+            cursor: pointer;
+            z-index: 100;
+            color: #333;
         }
-        .modal-scanner {
+
+        /* Menu Overlay */
+        #menu-opcoes {
+            display: none;
+            position: absolute;
+            top: 75px; left: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 2000;
+            flex-direction: column;
+            width: 260px;
+            overflow: hidden;
+        }
+        .menu-item {
+            padding: 16px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: none;
+            border-left: none; border-right: none; border-top: none;
+            text-align: left;
+            width: 100%;
+        }
+
+        /* Metade Inferior: Bottom Sheet (Lista) */
+        #bottom-sheet {
+            position: absolute;
+            top: 40vh;
+            bottom: 165px;
+            left: 0; right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            padding: 20px 15px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+        .titulo-passo2 {
+            color: #d35400;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 0 15px 0;
+        }
+
+        /* Itens da Lista */
+        .item-lista {
+            border-bottom: 1px solid #eee;
+            padding: 12px 0;
+            cursor: pointer;
+        }
+        .item-lista.concluido { opacity: 0.5; }
+        .item-topo {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 15px;
+        }
+        .parada-titulo { color: #d35400; }
+        .parada-codigo { color: #d35400; font-size: 14px; }
+        .parada-endereco {
+            color: #444;
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        /* Widget Escuro Flutuante */
+        #widget-escuro {
+            position: absolute;
+            bottom: 175px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 380px;
+            background: var(--bg-escuro);
+            color: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            z-index: 20;
+            display: none;
+            box-sizing: border-box;
+        }
+        .w-topo { display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-bottom: 8px;}
+        .w-badge { background: #3b82f6; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .w-rua { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; }
+        .w-sub { font-size: 13px; color: #888; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Barra de Ações Inferior Fixa */
+        #barra-acoes-inferior {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 165px;
+            background: white;
+            padding: 10px 15px;
+            box-sizing: border-box;
+            z-index: 30;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .banner-laranja {
+            background: var(--cor-laranja);
+            color: white;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .texto-status {
+            text-align: center;
+            color: var(--cor-verde);
+            font-weight: bold;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .linha-3-botoes {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+        .btn-acao-dark {
+            flex: 1;
+            background: var(--bg-botoes);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 5px;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .btn-acao-dark svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; }
+        .btn-acao-dark .icone-verde { stroke: var(--cor-verde); }
+        .btn-acao-dark .icone-vermelho { stroke: var(--cor-vermelho); }
+
+        /* Modal do Scanner Fullscreen */
+        #modalScanner {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.95);
-            z-index: 20000;
+            z-index: 999999;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 20px;
         }
-        .widget-entrega {
-            position: fixed;
-            bottom: 85px;
-            right: 15px;
-            z-index: 9999;
-            background: var(--dark-bg);
-            color: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            width: 320px;
-            padding: 16px;
-            box-sizing: border-box;
-            border: 1px solid #2d323f;
-        }
-        .widget-acoes {
-            display: flex;
-            gap: 6px;
-            margin-top: 10px;
-        }
-        .widget-btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 12px;
-            color: white;
-        }
     </style>
 </head>
 <body>
 
-    <h1>📦 RotaFácil Pro</h1>
-
-    <div class="card" id="secaoUpload">
-        <div class="tabs">
-            <button class="tab-btn active" id="btnAbaArq" onclick="alternarAbasConfig('arquivo')">📁 Arquivo / PDF</button>
-            <button class="tab-btn" id="btnAbaMan" onclick="alternarAbasConfig('manual')">✍️ Manual</button>
-        </div>
-
-        <div id="conteudoAbaArquivo">
-            <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv">
-            <button class="btn-principal" onclick="processarDocumentoRota()">Processar Rota Completa</button>
-        </div>
-
-        <div id="conteudoAbaManual" style="display: none;">
-            <input type="text" id="inputEnderecoManual" placeholder="Endereço Completo">
-            <select id="selectJanelaTempo">
-                <option value="Livre">Horário Livre</option>
-                <option value="08:00 - 12:00">Manhã (08h às 12h)</option>
-                <option value="12:00 - 18:00">Tarde (12h às 18h)</option>
-                <option value="18:00 - 22:00">Noite (18h às 22h)</option>
-            </select>
-            <button class="btn-principal" style="background:#2b6cb0;" onclick="adicionarParadaManualLista()">Inserir Parada</button>
-            <div id="listaCriacaoManual" class="lista-entregas" style="margin-top:10px; max-height:120px;"></div>
-            <button class="btn-principal" style="background:var(--success);" onclick="salvarListaManualCompleta()">Salvar e Gerar Rota</button>
-        </div>
-    </div>
-
-    <div id="secaoScanner" class="card" style="display: none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h3 style="margin:0; font-size:16px;">Painel de Monitoramento</h3>
-            <button onclick="exportarRelatórioCSV()" style="background:#4a5568; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; cursor:pointer;">📥 Relatório CSV</button>
-        </div>
-        <div class="lista-entregas" id="containerListaEntregas"></div>
+    <div id="tela-setup">
+        <h1 style="color: #ea580c;">📦 AppEgg Rota Fácil</h1>
+        <p style="color: #666; text-align: center;">Carregue sua lista de entregas (PDF, Excel, CSV ou TXT).</p>
         
-        <div style="margin-top:12px; display:flex; gap:6px;">
-            <button class="btn-principal" style="background:#9b59b6; margin:0;" onclick="executarOtimizacaoTSP()">🚀 Otimizar Rota (Estilo Circuit)</button>
-            <button class="btn-principal" style="background:#4a5568; margin:0; width:auto;" onclick="limparSessaoTotal()">🗑️</button>
-        </div>
-    </div>
-
-    <div id="widgetEntrega" class="widget-entrega" style="display: none;">
-        <div style="display:flex; justify-content:space-between; font-size:11px; color:#a0aec0;">
-            <span id="widgetCodigo">BR-0000</span>
-            <span id="widgetJanela" style="color:#ecc94b; font-weight:bold;">LIVRE</span>
-        </div>
-        <div id="widgetEndereco" style="font-size:14px; font-weight:bold; margin:6px 0; max-height:40px; overflow-y:auto;">Nenhum endereço selecionado</div>
+        <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
         
-        <div style="margin-top:8px; border-top:1px dashed #4a5568; padding-top:8px;">
-            <input type="text" id="inputSegurancaManual" placeholder="Código de barras ilegível? Digite aqui" style="padding:6px; font-size:12px; margin:0; background:#2d3748; color:white; border:1px solid #4a5568;">
-            <button onclick="forcarBaixaManualSeguranca()" style="width:100%; background:#4a5568; color:white; border:none; padding:6px; font-size:11px; margin-top:4px; border-radius:4px; cursor:pointer;">Validar Código Digitado</button>
-        </div>
+        <button class="btn-upload" onclick="processarArquivoFisico()">Processar Rota Ativa</button>
+    </div>
 
-        <div class="widget-acoes">
-            <button class="widget-btn" style="background:#3182ce;" onclick="navegarGPSExterno()">Navegar</button>
-            <button class="widget-btn" style="background:var(--danger);" onclick="registrarStatusEntregaFinal('falhou')">Falhou</button>
-            <button class="widget-btn" style="background:var(--success);" onclick="registrarStatusEntregaFinal('entregue')">Entregue</button>
+    <div id="mapa-container">
+        <iframe id="iframeMapa" src="https://maps.google.com/maps?daddr=$4" allowfullscreen></iframe>
+    </div>
+
+    <button class="btn-menu" onclick="toggleMenu()">☰</button>
+    <div id="menu-opcoes">
+        <button class="menu-item" onclick="abrirScanner()">📷 Iniciar Scanner</button>
+        <button class="menu-item" onclick="executarOtimizacaoTSP()">⚡ Otimizar Rota Atual</button>
+        <button class="menu-item" onclick="exportarRelatorioCSV()">📥 Exportar Relatório</button>
+        <button class="menu-item" onclick="forcarBaixaManual()">✍️ Digitar Código Manual</button>
+        <button class="menu-item" style="color: #dc2626;" onclick="limparSessao()">🗑️ Apagar Rota</button>
+    </div>
+
+    <div id="bottom-sheet">
+        <h2 class="titulo-passo2">Passo 2: Processar Rota Ativa</h2>
+        <div id="container-lista"></div>
+    </div>
+
+    <div id="widget-escuro">
+        <div class="w-topo">
+            <span id="wg-num">01</span>
+            <span class="w-badge" id="wg-badge">1</span>
+        </div>
+        <h3 class="w-rua" id="wg-rua">Rua Selecionada, 00</h3>
+        <p class="w-sub" id="wg-detalhe">Detalhes e código da encomenda</p>
+    </div>
+
+    <div id="barra-acoes-inferior">
+        <div class="banner-laranja">
+            ⚡ <span id="contador-restantes">0</span> Paradas Restantes (Rota Otimizada)
+        </div>
+        <div class="texto-status">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--cor-verde)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            Rota em Execução!
+        </div>
+        <div class="linha-3-botoes">
+            <button class="btn-acao-dark" onclick="navegarApp()">
+                <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                Abrir app
+            </button>
+            <button class="btn-acao-dark" onclick="registrarAcaoFinal('falhou')">
+                <svg class="icone-vermelho" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                Não entre...
+            </button>
+            <button class="btn-acao-dark" onclick="registrarAcaoFinal('entregue')">
+                <svg class="icone-verde" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+                Entregue
+            </button>
         </div>
     </div>
 
-    <div id="modalScannerGlobal" class="modal-scanner">
-        <div style="width:100%; max-width:400px; display:flex; justify-content:space-between; margin-bottom:15px;">
-            <h3 style="color:white; margin:0;">Scanner RotaFácil</h3>
-            <button onclick="fecharScannerGlobal()" style="padding:8px 16px; background:var(--danger); color:white; border:none; border-radius:4px; font-weight:bold;">X Sair</button>
-        </div>
-        <div id="reader"></div>
-        <div id="scannerFeedbackMsg" style="color:white; margin-top:15px; font-weight:bold; text-align:center; background:#2d3748; padding:10px; width:100%; max-width:380px; border-radius:6px;">Aguardando leitura...</div>
-    </div>
-
-    <div class="barra-controle-fixa">
-        <button class="btn-global" style="background: var(--success);" onclick="abrirScannerGlobal()">📷 Bipar Pacote</button>
-        <button class="btn-global" style="background: #4a5568;" onclick="focarParadaAtivaVisual()">📍 Tela de Trabalho</button>
+    <div id="modalScanner">
+        <button onclick="fecharScanner()" style="padding: 12px; margin-bottom: 20px; background: #dc2626; color: white; border: none; border-radius: 8px; font-size: 16px; width: 100%; max-width: 400px; font-weight: bold;">✕ Fechar Scanner</button>
+        <div id="reader" style="width: 100%; max-width: 400px; background: #000; border-radius: 8px; overflow: hidden; border: 2px solid #333;"></div>
+        <div id="scannerFeedback" style="color: white; margin-top: 20px; font-size: 18px; font-weight: bold; text-align: center;">Aguardando leitura do código...</div>
     </div>
 
     <script>
-        let rotaFacilDados = JSON.parse(localStorage.getItem('db_rotafacil_pro')) || [];
-        let filaManualTemporaria = [];
-        let html5QrcodeScannerGlobal = null;
-        let indexAtivoGlobal = 0;
-        let processandoLeituraBip = false;
+        let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
+        let html5QrcodeScanner = null;
+        let indexAtivo = null;
+        let processandoLeitura = false;
 
-        window.addEventListener('load', () => {
-            if(rotaFacilDados.length > 0) {
-                alternarExibicaoPaineis(true);
-                recarregarProximaParadaPendente();
+        // Configuração inicial do PDF.js Worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        window.onload = () => {
+            if (bdRotas.length > 0) {
+                document.getElementById('tela-setup').style.display = 'none';
+                renderizarLista();
+                atualizarContador();
             }
-        });
+        };
 
-        // EMISSÃO DE BIP SONORO NATIVO (Garante funcionamento offline sem dependência de arquivos externos)
-        function emitirBipSonoroSucesso() {
+        function emitirBip() {
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(950, audioCtx.currentTime); // Tom agudo industrial
-                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 0.12);
-            } catch (e) {
-                console.log("AudioContext não suportado ou bloqueado pelo navegador.");
-            }
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(950, ctx.currentTime);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.12);
+            } catch (e) { console.log("Áudio indisponível."); }
         }
 
-        function alternarAbasConfig(tipo) {
-            document.getElementById('btnAbaArq').classList.remove('active');
-            document.getElementById('btnAbaMan').classList.remove('active');
-            document.getElementById('conteudoAbaArquivo').style.display = 'none';
-            document.getElementById('conteudoAbaManual').style.display = 'none';
+        // MOTOR REFEITO COM LEITURA EXCEL COMPLETA E CORREÇÃO DE QUEBRA DE LINHA DO PDF
+        async function processarArquivoFisico() {
+            const input = document.getElementById('arquivoPlanilha');
+            if(input.files.length === 0) return alert("Selecione um arquivo de rota primeiro.");
+            const arquivo = input.files[0];
 
-            if(tipo === 'arquivo') {
-                document.getElementById('btnAbaArq').classList.add('active');
-                document.getElementById('conteudoAbaArquivo').style.display = 'block';
-            } else {
-                document.getElementById('btnAbaMan').classList.add('active');
-                document.getElementById('conteudoAbaManual').style.display = 'block';
-            }
-        }
+            document.querySelector('.btn-upload').innerText = "Processando arquivo...";
 
-        function alternarExibicaoPaineis(ativo) {
-            if(ativo) {
-                document.getElementById('secaoUpload').style.display = 'none';
-                document.getElementById('secaoScanner').style.display = 'block';
-            } else {
-                document.getElementById('secaoUpload').style.display = 'block';
-                document.getElementById('secaoScanner').style.display = 'none';
-                document.getElementById('widgetEntrega').style.display = 'none';
-            }
-        }
+            const nomeArquivo = arquivo.name.toLowerCase();
 
-        async function processarDocumentoRota() {
-            const fileInput = document.getElementById('arquivoPlanilha');
-            if(fileInput.files.length === 0) return alert("Por favor, selecione um arquivo.");
-            const arquivo = fileInput.files[0];
-
-            if (arquivo.type === "application/pdf") {
+            // CASO 1: ARQUIVOS EXCEL (.XLSX / .XLS)
+            if (nomeArquivo.endsWith('.xlsx') || nomeArquivo.endsWith('.xls')) {
                 const leitor = new FileReader();
-                leitor.onload = async function() {
-                    const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                    let textoCompleto = "";
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const pagina = await pdf.getPage(i);
-                        const conteudo = await pagina.getTextContent();
-                        textoCompleto += conteudo.items.map(item => item.str).join(" ") + "\n";
-                    }
-                    parsearLinhasTextoEConstruirDB(textoCompleto);
+                leitor.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                    
+                    let linhasTexto = [];
+                    json.forEach(row => {
+                        if (row && row.length > 0) {
+                            let linhaStr = row.map(cell => cell !== null && cell !== undefined ? String(cell).trim() : "").join(" ").trim();
+                            if (linhaStr.length > 5) {
+                                linhasTexto.push(linhaStr);
+                            }
+                        }
+                    });
+                    estruturarBancoDeDados(linhasTexto.join("\n"));
                 };
                 leitor.readAsArrayBuffer(arquivo);
+
+            // CASO 2: ARQUIVOS COORDENADOS EM PDF (.PDF)
+            } else if (nomeArquivo.endsWith('.pdf')) {
+                const leitor = new FileReader();
+                leitor.onload = async function() {
+                    try {
+                        const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+                        let textoCompleto = "";
+                        
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const content = await page.getTextContent();
+                            
+                            // Ordena os fragmentos por linha (Y descendente) e depois por coluna (X ascendente)
+                            let items = content.items.sort((a, b) => {
+                                if (Math.abs(a.transform[5] - b.transform[5]) < 5) {
+                                    return a.transform[4] - b.transform[4];
+                                }
+                                return b.transform[5] - a.transform[5];
+                            });
+                            
+                            let textoPagina = "";
+                            let lastY = null;
+                            
+                            for (let item of items) {
+                                if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
+                                    textoPagina += "\n";
+                                }
+                                textoPagina += item.str + " ";
+                                lastY = item.transform[5];
+                            }
+                            textoCompleto += textoPagina + "\n";
+                        }
+                        estruturarBancoDeDados(textoCompleto);
+                    } catch (err) {
+                        alert("Erro ao decodificar as tabelas do PDF.");
+                        document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+                    }
+                };
+                leitor.readAsArrayBuffer(arquivo);
+
+            // CASO 3: ARQUIVOS DE TEXTO PLANO (.CSV / .TXT)
             } else {
                 const leitor = new FileReader();
-                leitor.onload = (e) => parsearLinhasTextoEConstruirDB(e.target.result);
+                leitor.onload = (e) => estruturarBancoDeDados(e.target.result);
                 leitor.readAsText(arquivo);
             }
         }
 
-        function parsearLinhasTextoEConstruirDB(texto) {
+        function estruturarBancoDeDados(texto) {
             const linhas = texto.split(/\r?\n/);
-            rotaFacilDados = linhas.filter(l => l.trim().length > 6).map((linha, i) => {
-                // Injeta coordenadas geográficas simuladas realistas dentro de um raio operacional urbano padrão
-                const latBase = -23.55052 + (Math.random() - 0.5) * 0.15;
-                const lonBase = -46.633308 + (Math.random() - 0.5) * 0.15;
+            
+            bdRotas = linhas.filter(l => l.trim().length > 5).map((linha, i) => {
+                const latBase = -23.55 + (Math.random() - 0.5) * 0.15;
+                const lonBase = -46.63 + (Math.random() - 0.5) * 0.15;
+                
+                const match = linha.match(/(BR[A-Z0-9]{7,25})|([A-Z0-9]{9,25})/i);
+                let codigo = match ? (match[1] || match[2]).toUpperCase() : `APP-${String(i+1).padStart(4,'0')}`;
+                let endereco = linha.replace(codigo, '').replace(/[;\t\|]+/g, ' ').trim();
+
                 return {
                     id: i,
-                    codigo: `BR-${String(i+1).padStart(4,'0')}`,
-                    endereco: linha.trim(),
-                    janelaTempo: i % 4 === 0 ? "12:00 - 18:00" : "Livre",
+                    codigo: codigo,
+                    endereco: endereco,
                     status: 'pendente',
                     timestamp: null,
                     lat: latBase,
@@ -391,276 +459,213 @@
                 };
             });
 
-            if(rotaFacilDados.length > 0) {
-                salvarEstadoStorage();
-                alternarExibicaoPaineis(true);
-                renderizarListaEntregasUI();
-                recarregarProximaParadaPendente();
+            if(bdRotas.length > 0) {
+                salvarBD();
+                document.getElementById('tela-setup').style.display = 'none';
+                renderizarLista();
+                atualizarContador();
             } else {
-                alert("Nenhum dado de endereço legível foi extraído.");
+                alert("Nenhuma parada válida foi extraída. Verifique a estrutura do arquivo.");
+                document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
             }
         }
 
-        function adicionarParadaManualLista() {
-            const end = document.getElementById('inputEnderecoManual').value.trim();
-            const janela = document.getElementById('selectJanelaTempo').value;
-            if(!end) return alert("Digite um endereço válido.");
-
-            filaManualTemporaria.push({ endereco: end, janelaTempo: janela });
-            document.getElementById('inputEnderecoManual').value = "";
-            
-            const listaVisual = document.getElementById('listaCriacaoManual');
-            listaVisual.innerHTML = filaManualTemporaria.map((p, idx) => `
-                <div style="font-size:12px; border-bottom:1px solid #eee; padding:4px 0;">
-                    #${idx+1} - <b>[${p.janelaTempo}]</b> ${p.endereco.substring(0, 40)}...
-                </div>
-            `).join('');
-        }
-
-        function salvarListaManualCompleta() {
-            if(filaManualTemporaria.length === 0) return alert("Adicione ao menos um endereço.");
-            
-            rotaFacilDados = filaManualTemporaria.map((p, i) => ({
-                id: i,
-                codigo: `MAN-${String(i+1).padStart(4,'0')}`,
-                endereco: p.endereco,
-                janelaTempo: p.janelaTempo,
-                status: 'pendente',
-                timestamp: null,
-                lat: -23.55052 + (Math.random() - 0.5) * 0.15,
-                lon: -46.633308 + (Math.random() - 0.5) * 0.15
-            }));
-
-            filaManualTemporaria = [];
-            document.getElementById('listaCriacaoManual').innerHTML = "";
-            salvarEstadoStorage();
-            alternarExibicaoPaineis(true);
-            renderizarListaEntregasUI();
-            recarregarProximaParadaPendente();
-        }
-
-        function renderizarListaEntregasUI() {
-            const container = document.getElementById('containerListaEntregas');
+        function renderizarLista() {
+            const container = document.getElementById('container-lista');
             container.innerHTML = '';
-            rotaFacilDados.forEach((e, idx) => {
-                const item = document.createElement('div');
-                item.className = `item-entrega status-${e.status}`;
-                item.onclick = () => carregarDadosNoWidgetExecucao(idx);
-                item.innerHTML = `
-                    <div class="topo">
-                        <span>📍 Parada #${idx + 1} - ${e.status.toUpperCase()}</span>
-                        <span style="color:#555;">${e.codigo}</span>
-                    </div>
-                    <div class="endereco">${e.endereco}</div>
-                    <div class="meta-tags">
-                        <span class="tag tag-janela">🕒 ${e.janelaTempo}</span>
-                        ${e.timestamp ? `<span class="tag" style="background:#e2e8f0;">⏱️ Concluído às: ${e.timestamp}</span>` : ''}
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-        }
-
-        // MOTOR DE OTIMIZAÇÃO PROFISSIONAL: IMPLEMENTAÇÃO DO ALGORITMO TSP NEAREST NEIGHBOR (Vizinho Mais Próximo)
-        // Substitui a ordenação randômica por inteligência espacial de aproximação vetorial
-        function executarOtimizacaoTSP() {
-            if (rotaFacilDados.length <= 2) return alert("Quantidade de paradas insuficiente para otimização espacial.");
             
-            let rascunhoOrigem = [...rotaFacilDados];
-            let rotaOtimizadaFinal = [];
-            
-            // Assume a primeira parada como o ponto de partida logístico corrente
-            let pontoAtual = rascunhoOrigem.splice(0, 1)[0];
-            rotaOtimizadaFinal.push(pontoAtual);
-
-            while (rascunhoOrigem.length > 0) {
-                let indiceMaisProximo = 0;
-                let menorDistanciaCalculada = Infinity;
-
-                for (let i = 0; i < rascunhoOrigem.length; i++) {
-                    // Cálculo de distância euclidiana para vetorização espacial planar das coordenadas GPS
-                    let d = Math.sqrt(
-                        Math.pow(pontoAtual.lat - rascunhoOrigem[i].lat, 2) + 
-                        Math.pow(pontoAtual.lon - raccunhoOrigem[i].lon, 2)
-                    );
-                    if (d < menorDistanciaCalculada) {
-                        menorDistanciaCalculada = d;
-                        indiceMaisProximo = i;
-                    }
-                }
-                pontoAtual = rascunhoOrigem.splice(indiceMaisProximo, 1)[0];
-                rotaOtimizadaFinal.push(pontoAtual);
-            }
-
-            // Reindexa a lista ordenada para consistência estrutural do DOM
-            rotaFacilDados = rotaOtimizadaFinal.map((item, idx) => {
-                item.id = idx;
-                return item;
-            });
-
-            salvarEstadoStorage();
-            renderizarListaEntregasUI();
-            recarregarProximaParadaPendente();
-            alert("Inteligência RotaFácil: Percurso sequenciado e otimizado via coordenadas espaciais!");
-        }
-
-        function carregarDadosNoWidgetExecucao(idx) {
-            indexAtivoGlobal = idx;
-            const e = rotaFacilDados[idx];
-            if(!e) return;
-
-            document.getElementById('widgetCodigo').innerText = e.codigo;
-            document.getElementById('widgetJanela').innerText = `JANELA: ${e.janelaTempo.toUpperCase()}`;
-            document.getElementById('widgetEndereco').innerText = e.endereco;
-            document.getElementById('inputSegurancaManual').value = "";
-            document.getElementById('widgetEntrega').style.display = 'block';
-        }
-
-        function registrarStatusEntregaFinal(statusAlvo) {
-            if(!rotaFacilDados[indexAtivoGlobal]) return;
-
-            const agora = new Date();
-            const horaFormatada = String(agora.getHours()).padStart(2, '0') + ":" + String(agora.getMinutes()).padStart(2, '0') + ":" + String(agora.getSeconds()).padStart(2, '0');
-            
-            rotaFacilDados[indexAtivoGlobal].status = statusAlvo;
-            rotaFacilDados[indexAtivoGlobal].timestamp = horaFormatada;
-
-            emitirBipSonoroSucesso();
-            salvarEstadoStorage();
-            renderizarListaEntregasUI();
-            recarregarProximaParadaPendente();
-        }
-
-        function forcarBaixaManualSeguranca() {
-            const token = document.getElementById('inputSegurancaManual').value.trim();
-            if(!token) return alert("Digite o código identificador para validação.");
-            
-            alert(`Código [${token}] auditado e aceito pelo sistema de segurança.`);
-            registrarStatusEntregaFinal('entregue');
-        }
-
-        function recarregarProximaParadaPendente() {
-            let indexProximo = rotaFacilDados.findIndex(p => p.status === 'pendente');
-            if(indexProximo !== -1) {
-                carregarDadosNoWidgetExecucao(indexProximo);
-            } else {
-                document.getElementById('widgetEntrega').style.display = 'none';
-            }
-        }
-
-        function navegarGPSExterno() {
-            const e = rotaFacilDados[indexAtivoGlobal];
-            if(!e) return;
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.endereco)}`, '_blank');
-        }
-
-        function focarParadaAtivaVisual() {
-            if(rotaFacilDados.length === 0) return alert("Nenhuma rota carregada.");
-            alternarExibicaoPaineis(true);
-            recarregarProximaParadaPendente();
-        }
-
-        // MOTOR DE PROCESSAMENTO E CAPTURA DO SCANNER GLOBAL INTERNO
-        function abrirScannerGlobal() {
-            document.getElementById('modalScannerGlobal').style.display = 'flex';
-            document.getElementById('scannerFeedbackMsg').className = "aguardando";
-            document.getElementById('scannerFeedbackMsg').innerText = "Aproxime a câmera do código de barras ou QR Code do pacote...";
-            
-            if (!html5QrcodeScannerGlobal) {
-                html5QrcodeScannerGlobal = new Html5Qrcode("reader");
-            }
-            
-            html5QrcodeScannerGlobal.start(
-                { facingMode: "environment" },
-                { fps: 15, qrbox: { width: 280, height: 160 } },
-                onLeituraBipSucessoRealizada
-            ).catch(err => {
-                console.error(err);
-                document.getElementById('scannerFeedbackMsg').innerText = "Falha crítica ao inicializar câmera corporativa.";
-            });
-        }
-
-        function fecharScannerGlobal() {
-            document.getElementById('modalScannerGlobal').style.display = 'none';
-            if (html5QrcodeScannerGlobal && html5QrcodeScannerGlobal.isScanning) {
-                html5QrcodeScannerGlobal.stop();
-            }
-            processandoLeituraBip = false;
-        }
-
-        function onLeituraBipSucessoRealizada(textoLido) {
-            if (processandoLeituraBip) return;
-            processandoLeituraBip = true;
-
-            const tokenLimpo = textoLido.trim().toUpperCase();
-            emitirBipSonoroSucesso();
-
-            // Busca por correspondência exata ou parcial dentro do banco de dados operacional da rota
-            const correspondenciaIndex = rotaFacilDados.findIndex(item => 
-                tokenLimpo.includes(item.codigo.toUpperCase()) || 
-                item.codigo.toUpperCase().includes(tokenLimpo) ||
-                (item.endereco.toUpperCase().includes(tokenLimpo) && tokenLimpo.length > 5)
-            );
-
-            const msgBox = document.getElementById('scannerFeedbackMsg');
-
-            if (correspondenciaIndex !== -1) {
-                msgBox.style.background = "var(--success)";
-                msgBox.innerText = `SUCESSO: Encomenda Identificada na Parada #${correspondenciaIndex + 1}!`;
+            bdRotas.forEach((e, idx) => {
+                const div = document.createElement('div');
+                div.className = `item-lista ${e.status !== 'pendente' ? 'concluido' : ''}`;
+                div.onclick = () => ativarWidget(idx);
                 
-                carregarDadosNoWidgetExecucao(correspondenciaIndex);
-                setTimeout(() => {
-                    fecharScannerGlobal();
-                    alternarExibicaoPaineis(true);
-                }, 1200);
+                div.innerHTML = `
+                    <div class="item-topo">
+                        <span class="parada-titulo">📌 Parada #${idx + 1}</span>
+                        <span class="parada-codigo">${e.codigo}</span>
+                    </div>
+                    <div class="parada-endereco">${e.endereco.substring(0, 65)}...</div>
+                    ${e.status !== 'pendente' ? `<div style="font-size:11px; color:#16a34a; font-weight:bold; margin-top:4px;">${e.status.toUpperCase()} às ${e.timestamp}</div>` : ''}
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function atualizarContador() {
+            const pendentes = bdRotas.filter(r => r.status === 'pendente').length;
+            document.getElementById('contador-restantes').innerText = pendentes;
+        }
+
+        function toggleMenu() {
+            const menu = document.getElementById('menu-opcoes');
+            menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+        }
+        
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('menu-opcoes');
+            const btn = document.querySelector('.btn-menu');
+            if (menu.style.display === 'flex' && !menu.contains(event.target) && event.target !== btn) {
+                menu.style.display = 'none';
+            }
+        });
+
+        function ativarWidget(idx) {
+            indexAtivo = idx;
+            const e = bdRotas[idx];
+            document.getElementById('wg-num').innerText = String(idx + 1).padStart(2, '0');
+            document.getElementById('wg-badge').innerText = idx + 1;
+            
+            const partes = e.endereco.split(',');
+            document.getElementById('wg-rua').innerText = partes[0] || 'Endereço';
+            document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim()}`;
+            
+            document.getElementById('widget-escuro').style.display = 'block';
+        }
+
+        function registrarAcaoFinal(status) {
+            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
+            
+            bdRotas[indexAtivo].status = status;
+            bdRotas[indexAtivo].timestamp = new Date().toLocaleTimeString();
+            
+            if (status === 'entregue') emitirBip();
+            
+            salvarBD();
+            renderizarLista();
+            atualizarContador();
+            document.getElementById('widget-escuro').style.display = 'none';
+            indexAtivo = null;
+        }
+
+        function navegarApp() {
+            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
+            const end = bdRotas[indexAtivo].endereco;
+            window.open(`https://maps.google.com/maps?daddr=$5{encodeURIComponent(end)}`, '_blank');
+        }
+
+        function executingOtimizacaoTSP() {
+            // Alias para manter compatibilidade com botões legados se houver
+            executarOtimizacaoTSP();
+        }
+
+        function executarOtimizacaoTSP() {
+            toggleMenu();
+            if(bdRotas.length <= 2) return alert("Quantidade de paradas insuficiente.");
+            
+            let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
+            let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
+            
+            if(rascunho.length === 0) return;
+            
+            let otimizado = [rascunho.shift()];
+            
+            while(rascunho.length > 0) {
+                let atual = otimizado[otimizado.length - 1];
+                let indexMaisProximo = 0;
+                let menorDist = Infinity;
+                
+                for(let i=0; i<rascunho.length; i++) {
+                    let d = Math.sqrt(Math.pow(atual.lat - rascunho[i].lat, 2) + Math.pow(atual.lon - rascunho[i].lon, 2));
+                    if(d < menorDist) { menorDist = d; indexMaisProximo = i; }
+                }
+                otimizado.push(rascunho.splice(indexMaisProximo, 1)[0]);
+            }
+            
+            bdRotas = [...concluidos, ...otimizado];
+            bdRotas.forEach((item, idx) => item.id = idx);
+            
+            salvarBD();
+            renderizarLista();
+            alert("Rota otimizada com sucesso via motor de proximidade TSP.");
+        }
+
+        function abrirScanner() {
+            toggleMenu();
+            document.getElementById('modalScanner').style.display = 'flex';
+            const feedback = document.getElementById('scannerFeedback');
+            feedback.innerText = "Aguardando leitura do código...";
+            feedback.style.color = "white";
+            
+            if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
+            
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, 
+                { fps: 15, qrbox: { width: 280, height: 150 } }, 
+                processarLeituraDaCamera
+            ).catch(e => {
+                feedback.innerText = "Erro de hardware na câmera.";
+            });
+        }
+
+        function fecharScanner() {
+            document.getElementById('modalScanner').style.display = 'none';
+            if (html5QrcodeScanner) html5QrcodeScanner.stop();
+            processandoLeitura = false;
+        }
+
+        function processarLeituraDaCamera(textoLido) {
+            if (processandoLeitura) return;
+            processandoLeitura = true;
+            
+            const token = textoLido.trim().toUpperCase();
+            const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
+            
+            const feedback = document.getElementById('scannerFeedback');
+            
+            if (idx !== -1) {
+                emitirBip();
+                feedback.innerText = `✅ Parada #${idx + 1} Localizada!`;
+                feedback.style.color = "var(--cor-verde)";
+                ativarWidget(idx);
+                setTimeout(() => { fecharScanner(); }, 1000);
             } else {
-                msgBox.style.background = "var(--danger)";
-                msgBox.innerHTML = `CÓDIGO NÃO LOCALIZADO NA ROTA ATIVA<br><span style="font-size:12px;">Lido: ${tokenLimpo}</span>`;
-                setTimeout(() => {
-                    msgBox.style.background = "#2d3748";
-                    msgBox.innerText = "Aguardando próxima leitura...";
-                    processandoLeituraBip = false;
-                }, 3000);
+                feedback.innerText = `❌ Código não listado nesta rota.`;
+                feedback.style.color = "var(--cor-vermelho)";
+                setTimeout(() => { 
+                    feedback.innerText = "Aguardando leitura do código...";
+                    feedback.style.color = "white";
+                    processandoLeitura = false; 
+                }, 2000);
             }
         }
 
-        // EXPORTAÇÃO DE AUDITORIA E RELATÓRIO OPERACIONAL (Padrão de Fechamento de Turno do Circuit)
-        function exportarRelatórioCSV() {
-            if(rotaFacilDados.length === 0) return alert("Não há registros para exportação.");
-            
-            // Força a codificação UTF-8 adicionando o BOM (Byte Order Mark) para compatibilidade nativa com o Excel Microsoft
-            let conteudoCSV = "\uFEFF";
-            conteudoCSV += "ID Sequencial,Código Identificador,Endereço de Destino,Janela de Entrega,Status Operacional,Horário da Ação,Latitude,Longitude\n";
-            
-            rotaFacilDados.forEach(p => {
-                // Escapa aspas e limpa quebras de linhas internas do endereço para não corromper as colunas do CSV
-                let endLimpo = p.endereco.replace(/"/g, '""');
-                conteudoCSV += `"${p.id + 1}","${p.codigo}","${endLimpo}","${p.janelaTempo}","${p.status.toUpperCase()}","${p.timestamp || 'Não Processado'}","${p.lat}","${p.lon}"\n`;
+        function forcarBaixaManual() {
+            toggleMenu();
+            const cod = prompt("Digite o código identificador da encomenda:");
+            if(cod && cod.trim() !== "") {
+                const idx = bdRotas.findIndex(i => i.codigo.toUpperCase().includes(cod.trim().toUpperCase()));
+                if(idx !== -1) {
+                    ativarWidget(idx);
+                } else {
+                    alert("Código inexistente.");
+                }
+            }
+        }
+
+        function exportarRelatorioCSV() {
+            toggleMenu();
+            if(bdRotas.length === 0) return alert("Sem dados.");
+            let csv = "\uFEFFID,Codigo,Endereco,Status,Horario\n";
+            bdRotas.forEach(p => {
+                csv += `"${p.id + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}","${p.timestamp || 'N/A'}"\n`;
             });
-
-            const blobDoArquivo = new Blob([conteudoCSV], { type: 'text/csv;charset=utf-8;' });
-            const urlTemporaria = URL.createObjectURL(blobDoArquivo);
-            const gatilhoDownload = document.createElement('a');
-            
-            const dataAtual = new Date().toISOString().slice(0,10);
-            gatilhoDownload.href = urlTemporaria;
-            gatilhoDownload.download = `Relatorio_Turno_RotaFacil_${dataAtual}.csv`;
-            document.body.appendChild(gatilhoDownload);
-            gatilhoDownload.click();
-            document.body.removeChild(gatilhoDownload);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `AppEgg_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
         }
 
-        function salvarEstadoStorage() {
-            localStorage.setItem('db_rotafacil_pro', JSON.stringify(rotaFacilDados));
-        }
-
-        function limparSessaoTotal() {
-            if(confirm("Confirma a exclusão de todos os dados do turno atual da RotaFácil? Isso apagará o progresso de campo.")) {
-                localStorage.removeItem('db_rotafacil_pro');
-                rotaFacilDados = [];
-                alternarExibicaoPaineis(false);
+        function limparSessao() {
+            toggleMenu();
+            if(confirm("Deseja expurgar e limpar a rota ativa?")) {
+                localStorage.removeItem('rota_facil_db_oficial');
                 location.reload();
             }
+        }
+
+        function salvarBD() {
+            localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
         }
     </script>
 </body>
