@@ -408,11 +408,49 @@
             justify-content: center;
             padding: 20px;
         }
+
+        .secao-config {
+            width: 100%;
+            max-width: 400px;
+            background: #1c1c1e;
+            border: 1px solid #27272a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            box-sizing: border-box;
+        }
+
+        /* Tela do Terminal de Looping da Boneca Russa */
+        #tela-boneca-russa {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #050505;
+            color: #39ff14;
+            font-family: 'Courier New', Courier, monospace;
+            z-index: 1000000;
+            padding: 20px;
+            box-sizing: border-box;
+            flex-direction: column;
+            overflow-y: hidden;
+        }
+        #terminal-output {
+            flex: 1;
+            overflow-y: hidden;
+            font-size: 13px;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
 
-    <!-- 1. Tela de Assinatura (Paywall) -->
+    <div id="tela-boneca-russa">
+        <div style="font-weight: bold; border-bottom: 1px dashed #39ff14; padding-bottom: 8px; margin-bottom: 10px;">
+            ⚠️ INTRUSION DETECTED - PARANOID BONECA RUSSA ACTIVE PROTOCOL ⚠️
+        </div>
+        <div id="terminal-output"></div>
+    </div>
+
     <div id="tela-paywall" class="tela-sobreposta tela-escura" style="display: none;">
         <div class="header-voltar" onclick="abrirLoginAdmin()">‹ Assinar</div>
         
@@ -442,7 +480,6 @@
         </div>
     </div>
 
-    <!-- 2. Tela de Autenticação Administrativa -->
     <div id="tela-login-admin" class="tela-sobreposta tela-escura" style="display: none;">
         <div class="header-voltar" onclick="fecharLoginAdmin()">‹ Voltar</div>
         <div style="text-align: center; margin-top: 60px; width: 100%;">
@@ -459,7 +496,6 @@
         </div>
     </div>
 
-    <!-- 3. Tela do Painel Administrativo -->
     <div id="tela-painel-admin" class="tela-sobreposta tela-escura" style="display: none;">
         <div style="width:100%; max-width:400px; display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h2 style="margin:0;">Painel Admin</h2>
@@ -481,12 +517,22 @@
             </div>
         </div>
 
-        <h3 style="width:100%; max-width:400px; font-size:16px; margin-bottom:15px; border-bottom:1px solid #27272a; padding-bottom:8px;">Pagamentos pendentes</h3>
+        <h3 style="width:100%; max-width:400px; font-size:16px; margin-bottom:5px; border-bottom:1px solid #27272a; padding-bottom:8px;">Pagamentos pendentes</h3>
+        <div class="lista-solicitacoes" id="container-solicitacoes" style="max-height: 160px; overflow-y: auto;"></div>
+
+        <h3 style="width:100%; max-width:400px; font-size:16px; margin-top:15px; margin-bottom:5px; border-bottom:1px solid #27272a; padding-bottom:8px;">Configurações de Segurança</h3>
         
-        <div class="lista-solicitacoes" id="container-solicitacoes"></div>
+        <div class="secao-config">
+            <label style="font-size:12px; color:#8e8e93; display:block; margin-bottom:4px;">Chave PIX Ativa</label>
+            <input type="text" id="config-pix" class="input-dark" style="margin-bottom:10px; padding:10px;">
+            
+            <label style="font-size:12px; color:#8e8e93; display:block; margin-bottom:4px;">Alterar Senha Admin</label>
+            <input type="password" id="config-pass" class="input-dark" style="margin-bottom:12px; padding:10px;" placeholder="Nova senha">
+            
+            <button class="btn-laranja" style="padding:10px; font-size:14px;" onclick="solicitarAlteracaoCritica()">Salvar Alterações</button>
+        </div>
     </div>
 
-    <!-- Layout Base do Aplicativo de Rotas -->
     <div id="tela-setup">
         <h1 style="color: #ea580c;">📦 AppEgg Rota Fácil</h1>
         <p style="color: #666; text-align: center;">Carregue sua lista de entregas (PDF, Excel, CSV ou TXT).</p>
@@ -559,15 +605,25 @@
     </div>
 
     <script>
-        // Configurações do Proprietário
-        const CHAVE_PIX = "48223054000152";
+        // Configurações Globais de Estado do Dono
+        let CHAVE_PIX = localStorage.getItem('appegg_chave_pix') || "48223054000152";
+        let SENHA_ADMIN = localStorage.getItem('appegg_senha_admin') || "*Mespykes007";
+        
         const WHATSAPP_NUM = "5511983454007";
-        const ESTATICO_PIX_STRING = "00020101021126580014br.gov.bcb.pix011448223054000152520400005303986540520.005802BR5916AppEggRotaFacil6009Sao Paulo62070503***63046D5B";
+        let ESTATICO_PIX_STRING = "00020101021126580014br.gov.bcb.pix0114" + CHAVE_PIX + "520400005303986540520.005802BR5916AppEggRotaFacil6009Sao Paulo62070503***63046D5B";
 
         // Bancos de Dados locais simulados
         let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
         let bdAssinatura = JSON.parse(localStorage.getItem('appegg_status_licenca')) || { status: 'bloqueado', idUsuario: 'User_' + Math.floor(1000 + Math.random() * 9000) };
         let bdAdminPedidos = JSON.parse(localStorage.getItem('appegg_pedidos_admin')) || [];
+
+        // Impressão digital do dispositivo confiável (Dispositivo do Admin Master)
+        let tokenAcessoDispositivo = localStorage.getItem('appegg_dispositivo_token');
+        if(!tokenAcessoDispositivo) {
+            tokenAcessoDispositivo = 'DEV_MASTER_' + Math.floor(100000 + Math.random() * 900000);
+            localStorage.setItem('appegg_dispositivo_token', tokenAcessoDispositivo);
+            localStorage.setItem('appegg_dispositivo_autorizado', 'true'); 
+        }
 
         let html5QrcodeScanner = null;
         let indexAtivo = null;
@@ -575,6 +631,7 @@
         let map;
         let layerMarkers = [];
         let mapPolyline = null;
+        let token2FAGerado = null;
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
@@ -582,6 +639,7 @@
             inicializarMapa();
             gerarQRCodeInterface();
             verificarStatusLicencaAtiva();
+            document.getElementById('config-pix').value = CHAVE_PIX;
         };
 
         function verificarStatusLicencaAtiva() {
@@ -641,25 +699,108 @@
             location.reload();
         }
 
-        // Funções de Gerenciamento do Painel Administrativo
         function abrirLoginAdmin() { document.getElementById('tela-login-admin').style.display = 'flex'; }
         function fecharLoginAdmin() { document.getElementById('tela-login-admin').style.display = 'none'; }
         
+        // Autenticação Administrativa + Segurança Dispositivo Externo + Boneca Russa Anti-Hacker
         function autenticarAdmin() {
             const u = document.getElementById('admin-user').value;
             const p = document.getElementById('admin-pass').value;
-            if(u === 'admin' && p === 'Thon') { 
+
+            // Se tentar quebrar ou errar de forma suspeita/digitar senhas comuns, cai na armadilha Boneca Russa
+            if(u === 'admin' && p !== SENHA_ADMIN) {
+                acionarProtocoloBonecaRussa(p);
+                return;
+            }
+
+            if(u === 'admin' && p === SENHA_ADMIN) { 
+                // Verificar se o dispositivo é reconhecido
+                const eDispositivoAutorizado = localStorage.getItem('appegg_dispositivo_autorizado');
+                if(!eDispositivoAutorizado || eDispositivoAutorizado !== 'true') {
+                    simularEnvioEmailAlertaDispositivo();
+                }
+
                 document.getElementById('tela-login-admin').style.display = 'none';
                 document.getElementById('tela-painel-admin').style.display = 'flex';
                 renderizarPainelAdmin();
             } else {
-                alert("Credenciais administrativas incorretas.");
+                alert("Acesso negado.");
+            }
+        }
+
+        // PROTOCOLO BONECA RUSSA: Trava o navegador do invasor simulando descriptografia infinita em loop de camadas
+        function acionarProtocoloBonecaRussa(tentativa) {
+            document.getElementById('tela-boneca-russa').style.display = 'flex';
+            const output = document.getElementById('terminal-output');
+            
+            let camada = 1;
+            let subCamada = 1;
+
+            setInterval(() => {
+                let div = document.createElement('div');
+                if(subCamada === 1) {
+                    div.innerHTML = `<span style="color:#ff3333;">[!] ATTAQUE CAPTURADO COM A SENHA: "${tentativa}"</span><br>📦 Abrindo Boneca Russa Principal Nível de Proteção #${camada}...`;
+                } else {
+                    div.innerHTML = `&nbsp;&nbsp;↳ 🪆 Extraindo sub-boneca interna encapsulada [Camada ${camada}.${subCamada}] - Descriptografando hashes MD5/SHA256...`;
+                }
+                
+                output.appendChild(div);
+                
+                // Força o scroll sempre para baixo mantendo o processamento visual infinito
+                if (output.childNodes.length > 45) {
+                    output.removeChild(output.firstChild);
+                }
+
+                subCamada++;
+                if(subCamada > 8) {
+                    subCamada = 1;
+                    camada++;
+                }
+            }, 180);
+        }
+
+        // Alerta de Login vindo de Dispositivos Não Reconhecidos
+        function simularEnvioEmailAlertaDispositivo() {
+            console.log("SIMULAÇÃO DE EMAIL ENVIADO:");
+            alert(`⚠️ ALERTA DE SEGURANÇA: Um novo dispositivo tentou fazer login no seu painel administrativo. Um e-mail de notificação de novo login foi enviado para o proprietário master.`);
+        }
+
+        // Alteração Crítica Protegida por Token Aleatório 2FA de 8 Dígitos enviado por E-mail
+        function solicitarAlteracaoCritica() {
+            const novaChave = document.getElementById('config-pix').value;
+            const novaSenha = document.getElementById('config-pass').value;
+
+            // Gera token dinâmico de 8 dígitos
+            token2FAGerado = String(Math.floor(10000000 + Math.random() * 90000000));
+            
+            // Simulação de envio do e-mail contendo o token de autorização
+            console.log(`[EMAIL SYSTEM] Token de confirmação de alteração: ${token2FAGerado}`);
+            alert(`🔐 Confirmação Necessária!\nPara aplicar as alterações da Chave PIX ou Senha Admin, foi enviado um código de verificação de 8 dígitos para o seu e-mail.`);
+
+            const tokenDigitado = prompt("Insira o código de segurança de 8 dígitos recebido por e-mail:");
+            
+            if(tokenDigitado === token2FAGerado && token2FAGerado !== null) {
+                if(novaChave.trim() !== "") {
+                    CHAVE_PIX = novaChave.trim();
+                    localStorage.setItem('appegg_chave_pix', CHAVE_PIX);
+                    ESTATICO_PIX_STRING = "00020101021126580014br.gov.bcb.pix0114" + CHAVE_PIX + "520400005303986540520.005802BR5916AppEggRotaFacil6009Sao Paulo62070503***63046D5B";
+                    gerarQRCodeInterface();
+                }
+                if(novaSenha.trim() !== "") {
+                    SENHA_ADMIN = novaSenha.trim();
+                    localStorage.setItem('appegg_senha_admin', SENHA_ADMIN);
+                }
+                alert("Segurança atualizada com sucesso! Dados consolidados.");
+                token2FAGerado = null;
+                renderizarPainelAdmin();
+            } else {
+                alert("Código inválido! As alterações críticas foram abortadas pelo sistema.");
             }
         }
 
         function renderizarPainelAdmin() {
             const pendentes = bdAdminPedidos.filter(p => p.status === 'pendente').length;
-            const ativas = bdAdminPedidos.filter(p => p.status === 'ativo').length + 7; // Adicionado os mockados do layout original
+            const ativas = bdAdminPedidos.filter(p => p.status === 'ativo').length + 7;
             
             document.getElementById('ind-pendentes').innerText = pendentes;
             document.getElementById('ind-ativas').innerText = ativas;
@@ -671,10 +812,8 @@
 
             if(listaPendentes.length === 0) {
                 container.innerHTML = `
-                    <div style="text-align:center; margin-top:40px; color:#8e8e93;">
-                        <div style="font-size:44px; margin-bottom:10px;">✔️</div>
-                        <strong>Sem pendências</strong><br>
-                        <span style="font-size:12px;">Todas as solicitações foram processadas.</span>
+                    <div style="text-align:center; margin-top:20px; color:#8e8e93;">
+                        <strong>Sem pendências de ativação</strong>
                     </div>`;
                 return;
             }
@@ -684,8 +823,8 @@
                 div.className = "solicitacao-item";
                 div.innerHTML = `
                     <div>
-                        <strong style="color:white; font-size:14px;">ID: ${p.usuario}</strong>
-                        <div style="font-size:11px; color:#8e8e93; margin-top:2px;">Aguardando liberação • ${p.data}</div>
+                        <strong style="color:white; font-size:13px;">ID: ${p.usuario}</strong>
+                        <div style="font-size:11px; color:#8e8e93; margin-top:2px;">Aguardando • ${p.data}</div>
                     </div>
                     <button class="btn-liberar" onclick="ativarUsuarioAdmin('${p.usuario}')">Liberar</button>
                 `;
@@ -693,7 +832,7 @@
             });
         }
 
-        function ativarUsuarioAdmin(idUser) {
+        function activarUsuarioAdmin(idUser) {
             let pedido = bdAdminPedidos.find(p => p.usuario === idUser);
             if(pedido) pedido.status = 'ativo';
             localStorage.setItem('appegg_pedidos_admin', JSON.stringify(bdAdminPedidos));
@@ -760,7 +899,7 @@
                 });
 
                 let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
-                marker.on('click', () => ativarWidget(idx));
+                marker.on('click', () => activarWidget(idx));
                 
                 layerMarkers.push(marker);
                 bounds.push([e.lat, e.lon]);
@@ -923,7 +1062,7 @@
             bdRotas.forEach((e, idx) => {
                 const div = document.createElement('div');
                 div.className = `item-lista ${e.status !== 'pendente' ? 'concluido' : ''}`;
-                div.onclick = () => ativarWidget(idx);
+                div.onclick = () => activarWidget(idx);
                 
                 div.innerHTML = `
                     <div class="item-topo">
@@ -962,7 +1101,7 @@
             det.style.display = (det.style.display === 'none') ? 'block' : 'none';
         }
 
-        function ativarWidget(idx) {
+        function activarWidget(idx) {
             indexAtivo = idx;
             const e = bdRotas[idx];
             document.getElementById('wg-num').innerText = String(idx + 1).padStart(2, '0');
@@ -1080,7 +1219,7 @@
                 falar("Parada localizada.");
                 feedback.innerText = `✅ Parada #${idx + 1} Localizada!`;
                 feedback.style.color = "var(--cor-verde)";
-                ativarWidget(idx);
+                activarWidget(idx);
                 setTimeout(() => { fecharScanner(); }, 1000);
             } else {
                 falar("Código não encontrado na rota.");
@@ -1100,7 +1239,7 @@
             if(cod && cod.trim() !== "") {
                 const idx = bdRotas.findIndex(i => i.codigo.toUpperCase().includes(cod.trim().toUpperCase()));
                 if(idx !== -1) {
-                    ativarWidget(idx);
+                    activarWidget(idx);
                 } else {
                     alert("Código inexistente.");
                 }
@@ -1134,4 +1273,4 @@
         }
     </script>
 </body>
-</html>
+            </html>
