@@ -47,7 +47,9 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Definir ponto de saída e rastrear entregas"
         }
-      ]
+      ],
+      "expo-web-browser",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

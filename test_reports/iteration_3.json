@@ -1,0 +1,47 @@
+{
+  "summary": "Iteration 3 — Google Auth (Emergent) + 14-day Trial + Device Fingerprint anti-abuse. Backend: 19/19 pytest tests PASS via public ingress URL. /api/auth/google-session correctly returns 422 for missing/short session_token and 401 with detail='invalid_session_token' when a bogus 64-hex token is submitted (Emergent verify returns 404 → mapped to 401, observed in backend.err.log). /api/auth/me returns 401 'missing_token' for no header / non-Bearer header, 401 'invalid_token' for empty bearer, 401 'invalid_session' for bogus bearer. /api/auth/logout is idempotent (200 {ok:true}) with or without bogus token. All six new Mongo indexes are present at startup: users.email unique, users.user_id unique, users.device_fingerprint, user_sessions.session_token unique, user_sessions.expires_at TTL (expireAfterSeconds=0), user_sessions.user_id. Existing endpoints still healthy: /api/health, /api/, /api/parse-file (csv), /api/subscription/{id}, /api/admin/login wrong-creds. Frontend: /login renders correctly with title 'Rota+Rápida App', trial pill '14 dias grátis para testar', 4 feature cards (Lê PDF do Circuit / Scanner com voz / Sem precisar de mapa / R$ 20/mês após o trial) and 'Entrar com Google' button (testID=google-signin-button). Unauthenticated navigation to /, /upload, /scanner, /route, /paywall ALL redirect to /login as expected. /admin remains publicly accessible (Painel Admin screen renders) — admin uses its own JWT, untouched by the Google-auth guard. NOTE: real Google sign-in not attempted (requires full OAuth redirect — per request, fault paths only).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "frontend/.env", "issue": "EXPO_BACKEND_URL key not set (only EXPO_PUBLIC_BACKEND_URL). Backend tests fall back to it OK, but per the system-prompt PROTECTED_VARIABLES contract, EXPO_BACKEND_URL is the expected key — clients/test scripts that grep for it will miss. Consider mirroring as both."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "global", "issues": ["RN web warning repeated: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Affects login screen (logoCircle shadow*), index.tsx and paywall.tsx. Not a functional defect but adds console noise."]}
+    ],
+    "react_native_issues": [
+      {"component": "Expo SDK version drift", "issue": "expo@54.0.34 (expected ~54.0.35), expo-font@14.0.11 (expected ~14.0.12), expo-router@6.0.23 (expected ~6.0.24). Reference: /var/log/supervisor/expo.err.log. Same finding as iteration 2 — still not fixed."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_auth_iteration3.py",
+    "/app/test_reports/pytest/iteration3_results.xml"
+  ],
+  "action_items": [
+    "LOW — Replace 'shadow*' style props with 'boxShadow' on web (or restrict shadow props to native via Platform.select). Affected files: login.tsx (logoCircle, googleButton), index.tsx (logoCircle), paywall.tsx if any.",
+    "LOW — Update Expo packages: `cd /app/frontend && npx expo install expo expo-font expo-router` (carry-over from iter 2).",
+    "LOW — Add EXPO_BACKEND_URL to frontend/.env (mirroring EXPO_PUBLIC_BACKEND_URL) to satisfy the PROTECTED_VARIABLES contract.",
+    "INFO — Device-fingerprint anti-abuse path (is_blocked_device=true) and the trial→paywall transition were NOT exercised end-to-end because real Google sign-in cannot be completed in CI. Recommend manual smoke test once on a real device: (1) first sign-in grants 14d trial, (2) sign-in with a different email on the SAME device returns user with is_blocked_device=true, (3) landing screen shows the 'Aparelho já usou o trial' blocked state and routes to /paywall. The /api/auth/me payload structure (trial_active, trial_days_remaining, is_blocked_device, subscription_active) is already validated by the Pydantic response model."
+  ],
+  "critical_code_review_comments": [
+    "auth_routes.py:35 — EMERGENT_SESSION_URL hardcoded; OK for Emergent-managed auth (no API key required) but consider env-overridable for future. Confirmed reachable from backend (httpx GET → 404 for bogus token, properly mapped to 401).",
+    "auth_routes.py:200 — device fingerprint blocking logic correctly creates a user with is_blocked_device=true and trial_started_at=None when fp_hash matches an existing user. Good.",
+    "auth_routes.py:226 — when an EXISTING user signs in, name/picture are refreshed from provider but device_fingerprint is only stored if NOT previously set. This means the SAME existing account can be unblocked-by-moving-to-a-new-device later (no fingerprint overwrite). Acceptable.",
+    "auth_routes.py:237 — session_token uses 64 hex chars from two uuid4() — strong enough.",
+    "server.py:1311 — register_auth_routes is called BEFORE app.include_router(api_router), so auth routes are correctly mounted under /api.",
+    "server.py:1344 — startup_event creates all six expected indexes; verified live in MongoDB.",
+    "_layout.tsx:25 — publicScreens=['login','admin'] — correctly bypasses Google-auth guard for /admin (which has its own JWT login). Verified in browser test.",
+    "auth.tsx:64 — exchangeEmergentSession does NOT pass an Authorization header to /api/auth/google-session (sends session_token in body) — matches backend contract. Good.",
+    "device.ts:32 — fallback UUID uses Math.random (non-crypto). For a fingerprint that is ALSO hashed with a server-side salt, this is acceptable, but the value is generated client-side and stored locally, so a user wiping local storage on web can simply get a new fingerprint and start a fresh trial. Known limitation per problem statement (\"OK with reinstall limitation\")."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (19/19 pytest)", "frontend": "100% (login render + 5/5 redirects + admin bypass)"},
+  "seed_data_creation": "None — only read-only checks plus one bogus google-session attempt (no user inserted because Emergent verify returns 404 before any DB write).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend tests live in /app/backend/tests/test_auth_iteration3.py. Re-run with: `EXPO_BACKEND_URL=<public-url> pytest backend/tests/test_auth_iteration3.py -v`. The MongoDB index test class connects directly using MONGO_URL+DB_NAME from backend/.env. Frontend mobile viewport 390x844 used. All testIDs verified present: login-screen, google-signin-button, landing-screen, paywall-screen, paywall-back-button, signout-icon, submit-payment-button. Real Google OAuth sign-in NOT attempted (would require redirect to auth.emergentagent.com).",
+  "rca_of_issue": "N/A — no defects found in this iteration. All auth fault paths, Mongo indexes, and frontend redirect guards behave per spec."
+}

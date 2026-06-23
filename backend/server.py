@@ -1307,6 +1307,11 @@ async def admin_stats(admin: dict = Depends(get_current_admin)):
     }
 
 
+# =============== AUTH (Google + Trial + Device Fingerprint) ===============
+from auth_routes import register_auth_routes  # noqa: E402
+register_auth_routes(api_router, db)
+
+
 # =============== MOUNT ===============
 app.include_router(api_router)
 app.state.limiter = limiter
@@ -1345,6 +1350,13 @@ async def startup_event():
         await db.pix_transactions.create_index([("user_id", 1)])
         await db.subscriptions.create_index([("user_id", 1)], unique=True)
         await db.audit_logs.create_index([("ip", 1), ("timestamp", -1)])
+        # Auth (Google + Trial + Device Fingerprint)
+        await db.users.create_index([("email", 1)], unique=True)
+        await db.users.create_index([("user_id", 1)], unique=True)
+        await db.users.create_index([("device_fingerprint", 1)])
+        await db.user_sessions.create_index([("session_token", 1)], unique=True)
+        await db.user_sessions.create_index([("user_id", 1)])
+        await db.user_sessions.create_index([("expires_at", 1)], expireAfterSeconds=0)
     except Exception as e:
         logging.warning(f"Index creation skipped: {e}")
 

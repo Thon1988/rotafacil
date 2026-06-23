@@ -20,31 +20,34 @@ import * as Clipboard from "expo-clipboard";
 import { COLORS, RADIUS, SPACING } from "@/src/constants/theme";
 import { generatePix, PixData, submitPayment } from "@/src/lib/api";
 import { getOrCreateUserId } from "@/src/lib/user";
+import { useAuth } from "@/src/lib/auth";
 
 export default function Paywall() {
   const router = useRouter();
+  const { user, refresh } = useAuth();
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [userId, setUserId] = useState<string>("");
-  const [name, setName] = useState("");
-  const [contact, setContact] = useState("");
+  const [name, setName] = useState(user?.name || "");
+  const [contact, setContact] = useState(user?.email || "");
 
   const fetchPix = useCallback(async () => {
     try {
       setLoading(true);
-      const uid = await getOrCreateUserId();
+      // Prefer authenticated user_id; fallback to local id (legacy flows)
+      const uid = user?.user_id || (await getOrCreateUserId());
       setUserId(uid);
-      const data = await generatePix(uid);
+      const data = await generatePix(uid, user?.name || undefined, user?.email || undefined);
       setPixData(data);
     } catch {
       Alert.alert("Erro", "Não foi possível gerar o PIX. Tente novamente.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchPix();

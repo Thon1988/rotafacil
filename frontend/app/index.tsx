@@ -1,39 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, AppState, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  AppState,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { COLORS, RADIUS, SPACING } from "@/src/constants/theme";
-import { getOrCreateUserId } from "@/src/lib/user";
-import { getSubscription } from "@/src/lib/api";
 import { loadRoute } from "@/src/lib/route-store";
-
-type SubState = "loading" | "active" | "pending" | "none";
+import { useAuth } from "@/src/lib/auth";
 
 export default function Index() {
   const router = useRouter();
-  const [state, setState] = useState<SubState>("loading");
-  const [daysRemaining, setDaysRemaining] = useState(0);
+  const { user, hasAccess, signOut, refresh } = useAuth();
   const [hasRoute, setHasRoute] = useState(false);
   const [routeCount, setRouteCount] = useState(0);
-
-  const checkSubscription = useCallback(async () => {
-    try {
-      const userId = await getOrCreateUserId();
-      const sub = await getSubscription(userId);
-      if (sub.active) {
-        setState("active");
-        setDaysRemaining(sub.days_remaining);
-      } else if (sub.pending) {
-        setState("pending");
-      } else {
-        setState("none");
-      }
-    } catch {
-      setState("none");
-    }
-  }, []);
 
   const refreshRoute = useCallback(async () => {
     const route = await loadRoute();
@@ -42,86 +29,127 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
-    checkSubscription();
     refreshRoute();
-  }, [checkSubscription, refreshRoute]);
+  }, [refreshRoute]);
 
-  // Poll while pending (every 30s)
   useFocusEffect(
     useCallback(() => {
-      let interval: any;
       refreshRoute();
-      if (state === "pending") {
-        interval = setInterval(() => checkSubscription(), 30000);
-      }
+      refresh();
       const sub = AppState.addEventListener("change", (s) => {
         if (s === "active") {
-          checkSubscription();
+          refresh();
           refreshRoute();
         }
       });
-      return () => {
-        if (interval) clearInterval(interval);
-        sub.remove();
-      };
-    }, [state, checkSubscription, refreshRoute])
+      return () => sub.remove();
+    }, [refresh, refreshRoute])
   );
 
   const showComingSoon = (feature: string) => {
     Alert.alert(
       `${feature} — Em breve`,
-      "Esta funcionalidade está sendo finalizada e será liberada em uma próxima atualização. Por enquanto, foque em bipar e entregar os pacotes.",
+      "Esta funcionalidade está sendo finalizada e será liberada em uma próxima atualização.",
       [{ text: "Ok" }]
     );
   };
 
-  if (state === "loading") {
+  const confirmSignOut = () => {
+    Alert.alert("Sair", "Deseja sair da sua conta?", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Sair", style: "destructive", onPress: () => signOut() },
+    ]);
+  };
+
+  if (!user) {
     return (
-      <View style={styles.loadingContainer} testID="landing-loading">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
 
+  // Device blocked from trial — must pay PIX
+  if (user.is_blocked_device && !user.subscription_active) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+        <View style={styles.heroSection}>
+          <View style={[styles.logoCircle, { backgroundColor: COLORS.error }]}>
+            <Ionicons name="warning" size={48} color="#fff" />
+          </View>
+          <Text style={styles.title}>Aparelho já usou o trial</Text>
+          <Text style={styles.subtitle}>
+            Detectamos que este celular já fez o teste grátis com outra conta.
+            Para continuar usando o app, faça o pagamento de R$ 20/mês via PIX.
+          </Text>
+        </View>
+        <View style={styles.ctaSection}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => router.push("/paywall")}
+            testID="landing-pay-blocked-button"
+          >
+            <Text style={styles.primaryButtonText}>Assinar por R$ 20/mês</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={confirmSignOut} style={styles.signOutBtn}>
+            <Ionicons name="log-out" size={14} color={COLORS.textSecondary} />
+            <Text style={styles.signOutText}>Sair ({user.email})</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]} testID="landing-screen">
+      <View style={styles.topRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.greeting}>Olá,</Text>
+          <Text style={styles.userName} numberOfLines={1}>
+            {user.name?.split(" ")[0] || user.email}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={confirmSignOut} style={styles.iconBtn} testID="signout-icon">
+          <Ionicons name="log-out-outline" size={22} color={COLORS.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.heroSection}>
         <View style={styles.logoCircle}>
-          <Ionicons name="navigate" size={48} color="#fff" />
+          <Ionicons name="navigate" size={44} color="#fff" />
         </View>
-        <Text style={styles.title} testID="landing-title">Rota+Rápida App</Text>
-        <Text style={styles.subtitle}>
-          Bipe, ouça a parada e entregue.
-        </Text>
+        <Text style={styles.title}>Rota+Rápida</Text>
+        <Text style={styles.subtitle}>Bipe, ouça a parada e entregue.</Text>
 
-        {state === "active" && (
+        {user.subscription_active ? (
           <View style={styles.activeBadge}>
             <Ionicons name="shield-checkmark" size={14} color={COLORS.success} />
-            <Text style={styles.activeBadgeText}>
-              Assinatura ativa • {daysRemaining}d
+            <Text style={styles.activeBadgeText}>Assinatura ativa</Text>
+          </View>
+        ) : user.trial_active ? (
+          <View style={styles.trialBadge}>
+            <Ionicons name="gift" size={14} color={COLORS.primary} />
+            <Text style={styles.trialBadgeText}>
+              Trial: {user.trial_days_remaining}d restantes
             </Text>
           </View>
-        )}
-
-        {state === "pending" && (
-          <View style={styles.pendingBadge}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
-            <Text style={styles.pendingBadgeText}>
-              Aguardando aprovação do pagamento
-            </Text>
+        ) : (
+          <View style={styles.expiredBadge}>
+            <Ionicons name="time" size={14} color={COLORS.error} />
+            <Text style={styles.expiredBadgeText}>Trial expirado</Text>
           </View>
         )}
       </View>
 
       <View style={styles.featuresGrid}>
-        <FeatureCard icon="document-text" title="PDF Circuit" desc="Ordem do Circuit preservada" />
+        <FeatureCard icon="document-text" title="PDF Circuit" desc="Ordem preservada" />
         <FeatureCard icon="scan" title="Scanner" desc="Bipe e ouça a parada" />
         <FeatureCard icon="map" title="Mapa" desc="Em breve" locked />
         <FeatureCard icon="flash" title="Otimização" desc="Em breve" locked />
       </View>
 
       <View style={styles.ctaSection}>
-        {state === "active" ? (
+        {hasAccess ? (
           <>
             {hasRoute ? (
               <TouchableOpacity
@@ -164,29 +192,7 @@ export default function Index() {
                 <Ionicons name="lock-closed" size={16} color={COLORS.textSecondary} />
                 <Text style={styles.secondaryButtonText}>Histórico</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.secondaryButton, styles.lockedSecondary]}
-                onPress={() => showComingSoon("Estatísticas")}
-                testID="landing-stats-locked"
-              >
-                <Ionicons name="lock-closed" size={16} color={COLORS.textSecondary} />
-                <Text style={styles.secondaryButtonText}>Stats</Text>
-              </TouchableOpacity>
             </View>
-          </>
-        ) : state === "pending" ? (
-          <>
-            <TouchableOpacity
-              style={[styles.primaryButton, { backgroundColor: COLORS.bgElevated }]}
-              onPress={() => checkSubscription()}
-              testID="landing-refresh-button"
-            >
-              <Ionicons name="refresh" size={20} color="#fff" />
-              <Text style={styles.primaryButtonText}>Verificar Aprovação</Text>
-            </TouchableOpacity>
-            <Text style={styles.pricingNote}>
-              Você receberá acesso assim que o admin aprovar seu pagamento
-            </Text>
           </>
         ) : (
           <>
@@ -198,7 +204,8 @@ export default function Index() {
               <Text style={styles.primaryButtonText}>Assinar por R$ 20/mês</Text>
             </TouchableOpacity>
             <Text style={styles.pricingNote} testID="pricing-note">
-              💡 Menos de <Text style={styles.bold}>R$ 1 por dia</Text>
+              💡 Trial encerrado. Reative pagando o PIX (menos de{" "}
+              <Text style={styles.bold}>R$ 1/dia</Text>).
             </Text>
           </>
         )}
@@ -237,51 +244,52 @@ function FeatureCard({
 const styles = StyleSheet.create({
   loadingContainer: { flex: 1, backgroundColor: COLORS.bgBase, justifyContent: "center", alignItems: "center" },
   container: { flex: 1, backgroundColor: COLORS.bgBase, paddingHorizontal: SPACING.lg, justifyContent: "space-between" },
-  heroSection: { alignItems: "center", marginTop: SPACING.xl },
+  topRow: { flexDirection: "row", alignItems: "center", paddingTop: SPACING.sm, marginBottom: -SPACING.md },
+  greeting: { color: COLORS.textTertiary, fontSize: 12, fontWeight: "600" },
+  userName: { color: COLORS.textPrimary, fontSize: 16, fontWeight: "800" },
+  iconBtn: { padding: 10, borderRadius: RADIUS.full, backgroundColor: COLORS.bgSurface },
+  heroSection: { alignItems: "center", marginTop: SPACING.lg },
   logoCircle: {
-    width: 90, height: 90, borderRadius: 45, backgroundColor: COLORS.primary,
-    justifyContent: "center", alignItems: "center", marginBottom: SPACING.lg,
+    width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primary,
+    justifyContent: "center", alignItems: "center", marginBottom: SPACING.md,
     shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4, shadowRadius: 16,
   },
-  title: { fontSize: 34, fontWeight: "900", color: COLORS.textPrimary, letterSpacing: -1 },
-  subtitle: { fontSize: 15, color: COLORS.textSecondary, marginTop: SPACING.sm, textAlign: "center" },
+  title: { fontSize: 28, fontWeight: "900", color: COLORS.textPrimary, letterSpacing: -1 },
+  subtitle: { fontSize: 14, color: COLORS.textSecondary, marginTop: SPACING.xs, textAlign: "center" },
   activeBadge: {
     marginTop: SPACING.md, flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: "rgba(22,163,74,0.15)", paddingHorizontal: SPACING.md,
     paddingVertical: 6, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.success,
   },
   activeBadgeText: { color: COLORS.success, fontWeight: "700", fontSize: 12 },
-  pendingBadge: {
-    marginTop: SPACING.md, flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+  trialBadge: {
+    marginTop: SPACING.md, flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: "rgba(234,88,12,0.15)", paddingHorizontal: SPACING.md,
-    paddingVertical: 8, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.primary,
+    paddingVertical: 6, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.primary,
   },
-  pendingBadgeText: { color: COLORS.primary, fontWeight: "700", fontSize: 12 },
+  trialBadgeText: { color: COLORS.primary, fontWeight: "800", fontSize: 12 },
+  expiredBadge: {
+    marginTop: SPACING.md, flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "rgba(220,38,38,0.15)", paddingHorizontal: SPACING.md,
+    paddingVertical: 6, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.error,
+  },
+  expiredBadgeText: { color: COLORS.error, fontWeight: "800", fontSize: 12 },
   featuresGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.md, justifyContent: "space-between" },
   featureCard: {
     width: "47%", backgroundColor: COLORS.bgSurface, borderRadius: RADIUS.lg,
     padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border, gap: SPACING.sm,
   },
-  featureCardLocked: {
-    opacity: 0.65,
-    borderStyle: "dashed",
-  },
+  featureCardLocked: { opacity: 0.65, borderStyle: "dashed" },
   featureIconRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  lockBadge: {
-    backgroundColor: COLORS.bgElevated,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.full,
-  },
+  lockBadge: { backgroundColor: COLORS.bgElevated, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.full },
   lockBadgeText: { color: COLORS.textSecondary, fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
   featureTitle: { color: COLORS.textPrimary, fontWeight: "700", fontSize: 15 },
   featureDesc: { color: COLORS.textSecondary, fontSize: 12 },
-  ctaSection: { gap: SPACING.md },
+  ctaSection: { gap: SPACING.md, paddingBottom: SPACING.md },
   primaryButton: {
-    backgroundColor: COLORS.primary, paddingVertical: 18,
-    borderRadius: RADIUS.lg, flexDirection: "row", alignItems: "center",
-    justifyContent: "center", gap: SPACING.sm,
+    backgroundColor: COLORS.primary, paddingVertical: 18, borderRadius: RADIUS.lg,
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: SPACING.sm,
   },
   primaryButtonText: { color: "#fff", fontSize: 16, fontWeight: "800" },
   secondaryRow: { flexDirection: "row", gap: SPACING.sm },
@@ -294,4 +302,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: { color: COLORS.textPrimary, fontWeight: "700", fontSize: 13 },
   pricingNote: { color: COLORS.textSecondary, fontSize: 14, textAlign: "center" },
   bold: { color: COLORS.primary, fontWeight: "800" },
+  signOutBtn: { flexDirection: "row", gap: 6, justifyContent: "center", paddingVertical: 8 },
+  signOutText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: "600" },
 });
