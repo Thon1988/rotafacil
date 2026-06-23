@@ -74,6 +74,8 @@ packaging==26.2
 pandas==3.0.3
 passlib==1.7.4
 pathspec==1.1.1
+pdfminer.six==20260107
+pdfplumber==0.11.10
 pillow==12.2.0
 platformdirs==4.10.0
 pluggy==1.6.0
@@ -92,6 +94,7 @@ PyJWT==2.13.0
 pymongo==4.6.3
 pyparsing==3.3.2
 pypdf==6.13.3
+pypdfium2==5.10.1
 pytest==9.1.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2

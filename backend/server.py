@@ -186,7 +186,7 @@ class HistoryEntry(BaseModel):
 STREET_PREFIX_RE = re.compile(
     r"\b(?:Rua|R\.?|Avenida|Av\.?|Travessa|Tv\.?|Alameda|Al\.?|"
     r"Praça|Praca|Pca\.?|Estrada|Estr\.?|Largo|Lgo\.?|Rodovia|Rod\.?|"
-    r"Viaduto|Vd\.?|Marginal|Caminho|Beco)\s+(?=[A-ZÀ-Ý])",
+    r"Viaduto|Vd\.?|Marginal|Caminho|Beco)\s+(?-i:[A-ZÀ-Ý])",
     re.IGNORECASE,
 )
 
@@ -392,6 +392,95 @@ def parse_excel(content: bytes) -> str:
 
 
 def parse_pdf(content: bytes) -> str:
+    """Extract PDF text preserving the visual top-to-bottom reading order.
+
+    Strategy for Circuit/Spoke PDFs:
+    1. Try pdfplumber TABLE extraction. Circuit PDFs are organized as a
+       4-column table (# | Address | Arrival | Notes). Table extraction is
+       the most reliable way to preserve row numbers + address + code.
+       We serialize each row as `<row#> <address> <code>` so the downstream
+       cleaner picks the clean Address column and not the noisy Notes blob.
+    2. Fall back to pdfplumber word-by-word reading order (sorted by Y/X).
+    3. Final fallback: pypdf default extract_text.
+    """
+    try:
+        import pdfplumber  # type: ignore
+        lines_out: List[str] = []
+        with pdfplumber.open(io.BytesIO(content)) as pdf:
+            for page in pdf.pages:
+                tables = []
+                try:
+                    tables = page.extract_tables() or []
+                except Exception:
+                    tables = []
+                got_rows = False
+                for table in tables:
+                    for row in table:
+                        if not row:
+                            continue
+                        first_cell = (row[0] or "").strip()
+                        if not first_cell.isdigit():
+                            continue
+                        # Circuit format: row[0]=# row[1]=Address row[2]=Time row[3]=Notes
+                        # Extract code from the Notes column (or any column as
+                        # fallback) — Circuit puts BR/MLB tracking code there.
+                        notes_blob = " ".join(
+                            ((cell or "").replace("\n", " "))
+                            for cell in row[3:]
+                        )
+                        if not notes_blob:
+                            notes_blob = " ".join(
+                                ((cell or "").replace("\n", " ")) for cell in row[1:]
+                            )
+                        code_match = None
+                        for pattern in CODE_PATTERNS:
+                            m = re.search(pattern, notes_blob, re.IGNORECASE)
+                            if m:
+                                cand = m.group(0).upper()
+                                if pattern == r"\d{14,18}" and (
+                                    cand.startswith("0000") or len(cand) < 14
+                                ):
+                                    continue
+                                code_match = cand
+                                break
+                        # Address from column 1 (Circuit's "Address" column)
+                        address = (row[1] or "").replace("\n", " ") if len(row) > 1 else ""
+                        address = re.sub(r"\s+", " ", address).strip(" ,;.-")
+                        if not code_match:
+                            # No code found → skip row
+                            continue
+                        lines_out.append(f"{first_cell} {address} {code_match}")
+                        got_rows = True
+                if got_rows:
+                    lines_out.append("")
+                    continue
+                # No table on this page → fall back to coordinate-aware words
+                try:
+                    words = page.extract_words(x_tolerance=2, y_tolerance=3)
+                except Exception:
+                    words = []
+                words.sort(key=lambda w: (round(w["top"]), w["x0"]))
+                current_y: Optional[float] = None
+                current_line: List[str] = []
+                for w in words:
+                    if current_y is None or abs(w["top"] - current_y) < 5:
+                        current_line.append(w["text"])
+                        if current_y is None:
+                            current_y = w["top"]
+                    else:
+                        lines_out.append(" ".join(current_line))
+                        current_line = [w["text"]]
+                        current_y = w["top"]
+                if current_line:
+                    lines_out.append(" ".join(current_line))
+                lines_out.append("")
+        text = "\n".join(lines_out)
+        if text.strip():
+            return text
+    except Exception as e:
+        logging.warning(f"pdfplumber failed, falling back to pypdf: {e}")
+
+    # Final fallback: pypdf
     try:
         reader = PdfReader(io.BytesIO(content))
         text = ""
