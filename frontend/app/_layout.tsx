@@ -22,7 +22,7 @@ function ProtectedNav() {
     if (loading) return;
     const first = segments[0] || "";
     // Allow these screens without auth
-    const publicScreens = ["login", "admin"];
+    const publicScreens = ["login", "admin", "auth"];
     const isPublic = publicScreens.includes(first);
 
     if (!user && !isPublic) {

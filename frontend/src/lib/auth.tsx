@@ -17,8 +17,6 @@ import { getDeviceFingerprint, getDeviceInfo } from "@/src/lib/device";
 
 const TOKEN_KEY = "rota_session_token";
 const EMERGENT_AUTH_BASE = "https://auth.emergentagent.com/";
-const SESSION_DATA_URL =
-  "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data";
 
 export interface AuthUser {
   user_id: string;
@@ -62,26 +60,16 @@ async function fetchMe(token: string): Promise<AuthUser | null> {
 }
 
 async function exchangeEmergentSession(emergentSessionId: string) {
-  // Fetch profile + persistent session_token from Emergent
-  const r = await fetch(SESSION_DATA_URL, {
-    headers: { "X-Session-ID": emergentSessionId },
-  });
-  if (!r.ok) throw new Error(`session-data ${r.status}`);
-  const data = (await r.json()) as {
-    id: string;
-    email: string;
-    name: string;
-    picture: string;
-    session_token: string;
-  };
-  // Send to our backend with device fingerprint
+  // Send the raw session_id straight to our backend, which calls Emergent's
+  // session-data endpoint server-side to get the user profile. This avoids
+  // CORS issues on web and mismatches between session_id vs session_token.
   const fingerprint = await getDeviceFingerprint();
   const info = getDeviceInfo();
   const back = await fetch(`${API}/auth/google-session`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      session_token: data.session_token,
+      session_id: emergentSessionId,
       device_fingerprint: fingerprint,
       device_info: info,
     }),
@@ -189,8 +177,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (mounted) setLoading(false);
       }
     })();
+
+    // Listen for runtime deep links (warm-start: app already open when redirect fires)
+    const linkSub = Linking.addEventListener("url", async (event) => {
+      const sid = extractSessionIdFromUrl(event.url);
+      if (!sid) return;
+      try {
+        setSigningIn(true);
+        const result = await exchangeEmergentSession(sid);
+        await persistToken(result.session_token);
+        if (mounted) setUser(result.user);
+      } catch (e) {
+        console.log("warm deep-link exchange failed", e);
+      } finally {
+        if (mounted) setSigningIn(false);
+      }
+    });
+
     return () => {
       mounted = false;
+      try {
+        linkSub.remove();
+      } catch {
+        /* noop */
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

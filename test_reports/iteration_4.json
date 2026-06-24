@@ -1,0 +1,47 @@
+{
+  "summary": "Iteration 4 — Google Auth session_token → session_id rename + new /auth deep-link route. Backend: 14/14 pytest PASS via public ingress. /api/auth/google-session with empty body → 422 detail='missing_session_id' (NEW). Same endpoint with bogus session_id → 401 detail='invalid_session_id' (RENAMED from invalid_session_token). Legacy alias session_token still accepted on the same endpoint and routes to the same Emergent verification, yielding the same 401 invalid_session_id. EMERGENT_AUTH_SESSION_URL env var is honored — set in /app/backend/.env (line 15) and confirmed via httpx call in backend logs (httpx GET → demobackend.emergentagent.com/auth/v1/env/oauth/session-data → 404 → mapped to 401). /api/auth/me, /api/auth/logout, /api/health, /api/parse-file, /api/subscription/{id}, /api/admin/login all regression-clean. Frontend: /auth route NO LONGER returns 'Page could not be found' (was the old bug). Visiting /auth without session_id quickly redirects to /login (Concluindo login... spinner displays briefly during the 500ms timeout, then router.replace('/') → ProtectedNav → /login since no auth). Visiting /auth?session_id=invalid_token_string_for_testing_123 triggers AuthProvider's web bootstrap → POST /api/auth/google-session {session_id: 'invalid...'} → 401 detail='invalid_session_id' captured in browser console as 'web session exchange failed Error: invalid_session_id' → URL session_id stripped via history.replaceState → ProtectedNav routes to /login showing 'Entrar com Google' button with testID=google-signin-button. The full new fault path is wired end-to-end exactly as described in the request. Real Google sign-in not attempted (requires real Google account interaction, per request).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "frontend/.env", "issue": "EXPO_BACKEND_URL key still not set (only EXPO_PUBLIC_BACKEND_URL exists). Per PROTECTED_VARIABLES contract in system prompt, EXPO_BACKEND_URL is the expected key. Carry-over from iteration 3."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "global (web preview)", "issues": ["RN web warning still repeated: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Console noise only — carry-over from iter 3."]}
+    ],
+    "react_native_issues": [
+      {"component": "Expo SDK version drift", "issue": "expo@54.0.34 (expected ~54.0.35), expo-font@14.0.11 (expected ~14.0.12), expo-router@6.0.23 (expected ~6.0.24). Reference: /var/log/supervisor/expo.err.log. Same finding as iter 2 and iter 3 — still not fixed."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_auth_iteration4.py",
+    "/app/test_reports/pytest/iteration4_results.xml"
+  ],
+  "action_items": [
+    "(none blocking) — All fault-path fixes verified working as specified.",
+    "LOW (carry-over) — Replace 'shadow*' style props with 'boxShadow' on web (or Platform.select to native-only).",
+    "LOW (carry-over) — Update Expo packages: `cd /app/frontend && npx expo install expo expo-font expo-router`.",
+    "LOW (carry-over) — Add EXPO_BACKEND_URL to /app/frontend/.env (mirroring EXPO_PUBLIC_BACKEND_URL).",
+    "INFO — Real Google sign-in success path (Emergent OAuth → redirect to /auth?session_id=<real> → exchange → trial granted) cannot be exercised in CI. Manual smoke test on a real device still recommended."
+  ],
+  "critical_code_review_comments": [
+    "auth_routes.py:37-40 — EMERGENT_SESSION_URL now reads os.environ.get('EMERGENT_AUTH_SESSION_URL', '<official-url>'). Verified env value loaded by triggering an end-to-end call and observing the httpx GET to the expected URL in backend.err.log. Good.",
+    "auth_routes.py:46-52 — GoogleSessionIn model accepts both `session_id` (preferred) and `session_token` (legacy) as Optional[str]. min_length=8 is enforced via Pydantic so short strings of either field return 422.",
+    "auth_routes.py:172-175 — google_session endpoint coalesces (payload.session_id or payload.session_token).strip() then enforces len>=8, raising 422 'missing_session_id' otherwise. Note: when BOTH fields are absent Pydantic still validates the model (both Optional), so the 422 'missing_session_id' is raised by our own check, NOT by Pydantic — body is correctly { 'detail': 'missing_session_id' } and not a Pydantic validation envelope. Verified in test.",
+    "auth_routes.py:186-190 — non-200 response from Emergent → 401 'invalid_session_id' (renamed). Backend correctly returns the new label.",
+    "auth.tsx:62-76 — exchangeEmergentSession now posts {session_id, device_fingerprint, device_info}. Matches new backend contract. Verified live: payload `{\"session_id\":\"invalid_token_string_for_testing_123\",\"device_fingerprint\":\"fb:...\",...}`.",
+    "auth.tsx:182-195 — Linking.addEventListener('url', ...) subscribes to warm-app deep links and exchanges session_id. linkSub.remove() is called on unmount inside try/catch — safe.",
+    "app/auth.tsx:14-33 — Renders ActivityIndicator + 'Concluindo login...' text, then router.replace('/') after 500ms. Public-screen guard in _layout.tsx (publicScreens includes 'auth') lets the route render without auth.",
+    "_layout.tsx:25 — publicScreens=['login','admin','auth'] correctly bypasses auth guard for the new /auth route."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (14/14 pytest)", "frontend": "100% (/auth no-404, /auth?session_id=... → backend POST observed → 401 invalid_session_id → redirect to /login)"},
+  "seed_data_creation": "None — only fault-path checks; no user inserted because Emergent verify returns 404 before any DB write.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend tests live in /app/backend/tests/test_auth_iteration4.py. Re-run with: `EXPO_BACKEND_URL=<public-url> pytest backend/tests/test_auth_iteration4.py -v`. The full /auth?session_id=<bogus> → backend 401 invalid_session_id → /login flow is verified end-to-end via Playwright at the public URL. Real Google OAuth NOT exercised. Iteration 3 indexes/admin tests still hold (see test_auth_iteration3.py).",
+  "rca_of_issue": "Original user-reported defect ('Erro no login: invalid_session_token') was caused by the backend treating the Emergent-issued session_token (returned by client-side Emergent SDK) as if it were a session_id (X-Session-ID header expected by Emergent's session-data endpoint). The two-part fix is verified: (1) frontend now posts the raw session_id received from the OAuth redirect URL to /api/auth/google-session, (2) backend GET to EMERGENT_AUTH_SESSION_URL with X-Session-ID: <session_id> exchanges for the user profile, mapping non-200 responses to 401 detail='invalid_session_id'. The new /auth Expo route is now public (added to publicScreens) so deep-link callbacks no longer 404. All behavior verified by 14 backend pytest cases and live Playwright end-to-end exchange."
+}

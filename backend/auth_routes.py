@@ -32,14 +32,22 @@ from pydantic import BaseModel, Field, EmailStr
 
 logger = logging.getLogger("auth")
 
-EMERGENT_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
+# Emergent's official OAuth session-data endpoint. Read from env so the same
+# code works in both preview and production without touching the file.
+EMERGENT_SESSION_URL = os.environ.get(
+    "EMERGENT_AUTH_SESSION_URL",
+    "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+)
 SESSION_LIFETIME_DAYS = 7
 TRIAL_DAYS = 14
 
 
 # -------- Models --------
 class GoogleSessionIn(BaseModel):
-    session_token: str = Field(..., min_length=8)
+    # The short-lived session_id received from Emergent OAuth redirect URL.
+    # We accept it as either `session_id` (preferred) or `session_token` (legacy alias).
+    session_id: Optional[str] = Field(None, min_length=8)
+    session_token: Optional[str] = Field(None, min_length=8)
     device_fingerprint: Optional[str] = Field(None, max_length=128)
     device_info: Optional[dict] = None  # {"model":"...","os":"...","brand":"..."}
 
@@ -161,15 +169,25 @@ async def get_current_user(
 def register_auth_routes(api_router: APIRouter, db) -> None:
     @api_router.post("/auth/google-session", response_model=GoogleSessionOut)
     async def google_session(payload: GoogleSessionIn, request: Request):
-        # 1) Verify Emergent session_token with their session-data endpoint
+        # Accept either `session_id` (preferred) or legacy `session_token` alias.
+        sid = (payload.session_id or payload.session_token or "").strip()
+        if not sid or len(sid) < 8:
+            raise HTTPException(status_code=422, detail="missing_session_id")
+
+        # 1) Verify Emergent session_id with their session-data endpoint
+        #    (this endpoint takes the SHORT-LIVED session_id in `X-Session-ID`
+        #    header and returns the user profile + a long-lived session_token).
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 r = await client.get(
                     EMERGENT_SESSION_URL,
-                    headers={"X-Session-ID": payload.session_token},
+                    headers={"X-Session-ID": sid},
                 )
             if r.status_code != 200:
-                raise HTTPException(status_code=401, detail="invalid_session_token")
+                logger.warning(
+                    f"emergent session-data returned {r.status_code}: {r.text[:200]}"
+                )
+                raise HTTPException(status_code=401, detail="invalid_session_id")
             data = r.json()
         except HTTPException:
             raise
