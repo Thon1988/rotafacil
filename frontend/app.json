@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.thonenterprise.rota_rapida_app"
+      "bundleIdentifier": "com.thonenterprise.rotarapidaapp"
     },
     "android": {
       "package": "com.thonenterprise.rota_rapida_app",
