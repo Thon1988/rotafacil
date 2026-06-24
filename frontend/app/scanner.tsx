@@ -50,6 +50,12 @@ export default function ScannerScreen() {
   const recentRef = useRef<Map<string, number>>(new Map());
   const [manualOpen, setManualOpen] = useState(false);
   const [manualCode, setManualCode] = useState("");
+  const [pendingFallback, setPendingFallback] = useState<{
+    scannedCode: string;
+    nextIdx: number;
+    nextSequence: number;
+    nextAddress: string;
+  } | null>(null);
 
   // Load stops on focus
   useFocusEffect(
@@ -166,6 +172,24 @@ export default function ScannerScreen() {
         }, 2200);
         return true;
       } else {
+        // No tracker code match. Offer fallback: assign this scan to the next
+        // pending stop (covers cases where the Circuit PDF did not include the
+        // tracker BR/ML code in the Tracker column).
+        const nextIdx = stops.findIndex((s) => s.status === "pendente");
+        if (nextIdx !== -1) {
+          if (Platform.OS !== "web") {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          }
+          setPendingFallback({
+            scannedCode: token,
+            nextIdx,
+            nextSequence: nextIdx + 1,
+            nextAddress: stops[nextIdx].endereco,
+          });
+          setFeedback(null);
+          // Keep lock until user resolves the prompt
+          return false;
+        }
         if (Platform.OS !== "web") {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         }
@@ -202,6 +226,48 @@ export default function ScannerScreen() {
       processCode(code, "manual");
     }, 150);
   }, [manualCode, processCode]);
+
+  const confirmFallback = useCallback(async () => {
+    if (!pendingFallback) return;
+    const { nextIdx, nextSequence, scannedCode } = pendingFallback;
+    const updated = stops.map((s, i) =>
+      i === nextIdx
+        ? {
+            ...s,
+            codigo: scannedCode, // adopt the scanned code as this stop's tracker
+            status: "entregue" as const,
+            timestamp: new Date().toISOString(),
+          }
+        : s
+    );
+    setStops(updated);
+    await saveRoute(updated);
+    if (Platform.OS !== "web") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    speakStop(nextSequence);
+    setLastScanned({
+      sequence: nextSequence,
+      code: scannedCode,
+      address: stops[nextIdx].endereco,
+    });
+    setFeedback({
+      msg: `✅ Parada ${nextSequence} (atribuída)`,
+      detail: stops[nextIdx].endereco,
+      color: COLORS.success,
+    });
+    setPendingFallback(null);
+    setTimeout(() => {
+      lockRef.current = false;
+      setFeedback(null);
+    }, 2200);
+  }, [pendingFallback, stops, speakStop]);
+
+  const dismissFallback = useCallback(() => {
+    Speech.stop();
+    setPendingFallback(null);
+    lockRef.current = false;
+  }, []);
 
   const resetRoute = useCallback(async () => {
     Speech.stop();
@@ -438,14 +504,76 @@ export default function ScannerScreen() {
         </SafeAreaView>
       </View>
 
+      {/* Fallback: assign unmatched scan to next pending stop */}
+      <Modal
+        visible={!!pendingFallback}
+        transparent
+        animationType="fade"
+        onRequestClose={dismissFallback}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard} testID="fallback-modal">
+            <View style={styles.modalHeader}>
+              <Ionicons name="alert-circle" size={22} color={COLORS.primary} />
+              <Text style={styles.modalTitle}>Código não reconhecido</Text>
+              <TouchableOpacity onPress={dismissFallback} hitSlop={8}>
+                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalDesc}>
+              O código bipado não está cadastrado na rota do Circuit. Quer
+              atribuir esta bipagem à <Text style={{ fontWeight: "800" }}>
+                próxima parada pendente
+              </Text>?
+            </Text>
+            {pendingFallback ? (
+              <View style={styles.fallbackPreview}>
+                <View style={styles.fallbackBadge}>
+                  <Text style={styles.fallbackBadgeText}>
+                    Parada {pendingFallback.nextSequence}
+                  </Text>
+                </View>
+                <Text style={styles.fallbackAddress} numberOfLines={3}>
+                  {pendingFallback.nextAddress}
+                </Text>
+                <Text style={styles.fallbackCodeRow}>
+                  Código bipado:{" "}
+                  <Text style={{ fontWeight: "800" }}>
+                    {pendingFallback.scannedCode.slice(0, 28)}
+                  </Text>
+                </Text>
+              </View>
+            ) : null}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={dismissFallback}
+                testID="fallback-cancel-button"
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirm}
+                onPress={confirmFallback}
+                testID="fallback-confirm-button"
+              >
+                <Ionicons name="checkmark" size={18} color="#fff" />
+                <Text style={styles.modalConfirmText}>
+                  Marcar Parada {pendingFallback?.nextSequence ?? ""}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Manual code entry modal */}
       <Modal
         visible={manualOpen}
         transparent
         animationType="fade"
         onRequestClose={() => setManualOpen(false)}
-      >
-        <KeyboardAvoidingView
+      >        <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.modalBackdrop}
         >
@@ -803,4 +931,22 @@ const styles = StyleSheet.create({
   },
   modalConfirmDisabled: { opacity: 0.45 },
   modalConfirmText: { color: "#fff", fontWeight: "800", fontSize: 14 },
+  fallbackPreview: {
+    backgroundColor: COLORS.bgBase,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    gap: 6,
+  },
+  fallbackBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+  },
+  fallbackBadgeText: { color: "#fff", fontWeight: "800", fontSize: 13 },
+  fallbackAddress: { color: COLORS.textPrimary, fontSize: 14, fontWeight: "700" },
+  fallbackCodeRow: { color: COLORS.textSecondary, fontSize: 12 },
 });

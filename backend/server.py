@@ -86,6 +86,7 @@ CODE_PATTERNS = [
     r"MLB\d{10,14}[A-Z]?",
     r"ML-\d{6,12}",
     r"\d{14,18}",
+    r"SEQ\d{3,5}",  # placeholder for Circuit rows where the Tracker column is empty
 ]
 
 
@@ -447,8 +448,17 @@ def parse_pdf(content: bytes) -> str:
                         address = (row[1] or "").replace("\n", " ") if len(row) > 1 else ""
                         address = re.sub(r"\s+", " ", address).strip(" ,;.-")
                         if not code_match:
-                            # No code found → skip row
-                            continue
+                            # Tracker missing in this row — still preserve the
+                            # Circuit sequence by inserting a placeholder code
+                            # derived from the row number. The frontend scanner
+                            # falls back to "assign to next pending stop" when
+                            # a scanned code does not match any tracker.
+                            try:
+                                code_match = f"SEQ{int(first_cell):04d}"
+                            except ValueError:
+                                code_match = f"SEQ{first_cell}"
+                        if len(address) < 3:
+                            address = "Endereço não detectado"
                         lines_out.append(f"{first_cell} {address} {code_match}")
                         got_rows = True
                 if got_rows:
