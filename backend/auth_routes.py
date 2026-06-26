@@ -206,36 +206,22 @@ def register_auth_routes(api_router: APIRouter, db) -> None:
 
         if user is None:
             # 3) NEW USER → device fingerprint anti-abuse check
+            #    STRICT: 1 device = 1 account. If this device has ALREADY been
+            #    used by any other email (regardless of trial state), the new
+            #    account is created BLOCKED — no trial granted. Forces the
+            #    user to either log back in with the original account or pay
+            #    R$20/mês via PIX. Prevents trial-abuse fraud.
             blocked = False
             if fp_hash:
-                # Only block if the device has been used by a DIFFERENT email
-                # whose trial already EXPIRED (or has paid subscription). If
-                # the prior user is still in trial, we assume the same person
-                # is retrying with another Google account and grant the trial.
                 prior = await db.users.find_one(
-                    {"device_fingerprint": fp_hash}, {"_id": 0}
+                    {"device_fingerprint": fp_hash, "email": {"$ne": email}},
+                    {"_id": 0, "email": 1},
                 )
-                if prior is not None and prior.get("email") != email:
-                    prior_started = _ensure_aware(prior.get("trial_started_at"))
-                    if prior_started:
-                        trial_done = (now - prior_started) >= timedelta(days=TRIAL_DAYS)
-                    else:
-                        trial_done = True
-                    # Also let it pass if the prior account paid PIX
-                    prior_paid = False
-                    try:
-                        psub = await db.subscriptions.find_one(
-                            {"user_id": prior["user_id"], "status": "active"},
-                            {"_id": 0, "expires_at": 1},
-                        )
-                        if psub:
-                            pexp = _ensure_aware(psub.get("expires_at"))
-                            if pexp and now < pexp:
-                                prior_paid = True
-                    except Exception:
-                        pass
-                    if trial_done or prior_paid:
-                        blocked = True
+                if prior is not None:
+                    blocked = True
+                    logger.info(
+                        f"device fingerprint reuse blocked: new={email} prior={prior.get('email')}"
+                    )
 
             # Create the user
             user = {
