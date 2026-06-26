@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 5 — Backend-only verification of (a) removal of hardcoded Emergent URL from auth_routes.py, (b) env-only EMERGENT_AUTH_SESSION_URL lookup, (c) device-fingerprint anti-abuse relaxation, (d) MongoDB reset of wrongly-blocked users. 17/17 pytest PASS on public ingress. SOURCE HYGIENE: grep confirms `demobackend.emergentagent.com` no longer appears in /app/backend/auth_routes.py (only in /app/backend/.env line 15). auth_routes.py:37 reads `os.environ.get('EMERGENT_AUTH_SESSION_URL', '').strip()` with EMPTY-STRING fallback (no hardcoded URL anywhere in source). No `http://` or `https://` literal exists in auth_routes.py. CONTRACT REGRESSION: POST /api/auth/google-session with empty body → 422 detail='missing_session_id'; with bogus session_id → 401 detail='invalid_session_id' (NOT invalid_session_token); legacy session_token alias still routes to the same 401 invalid_session_id. /api/auth/me with bogus bearer → 401 invalid_session; /api/auth/logout idempotent (200 with or without auth). EXISTING ENDPOINTS: /api/health, /api/, /api/parse-file (txt sample, 2 BR shops parsed), /api/subscription/{id} (returns active=false pending=false for unknown user), /api/admin/login (401 wrong creds) — all regression-clean. MONGO INVARIANT: db.users.count_documents({is_blocked_device: True}) == 0 — confirms the post-fix reset successfully cleared every wrongly-blocked record. DEVICE FINGERPRINT LOGIC REVIEW (auth_routes.py:207-238): block path is now (prior_user_with_different_email_on_same_fingerprint) AND (prior_trial_consumed_14d OR prior_has_active_paid_sub). If prior is still mid-trial, the new email is granted a fresh trial (treated as same person retrying). Code matches the spec described in the request exactly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Expo SDK version drift", "issue": "expo@54.0.34 (expected ~54.0.35), expo-font@14.0.11 (expected ~14.0.12), expo-router@6.0.23 (expected ~6.0.24). Carry-over from iterations 2/3/4 — still not fixed. Reference: /var/log/supervisor/expo.err.log. Not in scope this iteration (backend-only)."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_auth_iteration5.py",
+    "/app/test_reports/pytest/iteration5_results.xml"
+  ],
+  "action_items": [
+    "(none blocking) — All requested backend changes verified working: env-only URL lookup, no hardcoded fallback, device-fingerprint relaxation, MongoDB reset confirmed.",
+    "LOW (carry-over) — `cd /app/frontend && npx expo install expo expo-font expo-router` to align package versions.",
+    "INFO — Real Google OAuth happy-path (valid session_id → user create with trial_started_at=now → /auth/me returns trial_active=true) cannot be exercised in CI without a live Google account. Backend logs from real device confirm 200 OK on both /api/auth/google-session and /api/auth/me — main agent already validated this path. No further automation possible here."
+  ],
+  "critical_code_review_comments": [
+    "auth_routes.py:37 — EMERGENT_SESSION_URL = os.environ.get('EMERGENT_AUTH_SESSION_URL', '').strip(). The empty-string fallback means a missing env var would yield a relative-URL httpx call which would fail; this is intentional fail-fast behavior. Good.",
+    "auth_routes.py:207-238 — Device fingerprint anti-abuse now correctly checks BOTH (a) trial_done (now - prior_started >= 14d) and (b) prior_paid (active subscription with future expires_at). Blocked only if at least one of (a)/(b) is true. Matches the relaxed spec from the request. Good.",
+    "auth_routes.py:218 — `prior is not None and prior.get('email') != email` ensures the SAME email logging in on the same device is NEVER blocked (existing user path). Correct.",
+    "auth_routes.py:248 — `trial_started_at: now if not blocked else None` — when blocked, trial timer is NOT started (user can later switch to PIX). Good.",
+    "backend/.env:15 — EMERGENT_AUTH_SESSION_URL=https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data — present and reachable (verified via httpx logs returning 200 OK on real session_ids)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (17/17 pytest)", "frontend": "not tested (backend-only iteration)"},
+  "seed_data_creation": "None — fault-path tests only; no DB writes performed by tests.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 5 tests live in /app/backend/tests/test_auth_iteration5.py and cover (a) source-code hygiene (no hardcoded URL in auth_routes.py), (b) env-var presence in backend/.env, (c) MongoDB invariant (no is_blocked_device=True), (d) Google session fault paths, (e) regression of /api/auth/me, /api/auth/logout, /api/health, /api/, /api/parse-file, /api/subscription, /api/admin/login. Run with: `EXPO_BACKEND_URL=https://rota-facil-mobile.preview.emergentagent.com pytest backend/tests/test_auth_iteration5.py -v`. The MongoDB test directly queries via pymongo using MONGO_URL/DB_NAME from env. Iter 3/4 tests still hold.",
+  "rca_of_issue": "User's iteration-4 complaints: (1) trial showing as expired on first login — root cause: previous device-fingerprint anti-abuse logic blocked ANY second account on the same device, so even a brand-new email would receive trial_started_at=None and is_blocked_device=True. Reproduction (pre-fix): any Google account #2 on a device that had previously logged in → blocked. Fix verified: auth_routes.py:207-238 now only blocks when prior account on device has (consumed_trial) OR (active_paid_sub). (2) hardcoded URL request — root cause: auth_routes.py:37 previously had the URL as a fallback string literal. Fix verified: grep confirms `demobackend.emergentagent.com` no longer appears in auth_routes.py; URL is now read with empty-string fallback from EMERGENT_AUTH_SESSION_URL env var. Mitigation: existing wrongly-blocked users were reset (is_blocked_device=False, trial_started_at=now) — verified via Mongo query returning 0 blocked users."
+}

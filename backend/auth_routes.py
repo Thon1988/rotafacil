@@ -32,12 +32,9 @@ from pydantic import BaseModel, Field, EmailStr
 
 logger = logging.getLogger("auth")
 
-# Emergent's official OAuth session-data endpoint. Read from env so the same
-# code works in both preview and production without touching the file.
-EMERGENT_SESSION_URL = os.environ.get(
-    "EMERGENT_AUTH_SESSION_URL",
-    "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-)
+# Emergent's official OAuth session-data endpoint — read from env (no hardcoded
+# fallback). Set EMERGENT_AUTH_SESSION_URL in backend/.env.
+EMERGENT_SESSION_URL = os.environ.get("EMERGENT_AUTH_SESSION_URL", "").strip()
 SESSION_LIFETIME_DAYS = 7
 TRIAL_DAYS = 14
 
@@ -211,14 +208,34 @@ def register_auth_routes(api_router: APIRouter, db) -> None:
             # 3) NEW USER → device fingerprint anti-abuse check
             blocked = False
             if fp_hash:
-                # Has this device fingerprint already been registered with another email?
+                # Only block if the device has been used by a DIFFERENT email
+                # whose trial already EXPIRED (or has paid subscription). If
+                # the prior user is still in trial, we assume the same person
+                # is retrying with another Google account and grant the trial.
                 prior = await db.users.find_one(
                     {"device_fingerprint": fp_hash}, {"_id": 0}
                 )
-                if prior is not None:
-                    # The device already has an account. Block creating a fresh
-                    # trial. The user MUST use that previous account or pay PIX.
-                    blocked = True
+                if prior is not None and prior.get("email") != email:
+                    prior_started = _ensure_aware(prior.get("trial_started_at"))
+                    if prior_started:
+                        trial_done = (now - prior_started) >= timedelta(days=TRIAL_DAYS)
+                    else:
+                        trial_done = True
+                    # Also let it pass if the prior account paid PIX
+                    prior_paid = False
+                    try:
+                        psub = await db.subscriptions.find_one(
+                            {"user_id": prior["user_id"], "status": "active"},
+                            {"_id": 0, "expires_at": 1},
+                        )
+                        if psub:
+                            pexp = _ensure_aware(psub.get("expires_at"))
+                            if pexp and now < pexp:
+                                prior_paid = True
+                    except Exception:
+                        pass
+                    if trial_done or prior_paid:
+                        blocked = True
 
             # Create the user
             user = {
