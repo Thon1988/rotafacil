@@ -10,10 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.thonenterprise.rotamaisrapida"
+      "bundleIdentifier": "app.enterprise.rotamaisrapida"
     },
     "android": {
-      "package": "app.thonenterprise.rota_mais_rapida",
+      "package": "app.enterprise.rota_mais_rapida",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000"

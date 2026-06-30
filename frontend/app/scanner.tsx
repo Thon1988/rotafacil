@@ -41,6 +41,7 @@ export default function ScannerScreen() {
     color: string;
   } | null>(null);
   const [torch, setTorch] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState<"back" | "front">("back");
   const [lastScanned, setLastScanned] = useState<{
     sequence: number;
     code: string;
@@ -366,8 +367,8 @@ export default function ScannerScreen() {
     <View style={styles.container} testID="scanner-screen">
       <CameraView
         style={StyleSheet.absoluteFillObject}
-        facing="back"
-        enableTorch={torch}
+        facing={cameraFacing}
+        enableTorch={cameraFacing === "back" && torch}
         barcodeScannerSettings={{
           barcodeTypes: [
             "code128",
@@ -406,6 +407,16 @@ export default function ScannerScreen() {
             <View style={styles.topRightGroup}>
               <TouchableOpacity
                 style={styles.iconBtn}
+                onPress={() =>
+                  setCameraFacing((f) => (f === "back" ? "front" : "back"))
+                }
+                testID="camera-flip-button"
+                accessibilityLabel="Trocar câmera"
+              >
+                <Ionicons name="camera-reverse" size={22} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.iconBtn}
                 onPress={() => {
                   Speech.stop();
                   setManualCode("");
@@ -417,14 +428,18 @@ export default function ScannerScreen() {
                 <Ionicons name="create-outline" size={22} color="#fff" />
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.iconBtn}
+                style={[
+                  styles.iconBtn,
+                  cameraFacing === "front" && styles.iconBtnDisabled,
+                ]}
                 onPress={() => setTorch((t) => !t)}
+                disabled={cameraFacing === "front"}
                 testID="torch-toggle-button"
               >
                 <Ionicons
                   name={torch ? "flashlight" : "flashlight-outline"}
                   size={22}
-                  color="#fff"
+                  color={cameraFacing === "front" ? "#666" : "#fff"}
                 />
               </TouchableOpacity>
             </View>
@@ -678,6 +693,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  iconBtnDisabled: { opacity: 0.4 },
   counterPill: {
     flexDirection: "row",
     alignItems: "center",
