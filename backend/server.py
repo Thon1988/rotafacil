@@ -19,6 +19,7 @@ from datetime import datetime, timezone, timedelta
 import crcmod.predefined
 import pandas as pd
 import requests
+import httpx
 from pypdf import PdfReader
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -202,6 +203,35 @@ NOISE_PATTERNS = [
 ]
 
 
+def _expand_address_abbrev(text: str) -> str:
+    """Expand common Brazilian address abbreviations before geocoding.
+    Uses word-boundary regexes so we don't mangle words like 'Trav' inside
+    'Travessia' — the trailing '\b' plus a following space keeps replacements safe.
+    """
+    substitutions = [
+        (r"\bAv\.?\s+", "Avenida "),
+        (r"\bAvda\.?\s+", "Avenida "),
+        (r"\bR\.?\s+", "Rua "),
+        (r"\bRUA\s+", "Rua "),
+        (r"\bAl\.?\s+", "Alameda "),
+        (r"\bTrav\.?\s+", "Travessa "),
+        (r"\bTv\.?\s+", "Travessa "),
+        (r"\bPça\.?\s+", "Praça "),
+        (r"\bPca\.?\s+", "Praça "),
+        (r"\bDr\.?\s+", "Doutor "),
+        (r"\bDra\.?\s+", "Doutora "),
+        (r"\bProf\.?\s+", "Professor "),
+        (r"\bProfa\.?\s+", "Professora "),
+        (r"\bEng\.?\s+", "Engenheiro "),
+        (r"\bCel\.?\s+", "Coronel "),
+        (r"\bMal\.?\s+", "Marechal "),
+        (r"\bJd\.?\s+", "Jardim "),
+    ]
+    for pat, repl in substitutions:
+        text = re.sub(pat, repl, text, flags=re.IGNORECASE)
+    return text
+
+
 def clean_address(raw: str) -> str:
     """Clean noisy address text from Circuit-style PDFs.
     Strategy: the Circuit PDF row usually has the street name TWICE
@@ -221,6 +251,9 @@ def clean_address(raw: str) -> str:
 
     # Normalize whitespace and punctuation
     text = re.sub(r"\s+", " ", text).strip(" ,.-;")
+
+    # Expand abbreviations (R -> Rua, Av -> Avenida, ...) for better geocoding
+    text = _expand_address_abbrev(text)
 
     # Truncate at clearly unrelated content
     if len(text) > 160:
@@ -533,6 +566,56 @@ def generate_pix_brcode(pix_key: str, amount: float, merchant_name: str, merchan
     return payload + crc16.hexdigest().upper()
 
 
+async def geocode_google(address: str) -> Optional[dict]:
+    """Primary geocoder: Google Maps Geocoding API.
+    Uses region=br, components=country:BR, language=pt-BR for Brazilian bias.
+    Accepts ONLY results with location_type in {ROOFTOP, RANGE_INTERPOLATED,
+    GEOMETRIC_CENTER} — rejects APPROXIMATE (city/state-level) matches.
+    """
+    api_key = (os.environ.get("GOOGLE_MAPS_API_KEY") or "").strip()
+    if not api_key:
+        return None
+    accepted_types = {"ROOFTOP", "RANGE_INTERPOLATED", "GEOMETRIC_CENTER"}
+    try:
+        url = "https://maps.googleapis.com/maps/api/geocode/json"
+        params = {
+            "address": address,
+            "key": api_key,
+            "region": "br",
+            "components": "country:BR",
+            "language": "pt-BR",
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(url, params=params)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        if data.get("status") != "OK" or not data.get("results"):
+            return None
+        for res in data["results"]:
+            geom = res.get("geometry", {}) or {}
+            loc_type = geom.get("location_type")
+            if loc_type not in accepted_types:
+                continue
+            loc = geom.get("location", {}) or {}
+            lat = loc.get("lat")
+            lon = loc.get("lng")
+            if lat is None or lon is None:
+                continue
+            return {
+                "lat": float(lat),
+                "lon": float(lon),
+                "display_name": res.get("formatted_address", ""),
+                "found": True,
+                "provider": "google",
+                "location_type": loc_type,
+            }
+        return None
+    except Exception as e:
+        logging.warning(f"Google geocode failed for '{address[:60]}…': {e}")
+        return None
+
+
 async def geocode_mapbox(address: str) -> Optional[dict]:
     """Primary geocoder: Mapbox v5. 100k free requests/month.
     Returns None if no token configured or if call fails — falls through to Nominatim/Photon."""
@@ -565,6 +648,11 @@ async def geocode_mapbox(address: str) -> Optional[dict]:
         if not feats:
             return None
         f = feats[0]
+        # Reject low-confidence Mapbox matches (< 0.75) — usually neighborhood-only
+        # or POI matches that Google couldn't resolve either.
+        relevance = f.get("relevance", 0)
+        if relevance < 0.75:
+            return None
         center = f.get("center", [])
         if len(center) < 2:
             return None
@@ -637,8 +725,17 @@ async def geocode_photon(address: str) -> Optional[dict]:
 
 
 async def geocode_nominatim(address: str) -> dict:
-    """Geocode pipeline: Mapbox (primary, paid-tier-free) → Nominatim → Photon."""
-    # Attempt 0: Mapbox if token configured (best quality for BR addresses)
+    """Geocode pipeline: Google (primary) → Mapbox → Nominatim → Photon.
+
+    Function name kept for backwards-compat with existing call sites; the
+    'nominatim' portion is now the LAST fallback, not the first.
+    """
+    # Attempt 0: Google (best quality for BR addresses; strict location_type filter)
+    r = await geocode_google(address)
+    if r:
+        return r
+
+    # Attempt 1: Mapbox (relevance >= 0.75 enforced inside geocode_mapbox)
     r = await geocode_mapbox(address)
     if r:
         return r
@@ -861,9 +958,12 @@ async def geocode(req: GeocodeRequest):
 
 @api_router.post("/geocode-batch")
 async def geocode_batch(payload: dict):
-    """Geocode multiple addresses with low concurrency + caching to avoid Nominatim rate limits."""
+    """Geocode multiple addresses with moderate concurrency + caching.
+    Google supports much higher concurrency than Nominatim, so we bump the
+    Semaphore to 5 and lower the polite-pause between calls to 100ms.
+    """
     addresses: List[str] = payload.get("addresses", [])
-    semaphore = asyncio.Semaphore(2)  # gentle on Nominatim
+    semaphore = asyncio.Semaphore(5)  # Google-tier concurrency
     cache: dict = {}
 
     async def bounded(addr: str):
@@ -872,8 +972,8 @@ async def geocode_batch(payload: dict):
         async with semaphore:
             r = await geocode_nominatim(addr)
             cache[addr] = r
-            # Brief pause between calls to be polite
-            await asyncio.sleep(0.4)
+            # Brief pause between calls to be polite (Google-tier)
+            await asyncio.sleep(0.1)
             return r
 
     results = await asyncio.gather(*[bounded(a) for a in addresses])

@@ -45,12 +45,21 @@ export default function UploadScreen() {
       });
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
-      await processStops(() =>
-        parseFile({
-          uri: asset.uri,
-          name: asset.name || "arquivo",
-          type: asset.mimeType || "application/octet-stream",
-        })
+      const name = (asset.name || "").toLowerCase();
+      const mime = (asset.mimeType || "").toLowerCase();
+      // PDF from Circuit → preserve the exact sequence and go straight to scanner.
+      // Anything else (Excel, CSV, TXT) → go to the map/route screen so the
+      // driver can hit "Otimizar Rota" before scanning.
+      const isPdf =
+        name.endsWith(".pdf") || mime === "application/pdf";
+      await processStops(
+        () =>
+          parseFile({
+            uri: asset.uri,
+            name: asset.name || "arquivo",
+            type: asset.mimeType || "application/octet-stream",
+          }),
+        { preserveOrder: isPdf }
       );
     } catch {
       Alert.alert("Erro", "Falha ao ler o arquivo.");
@@ -62,10 +71,14 @@ export default function UploadScreen() {
       Alert.alert("Atenção", "Cole ao menos um código + endereço.");
       return;
     }
-    await processStops(() => parseText(manualText));
+    // Manual paste → user pasted their own order, let them optimize on the map
+    await processStops(() => parseText(manualText), { preserveOrder: false });
   };
 
-  const processStops = async (fetcher: () => Promise<{ stops: Stop[]; total: number }>) => {
+  const processStops = async (
+    fetcher: () => Promise<{ stops: Stop[]; total: number }>,
+    opts: { preserveOrder: boolean } = { preserveOrder: true }
+  ) => {
     try {
       setLoading(true);
       setLoadingStep("Lendo arquivo...");
@@ -80,16 +93,22 @@ export default function UploadScreen() {
         return;
       }
 
-      // Circuit mode is always-on after the pivot: preserve PDF order.
-      await storage.setItem(CIRCUIT_KEY, "1");
+      // Circuit mode ON = preserve incoming order (PDF from Circuit).
+      // OFF = allow optimization (Excel/CSV/manual).
+      await storage.setItem(CIRCUIT_KEY, opts.preserveOrder ? "1" : "0");
 
       // Save stops IMMEDIATELY without waiting for geocoding.
       // Background geocoding will fill in lat/lon on the route screen.
       const initial = stops.map((s) => ({ ...s, lat: null, lon: null }));
       await saveRoute(initial);
 
-      setLoadingStep("Abrindo scanner...");
-      router.replace("/scanner");
+      if (opts.preserveOrder) {
+        setLoadingStep("Abrindo scanner...");
+        router.replace("/scanner");
+      } else {
+        setLoadingStep("Abrindo mapa...");
+        router.replace("/route");
+      }
     } catch (e) {
       console.log("Process error:", e);
       Alert.alert("Erro", "Não foi possível processar a rota.");
@@ -137,10 +156,10 @@ export default function UploadScreen() {
           <View style={styles.circuitCard} testID="circuit-mode-card">
             <Ionicons name="checkmark-circle" size={22} color={COLORS.primary} />
             <View style={styles.circuitTextWrap}>
-              <Text style={styles.circuitTitle}>🎯 Ordem do Circuit preservada</Text>
+              <Text style={styles.circuitTitle}>🎯 PDF do Circuit vs. Excel</Text>
               <Text style={styles.circuitDesc}>
-                O app mantém exatamente a sequência do PDF do Circuit. Ao bipar
-                um pacote, ele fala &quot;Parada N&quot; para você.
+                PDF do Circuit: mantemos a sequência original (o app fala &quot;Parada N&quot; ao bipar).{"\n"}
+                Excel/CSV/manual: o mapa abre com o botão <Text style={{ fontWeight: "800" }}>Otimizar Rota</Text> (Google Maps).
               </Text>
             </View>
           </View>
@@ -199,17 +218,9 @@ export default function UploadScreen() {
           <View style={styles.helpCard}>
             <Ionicons name="scan" size={20} color={COLORS.primary} />
             <Text style={styles.helpText}>
-              Após processar o PDF do Circuit, o <Text style={{ fontWeight: "800" }}>Scanner</Text> abre
-              automaticamente. Bipe cada pacote e o app vai falar o número da
-              parada (ex: &quot;Parada 10&quot;).
-            </Text>
-          </View>
-
-          <View style={[styles.helpCard, { borderColor: COLORS.primary }]}> 
-            <Ionicons name="lock-closed" size={20} color={COLORS.primary} />
-            <Text style={styles.helpText}>
-              <Text style={{ fontWeight: "800" }}>Mapa, otimização de rota e edição de local</Text> serão
-              liberados em breve. Por enquanto, foque em bipar e entregar.
+              PDF do Circuit → o <Text style={{ fontWeight: "800" }}>Scanner</Text> abre direto
+              (mantém a ordem). Excel/CSV/manual → o <Text style={{ fontWeight: "800" }}>Mapa</Text> abre
+              com o botão de otimização.
             </Text>
           </View>
         </ScrollView>

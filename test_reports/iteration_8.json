@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 8 — Backend geocoding overhaul verified (10/10 pytest PASS in 2.29s). (1) All 5 abbreviated SP addresses (Avenida Paulista 1578, R Augusta 500, Al Santos 100, Trav Padre Manoel de Nóbrega 50, Praça da Sé) resolved via provider='google' with location_type ∈ {ROOFTOP, RANGE_INTERPOLATED, GEOMETRIC_CENTER} and coords inside São Paulo state bounds. (2) 'Brasil' country-level query is correctly rejected by geocode_google (APPROXIMATE filter) — POST returned either fallback provider or found=false; test verified provider != 'google'. (3) 10-address batch completed in <4.5s (Semaphore=5 + sleep=0.1) — verified numerically AND by static inspection at server.py:966 (Semaphore(5)) and :976 (asyncio.sleep(0.1)). Old values (Semaphore(2)/sleep(0.4)) confirmed absent. NOTE: contract mentioned lines 866/876, actual location is 966/976 — no functional difference. (4) _expand_address_abbrev() defined at server.py:206, contains all 6 required substitutions (R→Rua, Av→Avenida, Al→Alameda, Trav→Travessa, Dr→Doutor, Prof→Professor) plus bonuses (Avda, Tv, Pça/Pca, Dra, Profa, Eng, Cel, Mal, Jd). Called from clean_address() at line 256, BEFORE the ', São Paulo, SP' city-context append at line 263 — verified with index ordering assertion. (5) geocode_nominatim() pipeline order confirmed: geocode_google() (line 734) → geocode_mapbox() (line 739, with relevance<0.75 rejection at line 654) → try_nominatim() (line 771) → geocode_photon() (line 786). (6) Regression /api/optimize with 4 SP stops (schema uses fields id:int, codigo, endereco, lat, lon) returned 200. (7) Regression /api/parse-file without file returned 422. FRONTEND STATIC CHECK (upload.tsx): isPdf = name.endsWith('.pdf') || mime === 'application/pdf' at line 53-54; processStops called with {preserveOrder: isPdf} at line 62; manual path uses {preserveOrder: false} at line 75; CIRCUIT_KEY = 'rota_circuit_mode' set to '1' or '0' via storage.setItem at line 98; router.replace('/scanner') for preserveOrder=true at line 107, router.replace('/route') otherwise at line 110. All branch logic matches spec. MINOR OBSERVATION: geocode_mapbox/geocode_photon/try_nominatim return dicts WITHOUT a 'provider' key — only geocode_google sets provider='google'. Not blocking (test only asserts provider=='google' for the 5-address happy path, and provider!='google' for the Brasil rejection), but future maintenance would benefit from all providers tagging their output.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/geocode-batch", "issue": "geocode_mapbox() / geocode_photon() / try_nominatim() return payloads do not include a 'provider' key — only geocode_google() sets provider='google'. Downstream code cannot tell which fallback served a result. Consider adding provider='mapbox'/'nominatim'/'photon' in each fallback return."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Expo SDK version drift", "issue": "expo@54.0.34 (expected ~54.0.35), expo-font@14.0.11 (expected ~14.0.12), expo-router@6.0.23 (expected ~6.0.24). Carry-over from iterations 2-7, non-blocking. Reference: /var/log/supervisor/expo.err.log."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_geocode_overhaul_iteration8.py",
+    "/app/test_reports/pytest/iteration8_results.xml"
+  ],
+  "action_items": [
+    "(none blocking) — All 7 checklist items pass. Main agent may proceed.",
+    "LOW — Tag Mapbox/Nominatim/Photon return dicts with provider='mapbox'|'nominatim'|'photon' for observability parity with geocode_google.",
+    "LOW (carry-over) — align Expo package versions: cd /app/frontend && npx expo install expo expo-font expo-router."
+  ],
+  "critical_code_review_comments": [
+    "server.py:569-616 — geocode_google() correctly uses region=br, components=country:BR, language=pt-BR and filters location_type ∈ {ROOFTOP, RANGE_INTERPOLATED, GEOMETRIC_CENTER}. Returns provider='google' + location_type in payload. Iterates all results, not just first, to skip APPROXIMATE matches — good.",
+    "server.py:619-671 — geocode_mapbox() enforces relevance>=0.75 (line 654) and applies São Paulo bbox + proximity + 0.7-degree distance safety check. Good defence-in-depth.",
+    "server.py:727-796 — geocode_nominatim() pipeline order matches spec: Google → Mapbox → Nominatim (full) → Nominatim (simplified) → Photon (full) → Photon (simplified). The 0.3s sleep between two Nominatim attempts is polite.",
+    "server.py:206-232 — _expand_address_abbrev() uses IGNORECASE regexes with \\b word-boundary + trailing \\s+ to avoid mangling 'Travessia', 'Ruay', etc. Good.",
+    "server.py:960-980 — geocode_batch() Semaphore(5) + sleep(0.1) — 10-address batch resolved in ~1s in practice (verified). Cache dict prevents duplicate lookups within a single request.",
+    "server.py:661 — Mapbox result rejected if abs(lat + 23.55) > 0.7 or abs(lon + 46.63) > 0.7. This is ~78km — reasonable for SP metro but would reject legitimate SP state addresses far from the capital (e.g., Campinas at ~90km). Not in scope but flagging for future.",
+    "upload.tsx:50-63 — Elegant PDF-vs-Excel branching using both filename extension AND MIME type as a defence against wrong mime detection. Correct.",
+    "upload.tsx:98 — CIRCUIT_KEY storage set BEFORE saveRoute — good ordering; scanner reads it on mount without race.",
+    "upload.tsx:74-75 — Manual paste path explicitly passes {preserveOrder: false} so it goes to /route — consistent with 'user pasted their own order, let them optimize on the map' comment."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (10/10 pytest)", "frontend": "100% (static inspection of upload.tsx branch logic)"},
+  "seed_data_creation": "None — read-only verification against live Google Geocoding API and static source inspection.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 8 test: /app/backend/tests/test_geocode_overhaul_iteration8.py — 10 tests covering geocode_google 5-address happy path, APPROXIMATE rejection, batch concurrency latency, static verification of _expand_address_abbrev / pipeline order / Semaphore=5+sleep=0.1, plus /api/optimize and /api/parse-file regressions. /api/optimize schema uses Portuguese field names: id (int), codigo (str), endereco (str), lat, lon — noted for future tests. Frontend upload.tsx branch logic verified from source; end-to-end file-upload flow not tested (requires authenticated session + real PDF/XLSX asset, out of scope per iteration-8 instructions).",
+  "rca_of_issue": "N/A — feature verification, no bugs found. Historical context: prior geocoding pipeline started with Mapbox, which produced low-quality matches for Brazilian addresses with abbreviations (R, Av, Al, Trav). Iteration 8 pivots to Google-first with strict location_type filtering + abbrev expansion in clean_address(), and bumps concurrency to Google's higher rate limit. All 5 problematic abbreviated test addresses now resolve via Google in <1s each."
+}

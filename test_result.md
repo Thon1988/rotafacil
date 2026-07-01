@@ -227,11 +227,91 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: >-
-      Please test backend endpoints /api/optimize and /api/optimize-google with
-      3-6 real São Paulo addresses (mix of lat/lon provided and geocode-only).
-      Verify: (a) response 200, (b) used_google=true when applicable in
-      /api/optimize-google, (c) /api/optimize returns metrics using Google's
-      distance/duration when Google succeeds, (d) fallback to nearest-neighbor
-      when Google key missing/invalid. Also test frontend by loading a fresh
-      dev-session, uploading a Circuit PDF, then tapping 'Mapa' from landing —
-      route screen should render and 'Otimizar Rota' should apply Google order.
+      Iteration 8 — geocoding overhaul + upload flow split.
+      Backend: added geocode_google() (region=br, components=country:BR,
+      language=pt-BR, accepts only ROOFTOP/RANGE_INTERPOLATED/GEOMETRIC_CENTER),
+      chained it first in geocode_nominatim() (Google → Mapbox with
+      relevance≥0.75 → Nominatim → Photon), bumped geocode_batch Semaphore
+      2→5 and sleep 0.4→0.1, and expanded address abbreviations in
+      clean_address() (R→Rua, Av→Avenida, Al→Alameda, Trav→Travessa,
+      Dr→Doutor, Prof→Professor, plus Pça, Eng, Cel, Mal, Jd, Dra, Profa).
+      Please test /api/geocode-batch with mixed abbreviated addresses to
+      confirm Google is used first and all 5 return found=true with
+      provider="google". Also confirm no regression on /api/optimize.
+
+      Frontend: upload.tsx now branches on file extension. PDF → /scanner
+      (Circuit order preserved). XLSX/XLS/CSV/TXT/manual → /route (which
+      renders the map with the existing "Otimizar Rota" button so the driver
+      can optimize via Google Maps before scanning). Frontend testing not
+      required unless bundle fails to load.
+
+frontend_tasks_iteration_8:
+  - task: "Route Excel/CSV uploads to /route (map with Otimizar Rota), PDF to /scanner"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/upload.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >-
+          Added isPdf detection via extension/mime. processStops now accepts
+          {preserveOrder} option. PDF path saves CIRCUIT_KEY=1 and routes to
+          /scanner; Excel/CSV/manual path saves CIRCUIT_KEY=0 and routes to
+          /route where the existing "Otimizar Rota" button is prominent.
+
+backend_tasks_iteration_8:
+  - task: "geocode_google() primary geocoder"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >-
+          New async function calling maps.googleapis.com/maps/api/geocode/json
+          with region=br, components=country:BR, language=pt-BR. Filters to
+          location_type ∈ {ROOFTOP, RANGE_INTERPOLATED, GEOMETRIC_CENTER}.
+  - task: "Chain Google → Mapbox (relevance≥0.75) → Nominatim → Photon"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >-
+          geocode_nominatim() now tries Google first, then Mapbox (relevance
+          check inside geocode_mapbox), then Nominatim, then Photon. Manual
+          curl confirmed all 5 test addresses returned provider="google".
+  - task: "geocode_batch Semaphore 2→5, sleep 0.4→0.1"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+  - task: "clean_address abbreviation expansion"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >-
+          Added _expand_address_abbrev() with R/Av/Al/Trav/Dr/Prof plus common
+          variants (Pça, Eng, Cel, Mal, Jd, Dra, Profa). Called from
+          clean_address() before city-context enrichment.
