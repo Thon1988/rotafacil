@@ -46,14 +46,6 @@ export default function Index() {
     }, [refresh, refreshRoute])
   );
 
-  const showComingSoon = (feature: string) => {
-    Alert.alert(
-      `${feature} — Em breve`,
-      "Esta funcionalidade está sendo finalizada e será liberada em uma próxima atualização.",
-      [{ text: "Ok" }]
-    );
-  };
-
   const confirmSignOut = () => {
     Alert.alert("Sair", "Deseja sair da sua conta?", [
       { text: "Cancelar", style: "cancel" },
@@ -144,8 +136,8 @@ export default function Index() {
       <View style={styles.featuresGrid}>
         <FeatureCard icon="document-text" title="PDF Circuit" desc="Ordem preservada" />
         <FeatureCard icon="scan" title="Scanner" desc="Bipe e ouça a parada" />
-        <FeatureCard icon="map" title="Mapa" desc="Em breve" locked />
-        <FeatureCard icon="flash" title="Otimização" desc="Em breve" locked />
+        <FeatureCard icon="map" title="Mapa" desc="Visualize paradas" />
+        <FeatureCard icon="flash" title="Otimização" desc="Google Maps TSP" />
       </View>
 
       <View style={styles.ctaSection}>
@@ -177,6 +169,16 @@ export default function Index() {
               {hasRoute && (
                 <TouchableOpacity
                   style={styles.secondaryButton}
+                  onPress={() => router.push("/route")}
+                  testID="landing-map-button"
+                >
+                  <Ionicons name="map" size={18} color={COLORS.textPrimary} />
+                  <Text style={styles.secondaryButtonText}>Mapa</Text>
+                </TouchableOpacity>
+              )}
+              {hasRoute && (
+                <TouchableOpacity
+                  style={styles.secondaryButton}
                   onPress={() => router.push("/upload")}
                   testID="landing-new-route-button"
                 >
@@ -185,11 +187,11 @@ export default function Index() {
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                style={[styles.secondaryButton, styles.lockedSecondary]}
-                onPress={() => showComingSoon("Histórico")}
-                testID="landing-history-locked"
+                style={styles.secondaryButton}
+                onPress={() => router.push("/history")}
+                testID="landing-history-button"
               >
-                <Ionicons name="lock-closed" size={16} color={COLORS.textSecondary} />
+                <Ionicons name="time-outline" size={18} color={COLORS.textPrimary} />
                 <Text style={styles.secondaryButtonText}>Histórico</Text>
               </TouchableOpacity>
             </View>

@@ -101,3 +101,101 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: |
+  Integrate Google Maps API as the "smart layer" backing route optimization (TSP)
+  in the Rota+Rápida app, and unlock all previously-locked "Em breve" map/routing
+  features on the landing screen. Provide deep links (Waze/Google Maps) for
+  navigation from the scanner.
+
+backend:
+  - task: "Google Maps TSP integration inside /api/optimize"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py, /app/backend/optimize_routes.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: >-
+          Added reorder_with_google() helper in optimize_routes.py using Google
+          Directions API with waypoints=optimize:true. Refactored /api/optimize
+          in server.py to call reorder_with_google first; falls back to
+          nearest-neighbor haversine heuristic if API fails or key missing.
+          Metrics now prefer Google's real-world distance_m/duration_s.
+          Manual curl test confirmed reorder + realistic metrics.
+  - task: "New /api/optimize-google endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/optimize_routes.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: Direct endpoint for Google Maps optimization (accepts stops with or without lat/lon; geocodes missing ones). Returns used_google flag.
+
+frontend:
+  - task: "Unlock Mapa/Otimização feature cards on landing"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/index.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: Removed 'Em breve' locked feature cards; unlocked Histórico secondary button; added new 'Mapa' secondary button navigating to /route when route exists.
+  - task: "Remove route.tsx PIVOT that redirected users to scanner"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/route.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: Removed router.replace('/scanner') pivot; route screen (map + optimize) now shows properly when opened with a loaded route.
+  - task: "Waze + Google Maps deep links in scanner"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/scanner.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: openWaze uses waze:// scheme with web fallback; openGoogleMaps uses maps.google.com. Both target the next pending stop.
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 6
+
+test_plan:
+  current_focus:
+    - "Google Maps TSP integration inside /api/optimize"
+    - "New /api/optimize-google endpoint"
+    - "Unlock Mapa/Otimização feature cards on landing"
+    - "Remove route.tsx PIVOT that redirected users to scanner"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: >-
+      Please test backend endpoints /api/optimize and /api/optimize-google with
+      3-6 real São Paulo addresses (mix of lat/lon provided and geocode-only).
+      Verify: (a) response 200, (b) used_google=true when applicable in
+      /api/optimize-google, (c) /api/optimize returns metrics using Google's
+      distance/duration when Google succeeds, (d) fallback to nearest-neighbor
+      when Google key missing/invalid. Also test frontend by loading a fresh
+      dev-session, uploading a Circuit PDF, then tapping 'Mapa' from landing —
+      route screen should render and 'Otimizar Rota' should apply Google order.

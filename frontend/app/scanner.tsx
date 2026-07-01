@@ -11,8 +11,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from "react-native";import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -276,6 +275,46 @@ export default function ScannerScreen() {
     router.replace("/upload");
   }, [router]);
 
+  // Deep link helpers: Google Maps and Waze for next pending stop
+  const nextPendingStop = useMemo(
+    () => stops.find((s) => s.status === "pendente"),
+    [stops]
+  );
+
+  const openGoogleMaps = useCallback(() => {
+    if (!nextPendingStop) return;
+    let url: string;
+    if (nextPendingStop.lat != null && nextPendingStop.lon != null) {
+      url = `https://www.google.com/maps/dir/?api=1&destination=${nextPendingStop.lat},${nextPendingStop.lon}&travelmode=driving`;
+    } else {
+      url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+        nextPendingStop.endereco
+      )}&travelmode=driving`;
+    }
+    Linking.openURL(url).catch((e) => console.log("openGoogleMaps err", e));
+  }, [nextPendingStop]);
+
+  const openWaze = useCallback(() => {
+    if (!nextPendingStop) return;
+    let wazeUrl: string;
+    if (nextPendingStop.lat != null && nextPendingStop.lon != null) {
+      wazeUrl = `waze://?ll=${nextPendingStop.lat},${nextPendingStop.lon}&navigate=yes`;
+    } else {
+      wazeUrl = `waze://?q=${encodeURIComponent(nextPendingStop.endereco)}&navigate=yes`;
+    }
+    Linking.canOpenURL(wazeUrl)
+      .then((ok) => {
+        if (ok) return Linking.openURL(wazeUrl);
+        // Fallback: browser Waze
+        const web =
+          nextPendingStop.lat != null && nextPendingStop.lon != null
+            ? `https://waze.com/ul?ll=${nextPendingStop.lat},${nextPendingStop.lon}&navigate=yes`
+            : `https://waze.com/ul?q=${encodeURIComponent(nextPendingStop.endereco)}&navigate=yes`;
+        return Linking.openURL(web);
+      })
+      .catch((e) => console.log("openWaze err", e));
+  }, [nextPendingStop]);
+
   // -------- Web fallback --------
   if (Platform.OS === "web") {
     return (
@@ -507,15 +546,36 @@ export default function ScannerScreen() {
               <Text style={styles.statValue}>{counts.total}</Text>
               <Text style={styles.statLabel}>Total</Text>
             </View>
-            <TouchableOpacity
-              style={styles.resetBtn}
-              onPress={resetRoute}
-              testID="reset-route-button"
-            >
-              <Ionicons name="refresh" size={18} color="#fff" />
-              <Text style={styles.resetBtnText}>Nova rota</Text>
-            </TouchableOpacity>
           </View>
+
+          {/* Navigation buttons */}
+          {nextPendingStop ? (
+            <View style={styles.navRow}>
+              <TouchableOpacity
+                style={[styles.navBtn, { backgroundColor: "#4285F4" }]}
+                onPress={openGoogleMaps}
+                testID="google-maps-button"
+              >
+                <Ionicons name="navigate" size={18} color="#fff" />
+                <Text style={styles.navBtnText}>Google Maps</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.navBtn, { backgroundColor: "#33CCFF" }]}
+                onPress={openWaze}
+                testID="waze-button"
+              >
+                <Ionicons name="car-sport" size={18} color="#fff" />
+                <Text style={styles.navBtnText}>Waze</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.resetBtn}
+                onPress={resetRoute}
+                testID="reset-route-button"
+              >
+                <Ionicons name="refresh" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </SafeAreaView>
       </View>
 
@@ -818,6 +878,22 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.18)",
   },
   resetBtnText: { color: "#fff", fontWeight: "800", fontSize: 12 },
+  navRow: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  navBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 13,
+    borderRadius: RADIUS.md,
+  },
+  navBtnText: { color: "#fff", fontWeight: "800", fontSize: 13 },
 
   permissionBox: {
     flex: 1,

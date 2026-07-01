@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 6 — Backend verification of the newly-unlocked Google-powered route optimization endpoints (POST /api/optimize-google and POST /api/optimize). 10/10 pytest PASS on public ingress (https://rota-facil-mobile.preview.emergentagent.com). Live Google Directions + Geocoding APIs exercised end-to-end using the configured GOOGLE_MAPS_API_KEY. Key evidence: /api/optimize-google with 5 São Paulo lat/lon stops → 200 used_google=true distance_m>0 duration_s>0 with all 5 codigos preserved; /api/optimize-google with only enderecos (no lat/lon) → auto-geocoded via Google Geocoding API and returned coords for ≥2 stops; /api/optimize with 5 SP stops → metrics.total_distance_km=21.94 km / driving_minutes=63.7 (matches Google-reported real-world route, strictly > raw haversine sum → NOT the pure haversine estimate); /api/optimize never returns 5xx (all-done stops, single pending, edge inputs all 200); done stops (status='entregue'/'falhou') preserved at the head of the returned list unchanged in order/codigo/endereco. Regressions: /api/auth/me correctly 401s without/with bogus bearer; /api/parse-file txt parse returns ≥2 stops with codigo+endereco. Backend logs confirm live Google API traffic (200 OK on maps.googleapis.com/directions and /geocode). Deprecated-package note: Expo SDK drift (expo/expo-font/expo-router) still carried over from iterations 2-5, not in scope this run.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Expo SDK version drift", "issue": "expo@54.0.34 (expected ~54.0.35), expo-font@14.0.11 (expected ~14.0.12), expo-router@6.0.23 (expected ~6.0.24). Carry-over from iterations 2/3/4/5 — still not aligned. Reference: /var/log/supervisor/expo.err.log. Not in scope this iteration (backend-only)."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_optimize_google_iteration6.py",
+    "/app/test_reports/pytest/iteration6_results.xml"
+  ],
+  "action_items": [
+    "(none blocking) — All 7 checklist items from the review request verified working.",
+    "LOW (carry-over) — `cd /app/frontend && npx expo install expo expo-font expo-router` to align package versions."
+  ],
+  "critical_code_review_comments": [
+    "server.py:895-981 (/api/optimize) — Correctly tries Google via optimize_routes.reorder_with_google FIRST, then falls back to nearest-neighbor haversine. When google_result present, metrics use google_dist_m/google_dur_s directly (real-world). Otherwise haversine * 1.3 * urban-speed formula. Verified live: metrics.total_distance_km=21.94km for 5 SP stops > haversine sum → clearly Google-driven.",
+    "server.py:924-932 — When Google returns <25 waypoints but caller supplied more, remaining pending stops beyond first 25 are appended at the tail. Correct handling of Google Directions 25-waypoint limit.",
+    "server.py:898,971-973 — Done stops (status != 'pendente') are separated up-front and re-prepended to `final = done + optimized`, then ids reassigned. Preserves user-facing history. Verified with mixed done/pending payload.",
+    "optimize_routes.py:38-105 (reorder_with_google) — Filters stops with valid lat/lon, respects 25-waypoint cap, correctly rebuilds ORIGINAL indices from Google's waypoint_order permutation, sums leg.distance/duration. Returns None on any failure so caller falls through to haversine. Safe.",
+    "optimize_routes.py:132-141 (_geocode) — Google Geocoding API used only when lat/lon missing (/api/optimize-google path). Best-effort: silently skips on failure so at least the coord-having subset is optimized.",
+    "optimize_routes.py:145-220 (/api/optimize-google) — Explicit endpoint. Returns used_google=false if fewer than 2 stops geocoded or Directions status != OK; never 500 except on missing api key (500 detail='google_maps_api_key_missing') — reasonable fail-fast.",
+    "SECURITY NOTE — GOOGLE_MAPS_API_KEY (AIzaSy…jf0qM) is embedded in /app/backend/.env (server-side only) and never exposed to the client bundle. Good. However this key is now visible in the review request text; recommend restricting the key in Google Cloud Console to (a) specific APIs (Directions + Geocoding only) and (b) HTTP referrer / server IP restrictions to prevent quota theft."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (10/10 pytest)", "frontend": "not tested (backend-only iteration per request)"},
+  "seed_data_creation": "None — all tests are read-only against Google APIs / stateless FastAPI endpoints.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 6 tests live in /app/backend/tests/test_optimize_google_iteration6.py. Run: `EXPO_BACKEND_URL=https://rota-facil-mobile.preview.emergentagent.com pytest backend/tests/test_optimize_google_iteration6.py -v`. Uses real Google Maps API (small cost per run: ~5 Directions + ~3 Geocoding calls). Prior iteration tests (2-5) still hold. Frontend Waze/Google Maps deep-link testing is out of scope for backend-only runs; verify manually in the app via Expo Go or web preview.",
+  "rca_of_issue": "N/A — no bug uncovered. The `/api/optimize` main endpoint now uses Google Directions for both ordering AND metric numbers when the API succeeds, and safely falls back to haversine when it doesn't. The 'Em breve' Mapa/Otimização feature is fully unlocked as requested. Frontend Waze/Google Maps deep-links (waze://?ll=… and comgooglemaps://?daddr=…) are pure client-side URI schemes and were correctly excluded from this backend-only test round."
+}

@@ -903,36 +903,68 @@ async def optimize_route(req: OptimizeRequest):
     # Start point: provided origin OR first pending stop
     if req.start_lat is not None and req.start_lon is not None:
         start = (req.start_lat, req.start_lon)
-        optimized: List[Stop] = []
-        remaining = list(pending)
+        origin_for_google = start
     else:
-        optimized = [pending[0]]
-        remaining = pending[1:]
         start = (pending[0].lat, pending[0].lon)
+        origin_for_google = None  # let Google use first stop as origin
 
-    while remaining:
-        last_lat, last_lon = (optimized[-1].lat, optimized[-1].lon) if optimized else start
-        nearest_idx = 0
-        min_d = float("inf")
-        for i, s in enumerate(remaining):
-            d = haversine_km(last_lat, last_lon, s.lat, s.lon)
-            if d < min_d:
-                min_d = d
-                nearest_idx = i
-        optimized.append(remaining.pop(nearest_idx))
+    optimized: List[Stop] = []
+    used_google = False
+    google_dist_m = 0
+    google_dur_s = 0
 
-    # Compute metrics
-    total_km = 0.0
-    prev = start
-    for s in optimized:
-        total_km += haversine_km(prev[0], prev[1], s.lat, s.lon)
-        prev = (s.lat, s.lon)
-    if req.return_to_start:
-        total_km += haversine_km(prev[0], prev[1], start[0], start[1])
+    # Try Google Maps optimization first (smart layer)
+    try:
+        from optimize_routes import reorder_with_google
+        google_result = await reorder_with_google(pending, origin=origin_for_google)
+    except Exception as e:
+        logger.warning(f"google optimize import/call failed: {e}")
+        google_result = None
 
-    # Real-world factor (~1.3 for urban driving vs straight line)
-    total_km *= 1.3
-    driving_min = (total_km / max(req.avg_speed_kmh, 1.0)) * 60.0
+    if google_result and google_result.get("order"):
+        order_indices = google_result["order"]
+        optimized = [pending[i] for i in order_indices]
+        # Any pending stops beyond first 25 (google limit) — append at tail
+        if len(pending) > len(optimized):
+            optimized.extend([s for i, s in enumerate(pending) if i not in order_indices])
+        used_google = True
+        google_dist_m = google_result.get("distance_m", 0)
+        google_dur_s = google_result.get("duration_s", 0)
+    else:
+        # Fallback: nearest-neighbor heuristic
+        if req.start_lat is not None and req.start_lon is not None:
+            remaining = list(pending)
+        else:
+            optimized = [pending[0]]
+            remaining = pending[1:]
+
+        while remaining:
+            last_lat, last_lon = (optimized[-1].lat, optimized[-1].lon) if optimized else start
+            nearest_idx = 0
+            min_d = float("inf")
+            for i, s in enumerate(remaining):
+                d = haversine_km(last_lat, last_lon, s.lat, s.lon)
+                if d < min_d:
+                    min_d = d
+                    nearest_idx = i
+            optimized.append(remaining.pop(nearest_idx))
+
+    # Compute metrics: prefer Google's real-world distance/duration, else haversine estimate
+    if used_google and google_dist_m > 0:
+        total_km = google_dist_m / 1000.0
+        driving_min = google_dur_s / 60.0
+    else:
+        total_km = 0.0
+        prev = start
+        for s in optimized:
+            total_km += haversine_km(prev[0], prev[1], s.lat, s.lon)
+            prev = (s.lat, s.lon)
+        if req.return_to_start:
+            total_km += haversine_km(prev[0], prev[1], start[0], start[1])
+        # Real-world factor (~1.3 for urban driving vs straight line)
+        total_km *= 1.3
+        driving_min = (total_km / max(req.avg_speed_kmh, 1.0)) * 60.0
+
     stops_min = len(optimized) * req.minutes_per_stop
     total_min = driving_min + stops_min
 
@@ -1320,6 +1352,10 @@ async def admin_stats(admin: dict = Depends(get_current_admin)):
 # =============== AUTH (Google + Trial + Device Fingerprint) ===============
 from auth_routes import register_auth_routes  # noqa: E402
 register_auth_routes(api_router, db)
+
+# =============== ROUTE OPTIMIZATION (Google Directions) ===============
+from optimize_routes import register_optimize_routes  # noqa: E402
+register_optimize_routes(api_router)
 
 
 # =============== MOUNT ===============

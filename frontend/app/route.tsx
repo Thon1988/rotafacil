@@ -53,13 +53,11 @@ export default function RouteScreen() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        // PIVOT: map/route screen is locked behind "Em breve". Send users
-        // directly to scanner when they have a route, or upload otherwise.
+        // If no route loaded yet, send user to upload screen.
+        // Otherwise render the map/route optimization view.
         const data = await loadRoute();
         if (data.length === 0) {
           router.replace("/upload");
-        } else {
-          router.replace("/scanner");
         }
       })();
     }, [router])
