@@ -49,20 +49,6 @@ export default function RouteScreen() {
   const [circuitMode, setCircuitMode] = useState(false);
   const lastStopTimeRef = useRef<number>(Date.now());
 
-  // Load stops on focus
-  useFocusEffect(
-    useCallback(() => {
-      (async () => {
-        // If no route loaded yet, send user to upload screen.
-        // Otherwise render the map/route optimization view.
-        const data = await loadRoute();
-        if (data.length === 0) {
-          router.replace("/upload");
-        }
-      })();
-    }, [router])
-  );
-
   const backgroundGeocode = useCallback(async (current: Stop[], indices: number[]) => {
     setGeoProgress({ done: 0, total: indices.length });
     try {
@@ -97,6 +83,33 @@ export default function RouteScreen() {
       setGeoProgress(null);
     }
   }, []);
+
+  // Load stops on focus
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      (async () => {
+        const data = await loadRoute();
+        if (!active) return;
+        if (data.length === 0) {
+          router.replace("/upload");
+          return;
+        }
+        setStops(data);
+        // Trigger background geocoding for any stop without coordinates so
+        // markers show up on the Google Maps view.
+        const missingIndices = data
+          .map((s, i) => (s.lat == null || s.lon == null ? i : -1))
+          .filter((i) => i >= 0);
+        if (missingIndices.length > 0) {
+          backgroundGeocode(data, missingIndices);
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, [router, backgroundGeocode])
+  );
 
   // Initial stops for map (snapshot). Live updates via postMessage.
   const initialStops = useMemo(() => stops, [stops.length === 0 ? 0 : 1]); // eslint-disable-line react-hooks/exhaustive-deps

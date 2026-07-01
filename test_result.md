@@ -167,11 +167,47 @@ frontend:
     file: "/app/frontend/app/scanner.tsx"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: openWaze uses waze:// scheme with web fallback; openGoogleMaps uses maps.google.com. Both target the next pending stop.
+  - task: "Replace Leaflet/OpenStreetMap with Google Maps JS API in route map"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/leaflet-map.ts, /app/frontend/.env"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >-
+          Rewrote src/components/leaflet-map.ts (name kept for import compatibility)
+          to load Google Maps JavaScript API via
+          https://maps.googleapis.com/maps/api/js?key=$EXPO_PUBLIC_GOOGLE_MAPS_API_KEY&callback=__initMap&language=pt-BR&region=BR&loading=async
+          instead of Leaflet. Markers use google.maps.Marker with an SVG data-URI icon
+          (numbered circle, colored by status). Polyline connects pending stops.
+          Dark styles applied. postMessage protocol preserved (update_stops, fly_to,
+          map_ready, stop_clicked). Added EXPO_PUBLIC_GOOGLE_MAPS_API_KEY to
+          /app/frontend/.env (same key as backend). Needs verification that map loads
+          in the WebView/iframe and markers render for stops with lat/lon.
+  - task: "Call backgroundGeocode from route.tsx useFocusEffect"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/route.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >-
+          useFocusEffect now loads the saved route, sets stops in state, then computes
+          missingIndices for any stop with null lat/lon and calls backgroundGeocode(data, missingIndices).
+          backgroundGeocode was moved above useFocusEffect to avoid TDZ. This should
+          make markers show up on the Google Maps view for parsed PDFs that arrive
+          without coordinates.
 
 metadata:
   created_by: "main_agent"
