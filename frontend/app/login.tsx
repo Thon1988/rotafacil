@@ -48,7 +48,7 @@ export default function LoginScreen() {
       <View style={styles.featuresGrid}>
         <Feature icon="document-text" title="Lê PDF do Circuit" />
         <Feature icon="scan" title="Scanner com voz" />
-        <Feature icon="checkmark-done" title="Sem precisar de mapa" />
+        <Feature icon="map" title="Mapa + Otimização" />
         <Feature icon="cash" title="R$ 20/mês após o trial" />
       </View>
 
