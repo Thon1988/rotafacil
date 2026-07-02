@@ -227,7 +227,125 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: >-
-      Iteration 8 — geocoding overhaul + upload flow split.
+      Iteration 9 — batched multi-fix.
+      BACKEND:
+      (1) Added _is_admin_place_reject() helper and applied it inside
+      try_nominatim() and geocode_photon() so results whose class/type/
+      addresstype indicate city, state, country, county, municipality,
+      administrative, province, region, town, village, suburb, or
+      neighbourhood are rejected. Nominatim now requests limit=3 with
+      addressdetails=1 and returns the first non-admin match.
+      (2) Added _COORD_PAIR_RE + _CEP_RE and helper _extract_coords_from_text
+      / _extract_cep_from_text. Both the row-based Circuit path and the
+      per-line fallback in extract_codes_and_addresses now scan the FULL
+      row/line for decimal coordinates within Brazilian bounds
+      (lat ∈ [-34, 5], lon ∈ [-74, -34]). If found → stop.lat/lon populated
+      inline and geocoding is skipped for that stop. If not, but a CEP is
+      present (\d{5}-?\d{3}), it's carried as _cep and parse_file /
+      parse_text resolve it via _resolve_cep_to_latlon() (ViaCEP →
+      geocode_nominatim) before returning stops.
+      (3) Added geocode_google_places() — Places Text Search API at
+      /maps/api/place/textsearch/json with query, key, region=br,
+      language=pt-BR, location=-23.5505,-46.6333, radius=50000. Prefers
+      results whose types contain street_address/premise/route.
+      (4) Updated geocode_nominatim() pipeline to:
+      geocode_google → geocode_google_places → geocode_mapbox
+      (relevance ≥ 0.75) → try_nominatim (with admin reject) →
+      geocode_photon (with admin reject).
+      FRONTEND:
+      (5) route.tsx — installed react-native-draggable-flatlist@4.0.3;
+      replaced FlatList with DraggableFlatList wrapped in
+      GestureHandlerRootView. Long-press or dedicated drag-handle triggers
+      reorder; handleDragEnd persists via saveRoute and disables
+      circuitMode. Added visible primary "Roteirizar" button at top of the
+      stops list (calls optimizeTSP, which no longer blocks on
+      circuitMode). Added "Reotimizar" (fixes first + last pending stops,
+      optionally inverts) and "Importar Circuit" (routes to /upload).
+      Menu also exposes "Reotimizar (fixar 1ª e última)". Manual paste
+      still preserveOrder=false; PDF preserveOrder=true.
+      (6) upload.tsx — line 102 now preserves backend-provided lat/lon
+      (from inline coords or CEP resolution) instead of overwriting with
+      null. Only stops WITHOUT coords get background-geocoded on the map
+      screen.
+      Please test the backend contracts (geocode_google_places
+      integration, admin rejection, inline coords + CEP parsing, /parse-
+      file end-to-end with mixed inputs). Frontend static verification for
+      route.tsx / upload.tsx changes acceptable. Report goes to
+      iteration_9.json.
+
+backend_tasks_iteration_9:
+  - task: "Admin-level rejection in Nominatim + Photon"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "Inline coord + CEP detection in extract_codes_and_addresses"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "CEP → lat/lon resolution in /parse-file and /parse-text"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "geocode_google_places() fallback"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "Updated geocode_nominatim pipeline order"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+
+frontend_tasks_iteration_9:
+  - task: "Prominent 'Roteirizar' primary button in route.tsx"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/route.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "Drag-and-drop stop reordering via DraggableFlatList"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/route.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "Reotimizar with fixed first/last (+ optional inversion)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/route.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "Remove Circuit lock from optimizeTSP"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/route.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "upload.tsx preserves backend-provided lat/lon"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/upload.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
       Backend: added geocode_google() (region=br, components=country:BR,
       language=pt-BR, accepts only ROOFTOP/RANGE_INTERPOLATED/GEOMETRIC_CENTER),
       chained it first in geocode_nominatim() (Google → Mapbox with

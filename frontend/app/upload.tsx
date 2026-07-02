@@ -98,8 +98,14 @@ export default function UploadScreen() {
       await storage.setItem(CIRCUIT_KEY, opts.preserveOrder ? "1" : "0");
 
       // Save stops IMMEDIATELY without waiting for geocoding.
-      // Background geocoding will fill in lat/lon on the route screen.
-      const initial = stops.map((s) => ({ ...s, lat: null, lon: null }));
+      // Preserve any lat/lon the backend already resolved (inline coords in
+      // the PDF/Excel or CEP → ViaCEP lookup). Only stops WITHOUT coords will
+      // be background-geocoded on the route screen.
+      const initial = stops.map((s) => ({
+        ...s,
+        lat: s.lat ?? null,
+        lon: s.lon ?? null,
+      }));
       await saveRoute(initial);
 
       if (opts.preserveOrder) {

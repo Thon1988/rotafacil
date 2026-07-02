@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 9 batched fix verification — 19/19 pytest PASS in 3.05s. (BACKEND #4) _is_admin_place_reject() defined at server.py:738, invoked inside try_nominatim() at line 911 AND inside geocode_photon() at line 794. Unit tests for {city,state,country,boundary} all reject; highway/residential correctly accepted. /api/geocode-batch on ['Brasil','São Paulo estado','América do Sul'] returned 200 with no nominatim/photon admin-level hit. (BACKEND #5) /api/parse-text with 3-line payload returned exactly 3 stops: stop 0 with inline coords (-23.5893, -46.6337), stop 1 CEP-resolved to SP bounds (-24.5<lat<-23.0, -47.5<lon<-46.0), stop 2 with lat=null/lon=null. Out-of-bounds coords (50.0, 100.0) correctly rejected — lat=null, lon=null. (BACKEND #7) geocode_google_places() defined at server.py:813 with correct signature, calls maps.googleapis.com/maps/api/place/textsearch/json with region=br, language=pt-BR, location='-23.5505,-46.6333', radius=50000. Preferred types = {street_address, premise, route}. Live call with 'Rua Augusta 500 Consolação São Paulo' returned provider='google_places' with lat<-23 and lon<-46. (BACKEND #8) Pipeline order in geocode_nominatim() verified: geocode_google (874) → geocode_google_places (879) → geocode_mapbox (884) → try_nominatim (928/938) → geocode_photon (976). (Regressions) /api/optimize with 4 SP stops returned 200 + metrics. /api/parse-file missing file → 422. /api/auth/me missing token → 401. FRONTEND STATIC: route.tsx has TouchableOpacity testID='roteirizar-button' at line 675 in primaryActionRow (not menu), label toggles 'Roteirizar' ↔ 'Roteirizando...' at line 683; optimizeTSP has NO 'Modo Circuit ativo' Alert; reoptimize(invertEndpoints:boolean) at line 228 validates pending>=3, swaps firstFixed/lastFixed when invertEndpoints=true, calls optimizeRoute with return_to_start=false for middle segment, combines done + firstFixed + orderedMiddle + lastFixed; showReoptimizeChoices at line 576 creates 3-button Alert (Cancelar, Manter sentido, Inverter); testID='reotimizar-button' at line 690. DraggableFlatList imported from 'react-native-draggable-flatlist' with ScaleDecorator (lines 15-18); GestureHandlerRootView wraps SafeAreaView at line 589; handleDragEnd at line 509; each row has testID='drag-handle-{index}' at line 541. upload.tsx line 106-107 preserves backend coords via `lat: s.lat ?? null, lon: s.lon ?? null`. FRONTEND SMOKE: https://rota-facil-mobile.preview.emergentagent.com loads cleanly on 375x667 mobile viewport, landing page renders 'Rota+Rápida App' hero + 4 feature cards + 'Entrar com Google' CTA + trial badge — no red screen, no Metro errors. One minor console deprecation warning: 'shadow*' style props deprecated, use 'boxShadow' — non-blocking. Carry-over Expo SDK drift (expo@54.0.34 vs ~54.0.35, expo-font@14.0.11 vs ~14.0.12, expo-router@6.0.23 vs ~6.0.24) still present, non-blocking.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Expo SDK version drift", "issue": "expo@54.0.34 (expected ~54.0.35), expo-font@14.0.11 (expected ~14.0.12), expo-router@6.0.23 (expected ~6.0.24). Carry-over from iterations 2-8, non-blocking. Reference: /var/log/supervisor/expo.err.log."},
+      {"component": "React Native Web deprecation", "issue": "Console warning: 'shadow*' style props are deprecated. Use 'boxShadow'. Non-blocking but should be migrated eventually. Reference: browser console on landing page."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration9.py",
+    "/app/test_reports/pytest/iteration9_results.xml"
+  ],
+  "action_items": [
+    "(none blocking) — All 11 checklist items pass. Main agent may proceed to demo/handoff.",
+    "LOW (carry-over) — align Expo package versions: cd /app/frontend && npx expo install expo expo-font expo-router.",
+    "LOW — migrate 'shadow*' RN style props to 'boxShadow' for react-native-web compat (silences console warning)."
+  ],
+  "critical_code_review_comments": [
+    "server.py:738-752 _is_admin_place_reject() checks class=='place' + type∈{city,state,country,county,municipality,administrative,province,region,town,village,suburb,neighbourhood} AND class∈{boundary} AND addresstype matching same set. Good defensive coverage.",
+    "server.py:911-912 try_nominatim() iterates results and skips admin-level entries via `continue` — correct short-circuit before assigning lat/lon.",
+    "server.py:794 geocode_photon() filters feats with list-comprehension `[f for f in feats if not _is_admin_place_reject(f.get('properties',{}))]` — clean and testable.",
+    "server.py:813-865 geocode_google_places() correctly uses httpx.AsyncClient + Text Search API with region/language/location/radius bias. Includes preferred_types picker for street_address/premise/route. Returns provider='google_places' + place_types for observability.",
+    "server.py:283-299 _extract_coords_from_text() enforces -34.0<=lat<=5.0 AND -74.0<=lon<=-34.0 which matches Brazilian mainland bounds. Also supports lon-first order via _COORD_PAIR_ALT_RE — good.",
+    "server.py:1087-1122 _resolve_cep_to_latlon() delegates to geocode_nominatim() which now uses the full 5-stage pipeline — so a CEP that resolves via ViaCEP to a logradouro/bairro/localidade string gets the best-available provider. Solid.",
+    "route.tsx:521-574 renderStopItem uses ScaleDecorator + separate drag handle (testID='drag-handle-{index}') with onPressIn={drag}. Long-press on the row also triggers drag (line 533). Two independent activation paths is good UX.",
+    "route.tsx:228-297 reoptimize() correctly picks firstFixed/lastFixed with swap on invert, filters middle by id!=first/last, calls optimizeRoute with start_lat/start_lon=firstFixed and return_to_start=false. Combines done+firstFixed+orderedMiddle+lastFixed with re-indexed ids — matches spec.",
+    "route.tsx:509-519 handleDragEnd preserves done-first ordering (done stops stay pinned at top), re-numbers ids after drag, and turns OFF Circuit lock — matches product requirement 'user manually reordered → allow optimization'.",
+    "upload.tsx:104-108 map spreads `...s` then explicitly re-nulls lat/lon with `s.lat ?? null, s.lon ?? null` — nullish coalescing preserves backend-provided coords AND normalizes undefined→null for storage. Correct."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (19/19 pytest)", "frontend": "100% (static inspection + smoke render)"},
+  "seed_data_creation": "None — read-only tests against live backend + Google Places API.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 9 test file: /app/backend/tests/test_iteration9.py — 19 tests: 3 static admin-reject inspections, 5 admin-reject unit tests, 1 admin-only batch integration, 2 parse-text (inline coords + bounds guard), 4 geocode_google_places (definition/endpoint/types/live call), 1 pipeline order regex-based check, 3 regressions (optimize/parse-file/auth-me). Live tests require: (a) backend running on EXPO_PUBLIC_BACKEND_URL, (b) GOOGLE_MAPS_API_KEY in backend/.env, (c) ViaCEP + Google reachable. Frontend UI-level Playwright tests for drag-and-drop / Roteirizar tap / Reotimizar alert flow were NOT run because they require an authenticated session (Google OAuth) and a route with 3+ stops — this requires auth harness the main agent has not yet built. Static inspection of the relevant route.tsx code paths was thorough. Next testing pass could stub localStorage `rota:token` + `rota:stops` if the main agent adds a dev-login flag.",
+  "rca_of_issue": "N/A — all 11 checklist items verified. No RCA needed."
+}

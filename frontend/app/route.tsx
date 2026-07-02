@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   ActivityIndicator,
-  FlatList,
   Linking,
   Modal,
   Platform,
@@ -13,7 +12,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import DraggableFlatList, {
+  RenderItemParams,
+  ScaleDecorator,
+} from "react-native-draggable-flatlist";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -179,13 +183,6 @@ export default function RouteScreen() {
 
   const optimizeTSP = async () => {
     setMenuOpen(false);
-    if (circuitMode) {
-      Alert.alert(
-        "Modo Circuit ativo",
-        "A ordem da rota já está mantida do PDF. Para reotimizar, desative o modo Circuit na tela de upload.",
-      );
-      return;
-    }
     if (stops.filter((s) => s.status === "pendente").length <= 1) {
       Alert.alert("Atenção", "Quantidade de paradas pendentes insuficiente.");
       return;
@@ -209,6 +206,10 @@ export default function RouteScreen() {
       setStops(optimized);
       await saveRoute(optimized);
       setMetrics(m);
+      // Disable "Circuit lock" once user explicitly reorders — the driver
+      // has chosen to optimize over the imported sequence.
+      setCircuitMode(false);
+      await storage.setItem("rota:circuit_mode", "0");
       if (m) {
         const h = Math.floor(m.estimated_minutes / 60);
         const min = Math.round(m.estimated_minutes % 60);
@@ -217,6 +218,79 @@ export default function RouteScreen() {
       }
     } catch {
       Alert.alert("Erro", "Falha ao otimizar a rota.");
+    } finally {
+      setOptimizing(false);
+    }
+  };
+
+  // Reoptimize while keeping the FIRST and LAST pending stop fixed.
+  // Optionally invert the direction (swap first↔last before locking).
+  const reoptimize = async (invertEndpoints: boolean = false) => {
+    setMenuOpen(false);
+    const pending = stops.filter((s) => s.status === "pendente");
+    const done = stops.filter((s) => s.status !== "pendente");
+    if (pending.length < 3) {
+      Alert.alert("Atenção", "Precisa de pelo menos 3 paradas pendentes para reotimizar.");
+      return;
+    }
+    const missing = pending.filter((s) => s.lat == null || s.lon == null);
+    if (missing.length > 0) {
+      Alert.alert("Aguarde", `Ainda localizando ${missing.length} endereço(s)…`);
+      return;
+    }
+    setOptimizing(true);
+    try {
+      const settings = await loadSettings();
+      // Pick fixed endpoints — inverted swaps them.
+      const firstFixed = invertEndpoints ? pending[pending.length - 1] : pending[0];
+      const lastFixed = invertEndpoints ? pending[0] : pending[pending.length - 1];
+      // Middle stops = pending minus first and last
+      const middle = pending.filter(
+        (s) => s.id !== firstFixed.id && s.id !== lastFixed.id
+      );
+
+      let orderedMiddle: Stop[] = middle;
+      if (middle.length >= 2) {
+        // Ask backend to optimize the middle segment starting from firstFixed's coords
+        const { stops: opt } = await optimizeRoute(middle, {
+          start_lat: firstFixed.lat!,
+          start_lon: firstFixed.lon!,
+          return_to_start: false,
+          minutes_per_stop: settings.minutesPerStop,
+          avg_speed_kmh: settings.avgSpeedKmh,
+        });
+        // Backend returns done+pending; keep only pending items from middle
+        orderedMiddle = opt.filter((s) => s.status === "pendente");
+      }
+
+      const finalPending = [firstFixed, ...orderedMiddle, lastFixed].map(
+        (s, i) => ({ ...s, id: i })
+      );
+      const combined = [
+        ...done,
+        ...finalPending,
+      ].map((s, i) => ({ ...s, id: i }));
+      setStops(combined);
+      await saveRoute(combined);
+
+      // Recompute metrics with all pending
+      const m = await computeMetrics(combined, {
+        start_lat: settings.startLat,
+        start_lon: settings.startLon,
+        return_to_start: settings.returnToStart,
+        minutes_per_stop: settings.minutesPerStop,
+        avg_speed_kmh: settings.avgSpeedKmh,
+      });
+      setMetrics(m);
+      setCircuitMode(false);
+      await storage.setItem("rota:circuit_mode", "0");
+      Alert.alert(
+        invertEndpoints ? "Rota invertida + reotimizada" : "Rota reotimizada",
+        `Primeira e última paradas fixas. ${orderedMiddle.length} paradas intermediárias reorganizadas.`
+      );
+    } catch (e) {
+      console.log("reoptimize error", e);
+      Alert.alert("Erro", "Falha ao reotimizar a rota.");
     } finally {
       setOptimizing(false);
     }
@@ -430,8 +504,90 @@ export default function RouteScreen() {
   const pendingCount = stops.filter((s) => s.status === "pendente").length;
   const activeStop = activeIdx !== null ? stops[activeIdx] : null;
 
+  // Persist manual drag-drop reorder. Only pending stops are draggable; done
+  // stops stay pinned at the top of the list in their original position.
+  const handleDragEnd = async ({ data }: { data: Stop[] }) => {
+    const done = data.filter((s) => s.status !== "pendente");
+    const pending = data.filter((s) => s.status === "pendente");
+    const reordered = [...done, ...pending].map((s, i) => ({ ...s, id: i }));
+    setStops(reordered);
+    await saveRoute(reordered);
+    // User manually reordered — Circuit lock no longer applies.
+    setCircuitMode(false);
+    await storage.setItem("rota:circuit_mode", "0");
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  };
+
+  const renderStopItem = ({ item, drag, isActive, getIndex }: RenderItemParams<Stop>) => {
+    const index = getIndex() ?? 0;
+    return (
+      <ScaleDecorator>
+        <TouchableOpacity
+          style={[
+            styles.stopRow,
+            item.status !== "pendente" && styles.stopRowDone,
+            activeIdx === index && styles.stopRowActive,
+            isActive && { opacity: 0.8, backgroundColor: "#1e293b" },
+          ]}
+          onPress={() => activateStop(index)}
+          onLongPress={drag}
+          delayLongPress={200}
+          disabled={isActive}
+          testID={`stop-row-${index}`}
+        >
+          <TouchableOpacity
+            onPressIn={drag}
+            style={styles.dragHandle}
+            testID={`drag-handle-${index}`}
+          >
+            <Ionicons name="reorder-three" size={22} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+          <View style={[styles.stopNum, { backgroundColor: getStatusColor(item.status) }]}>
+            <Text style={styles.stopNumText}>{index + 1}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.stopCode} numberOfLines={1}>
+              {item.codigo}
+            </Text>
+            <Text style={styles.stopAddr} numberOfLines={2}>
+              {item.endereco}
+            </Text>
+            {(item.lat == null || item.lon == null) && (
+              <Text style={styles.stopWarn}>📍 Sem localização — toque ✏️ para corrigir</Text>
+            )}
+            {item.status !== "pendente" && (
+              <Text style={[styles.stopStatus, { color: getStatusColor(item.status) }]}>
+                {item.status.toUpperCase()} • {item.timestamp}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity
+            onPress={() => openEditLocation(index)}
+            style={styles.editIcon}
+            testID={`edit-location-${index}`}
+          >
+            <Ionicons name="create-outline" size={18} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </ScaleDecorator>
+    );
+  };
+
+  const showReoptimizeChoices = () => {
+    Alert.alert(
+      "Reotimizar rota",
+      "Fixando a primeira e a última parada. Escolha o sentido:",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Manter sentido", onPress: () => reoptimize(false) },
+        { text: "Inverter (última → primeira)", onPress: () => reoptimize(true) },
+      ]
+    );
+  };
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]} testID="route-screen">
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container} edges={["top"]} testID="route-screen">
       {/* MAP - top half */}
       <View style={styles.mapContainer}>
         <RouteMap
@@ -510,6 +666,45 @@ export default function RouteScreen() {
           </View>
         </View>
 
+        {/* PRIMARY ACTION ROW — Roteirizar / Reotimizar / Importar Circuit */}
+        <View style={styles.primaryActionRow}>
+          <TouchableOpacity
+            style={[styles.primaryBtn, optimizing && styles.primaryBtnDisabled]}
+            onPress={optimizeTSP}
+            disabled={optimizing}
+            testID="roteirizar-button"
+          >
+            {optimizing ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="flash" size={18} color="#fff" />
+            )}
+            <Text style={styles.primaryBtnText}>
+              {optimizing ? "Roteirizando..." : "Roteirizar"}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={showReoptimizeChoices}
+            disabled={optimizing}
+            testID="reotimizar-button"
+          >
+            <Ionicons name="git-network-outline" size={16} color={COLORS.textPrimary} />
+            <Text style={styles.secondaryBtnText}>Reotimizar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => {
+              setMenuOpen(false);
+              router.push("/upload");
+            }}
+            testID="import-circuit-button"
+          >
+            <Ionicons name="document-text-outline" size={16} color={COLORS.textPrimary} />
+            <Text style={styles.secondaryBtnText}>Importar Circuit</Text>
+          </TouchableOpacity>
+        </View>
+
         {metrics && (
           <View style={styles.metricsBar} testID="metrics-bar">
             <View style={styles.metricsItem}>
@@ -533,50 +728,14 @@ export default function RouteScreen() {
           </View>
         )}
 
-        <FlatList
+        <DraggableFlatList
           data={stops}
-          keyExtractor={(item) => String(item.id)}
+          keyExtractor={(item) => String(item.id) + "-" + item.codigo}
+          onDragEnd={handleDragEnd}
+          renderItem={renderStopItem}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: SPACING.sm }}
-          renderItem={({ item, index }) => (
-            <TouchableOpacity
-              style={[
-                styles.stopRow,
-                item.status !== "pendente" && styles.stopRowDone,
-                activeIdx === index && styles.stopRowActive,
-              ]}
-              onPress={() => activateStop(index)}
-              onLongPress={() => openEditLocation(index)}
-              testID={`stop-row-${index}`}
-            >
-              <View style={[styles.stopNum, { backgroundColor: getStatusColor(item.status) }]}>
-                <Text style={styles.stopNumText}>{index + 1}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.stopCode} numberOfLines={1}>
-                  {item.codigo}
-                </Text>
-                <Text style={styles.stopAddr} numberOfLines={2}>
-                  {item.endereco}
-                </Text>
-                {(item.lat == null || item.lon == null) && (
-                  <Text style={styles.stopWarn}>📍 Sem localização — toque ✏️ para corrigir</Text>
-                )}
-                {item.status !== "pendente" && (
-                  <Text style={[styles.stopStatus, { color: getStatusColor(item.status) }]}>
-                    {item.status.toUpperCase()} • {item.timestamp}
-                  </Text>
-                )}
-              </View>
-              <TouchableOpacity
-                onPress={() => openEditLocation(index)}
-                style={styles.editIcon}
-                testID={`edit-location-${index}`}
-              >
-                <Ionicons name="create-outline" size={18} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          )}
+          activationDistance={10}
         />
       </View>
 
@@ -643,9 +802,16 @@ export default function RouteScreen() {
             />
             <MenuItem
               icon="flash"
-              label={optimizing ? "Otimizando..." : "Otimizar Rota (TSP)"}
+              label={optimizing ? "Otimizando..." : "Roteirizar (TSP)"}
               onPress={optimizeTSP}
               testID="menu-optimize"
+              disabled={optimizing}
+            />
+            <MenuItem
+              icon="git-network-outline"
+              label="Reotimizar (fixar 1ª e última)"
+              onPress={showReoptimizeChoices}
+              testID="menu-reoptimize"
               disabled={optimizing}
             />
             <MenuItem
@@ -864,6 +1030,7 @@ export default function RouteScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+    </GestureHandlerRootView>
   );
 }
 
@@ -976,6 +1143,46 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   listTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: "800" },
+  primaryActionRow: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  primaryBtn: {
+    flex: 1.2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  primaryBtnDisabled: { opacity: 0.55 },
+  primaryBtnText: { color: "#fff", fontWeight: "900", fontSize: 14 },
+  secondaryBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    backgroundColor: "#1e293b",
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  secondaryBtnText: { color: COLORS.textPrimary, fontWeight: "700", fontSize: 12 },
+  dragHandle: {
+    paddingVertical: 8,
+    paddingRight: 4,
+  },
   counterPill: {
     flexDirection: "row",
     alignItems: "center",

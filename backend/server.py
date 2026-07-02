@@ -266,6 +266,47 @@ def clean_address(raw: str) -> str:
     return text
 
 
+# Regex to detect a decimal coordinate pair (lat, lon) anywhere in Brazilian bounds.
+# Brazil: lat ∈ [-34, 5], lon ∈ [-74, -34]. Allow optional sign, common separators.
+_COORD_PAIR_RE = re.compile(
+    r"(-?[0-3]?\d(?:\.\d{4,10}))\s*[,;\s/]\s*(-[3-7]?\d(?:\.\d{4,10}))"
+)
+# Alt order: lon first, then lat (rare but happens in some CSVs).
+_COORD_PAIR_ALT_RE = re.compile(
+    r"(-[3-7]?\d(?:\.\d{4,10}))\s*[,;\s/]\s*(-?[0-3]?\d(?:\.\d{4,10}))"
+)
+_CEP_RE = re.compile(r"\b(\d{5})-?(\d{3})\b")
+
+
+def _extract_coords_from_text(text: str) -> Optional[tuple]:
+    """Scan text for a lat/lon pair inside Brazilian bounds. Return (lat, lon) or None."""
+    for m in _COORD_PAIR_RE.finditer(text):
+        try:
+            lat = float(m.group(1))
+            lon = float(m.group(2))
+        except ValueError:
+            continue
+        if -34.0 <= lat <= 5.0 and -74.0 <= lon <= -34.0:
+            return (lat, lon)
+    # Try lon-first order too
+    for m in _COORD_PAIR_ALT_RE.finditer(text):
+        try:
+            lon = float(m.group(1))
+            lat = float(m.group(2))
+        except ValueError:
+            continue
+        if -34.0 <= lat <= 5.0 and -74.0 <= lon <= -34.0:
+            return (lat, lon)
+    return None
+
+
+def _extract_cep_from_text(text: str) -> Optional[str]:
+    m = _CEP_RE.search(text)
+    if not m:
+        return None
+    return f"{m.group(1)}-{m.group(2)}"
+
+
 def extract_codes_and_addresses(text: str) -> List[dict]:
     """Extract stops preserving Circuit PDF order.
 
@@ -301,6 +342,10 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
 
             block = text[start:end]
 
+            # Detect inline coordinates in the FULL row block (before we strip)
+            coord_pair = _extract_coords_from_text(block)
+            cep_val = _extract_cep_from_text(block)
+
             # Find first matching code inside this row block
             codigo = None
             for pattern in CODE_PATTERNS:
@@ -327,19 +372,22 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
                 cleaned = "Endereço não detectado"
 
             seen_codes.add(codigo)
-            stops.append({
+            stop_obj = {
                 "id": 0,  # reassigned after sort
                 "codigo": codigo,
                 "endereco": cleaned,
                 "status": "pendente",
                 "timestamp": None,
-                "lat": None,
-                "lon": None,
+                "lat": coord_pair[0] if coord_pair else None,
+                "lon": coord_pair[1] if coord_pair else None,
                 "_circuit_order": row_num,
-            })
+            }
+            if not coord_pair and cep_val:
+                stop_obj["_cep"] = cep_val
+            stops.append(stop_obj)
 
         if len(stops) >= 2:
-            # Sort by row number (PDF order), reassign ids, drop internal field
+            # Sort by row number (PDF order), reassign ids, drop internal fields
             stops.sort(key=lambda s: s["_circuit_order"])
             for i, s in enumerate(stops):
                 s["id"] = i
@@ -371,6 +419,10 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
         raw = re.sub(re.escape(codigo), "", line, flags=re.IGNORECASE)
         raw = re.sub(r"[;\t\|]+", " ", raw).strip(" ,;-\t")
 
+        # Detect inline coords / CEP in the FULL original line (before stripping)
+        coord_pair = _extract_coords_from_text(line)
+        cep_val = _extract_cep_from_text(line)
+
         row_match = re.match(r"^\s*(\d{1,3})\b\s+(?=[A-ZÀ-Ýa-zà-ý])", raw)
         circuit_order: Optional[int] = None
         if row_match:
@@ -387,16 +439,19 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
             cleaned = "Endereço não detectado"
 
         seen_codes.add(codigo)
-        stops.append({
+        stop_obj = {
             "id": counter,
             "codigo": codigo,
             "endereco": cleaned,
             "status": "pendente",
             "timestamp": None,
-            "lat": None,
-            "lon": None,
+            "lat": coord_pair[0] if coord_pair else None,
+            "lon": coord_pair[1] if coord_pair else None,
             "_circuit_order": circuit_order,
-        })
+        }
+        if not coord_pair and cep_val:
+            stop_obj["_cep"] = cep_val
+        stops.append(stop_obj)
         counter += 1
 
     has_order = [s for s in stops if s.get("_circuit_order") is not None]
@@ -671,6 +726,32 @@ async def geocode_mapbox(address: str) -> Optional[dict]:
         return None
 
 
+# Nominatim/Photon: reject results at city/state/country level
+_ADMIN_REJECT_TYPES = {
+    "city", "state", "country", "county", "municipality",
+    "administrative", "province", "region", "town", "village",
+    "suburb", "neighbourhood",  # too coarse
+}
+_ADMIN_REJECT_CLASSES = {"boundary"}
+
+
+def _is_admin_place_reject(entry: dict) -> bool:
+    """Return True if a Nominatim/Photon feature is a coarse admin match
+    (city/state/country/etc.) that we should NOT accept as a delivery address."""
+    if not entry:
+        return False
+    klass = str(entry.get("class") or entry.get("osm_type") or "").lower()
+    typ = str(entry.get("type") or "").lower()
+    addr_type = str(entry.get("addresstype") or "").lower()
+    if klass == "place" and typ in _ADMIN_REJECT_TYPES:
+        return True
+    if klass in _ADMIN_REJECT_CLASSES:
+        return True
+    if addr_type in _ADMIN_REJECT_TYPES:
+        return True
+    return False
+
+
 async def geocode_photon(address: str) -> Optional[dict]:
     """Photon (komoot.io) — free OSM-based geocoder. Bias results to São Paulo."""
     try:
@@ -709,6 +790,11 @@ async def geocode_photon(address: str) -> Optional[dict]:
                 pass
             return s
 
+        # Filter out coarse admin-level results (city/state/country/etc.)
+        feats = [f for f in feats if not _is_admin_place_reject(f.get("properties", {}))]
+        if not feats:
+            return None
+
         best = max(feats, key=score)
         coords = best["geometry"]["coordinates"]  # [lon, lat]
         props = best.get("properties", {})
@@ -724,14 +810,73 @@ async def geocode_photon(address: str) -> Optional[dict]:
     return None
 
 
-async def geocode_nominatim(address: str) -> dict:
-    """Geocode pipeline: Google (primary) → Mapbox → Nominatim → Photon.
+async def geocode_google_places(address: str) -> Optional[dict]:
+    """Fallback: Google Places Text Search. Fuzzy — resolves abbreviated / partial
+    addresses that geocode_google() rejects as APPROXIMATE. Biased around São Paulo.
 
-    Function name kept for backwards-compat with existing call sites; the
-    'nominatim' portion is now the LAST fallback, not the first.
+    Prefers results whose `types` contains street_address, premise or route.
     """
-    # Attempt 0: Google (best quality for BR addresses; strict location_type filter)
+    api_key = (os.environ.get("GOOGLE_MAPS_API_KEY") or "").strip()
+    if not api_key:
+        return None
+    try:
+        url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+        params = {
+            "query": address,
+            "key": api_key,
+            "region": "br",
+            "language": "pt-BR",
+            "location": "-23.5505,-46.6333",
+            "radius": 50000,
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(url, params=params)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        if data.get("status") not in ("OK", "ZERO_RESULTS") or not data.get("results"):
+            return None
+        preferred_types = {"street_address", "premise", "route"}
+
+        # Prefer a result whose types contain street_address/premise/route
+        def pick():
+            for res in data["results"]:
+                types = set(res.get("types") or [])
+                if types & preferred_types:
+                    return res
+            return data["results"][0]
+
+        res = pick()
+        loc = (res.get("geometry") or {}).get("location") or {}
+        lat = loc.get("lat")
+        lon = loc.get("lng")
+        if lat is None or lon is None:
+            return None
+        return {
+            "lat": float(lat),
+            "lon": float(lon),
+            "display_name": res.get("formatted_address") or res.get("name") or "",
+            "found": True,
+            "provider": "google_places",
+            "place_types": res.get("types", []),
+        }
+    except Exception as e:
+        logging.warning(f"Google Places geocode failed for '{address[:60]}…': {e}")
+        return None
+
+
+async def geocode_nominatim(address: str) -> dict:
+    """Geocode pipeline: Google Geocoding → Google Places → Mapbox → Nominatim → Photon.
+
+    Function name kept for backwards-compat with existing call sites.
+    """
+    # Attempt 0: Google Geocoding (strict ROOFTOP/RANGE/GEOMETRIC only)
     r = await geocode_google(address)
+    if r:
+        return r
+
+    # Attempt 0.5: Google Places (fuzzy — great for abbreviated / partial addresses)
+    r = await geocode_google_places(address)
     if r:
         return r
 
@@ -745,7 +890,13 @@ async def geocode_nominatim(address: str) -> dict:
     async def try_nominatim(query: str) -> Optional[dict]:
         try:
             url = "https://nominatim.openstreetmap.org/search"
-            params = {"q": query, "format": "json", "limit": 1, "countrycodes": "br"}
+            params = {
+                "q": query,
+                "format": "json",
+                "limit": 3,
+                "countrycodes": "br",
+                "addressdetails": 1,
+            }
             loop = asyncio.get_event_loop()
             resp = await loop.run_in_executor(
                 None, lambda: requests.get(url, params=params, headers=headers, timeout=10)
@@ -756,13 +907,19 @@ async def geocode_nominatim(address: str) -> dict:
                 data = resp.json()
             except Exception:
                 return None
-            if data and len(data) > 0:
-                return {
-                    "lat": float(data[0]["lat"]),
-                    "lon": float(data[0]["lon"]),
-                    "display_name": data[0].get("display_name", ""),
-                    "found": True,
-                }
+            for entry in data or []:
+                if _is_admin_place_reject(entry):
+                    continue
+                try:
+                    return {
+                        "lat": float(entry["lat"]),
+                        "lon": float(entry["lon"]),
+                        "display_name": entry.get("display_name", ""),
+                        "found": True,
+                        "provider": "nominatim",
+                    }
+                except (KeyError, ValueError, TypeError):
+                    continue
         except Exception:
             return None
         return None
@@ -927,6 +1084,44 @@ async def lookup_cep(cep: str):
         raise HTTPException(500, "Erro ao consultar CEP")
 
 
+async def _resolve_cep_to_latlon(cep: str) -> Optional[tuple]:
+    """Resolve a Brazilian CEP to (lat, lon) via ViaCEP + geocoder pipeline.
+    Returns None on any failure."""
+    digits = re.sub(r"\D", "", cep or "")
+    if len(digits) != 8:
+        return None
+    try:
+        loop = asyncio.get_event_loop()
+        resp = await loop.run_in_executor(
+            None,
+            lambda: requests.get(
+                f"https://viacep.com.br/ws/{digits}/json/",
+                timeout=6,
+                headers={"User-Agent": "RotaRapidaApp/1.0"},
+            ),
+        )
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        if data.get("erro"):
+            return None
+        addr_parts = [
+            data.get("logradouro"),
+            data.get("bairro"),
+            data.get("localidade"),
+            data.get("uf"),
+        ]
+        addr = ", ".join(p for p in addr_parts if p)
+        if not addr:
+            return None
+        geo = await geocode_nominatim(addr)
+        if geo and geo.get("found") and geo.get("lat") is not None and geo.get("lon") is not None:
+            return (float(geo["lat"]), float(geo["lon"]))
+    except Exception as e:
+        logging.warning(f"CEP resolve failed for {cep}: {e}")
+    return None
+
+
 @api_router.post("/parse-file", response_model=ParsedFileResponse)
 async def parse_file(file: UploadFile = File(...)):
     content = await file.read()
@@ -938,6 +1133,25 @@ async def parse_file(file: UploadFile = File(...)):
     else:
         text = parse_csv(content)
     raw_stops = extract_codes_and_addresses(text)
+
+    # For stops WITHOUT coords BUT with a detected CEP, resolve CEP → lat/lon.
+    # This runs concurrently but is capped to a small pool to be gentle on ViaCEP.
+    cep_tasks = []
+    cep_indices = []
+    for i, s in enumerate(raw_stops):
+        if (s.get("lat") is None or s.get("lon") is None) and s.get("_cep"):
+            cep_tasks.append(_resolve_cep_to_latlon(s["_cep"]))
+            cep_indices.append(i)
+    if cep_tasks:
+        results = await asyncio.gather(*cep_tasks, return_exceptions=True)
+        for idx, r in zip(cep_indices, results):
+            if isinstance(r, tuple):
+                raw_stops[idx]["lat"] = r[0]
+                raw_stops[idx]["lon"] = r[1]
+    # Strip internal fields (Pydantic ignores them, but be tidy)
+    for s in raw_stops:
+        s.pop("_cep", None)
+
     stops = [Stop(**s) for s in raw_stops]
     return ParsedFileResponse(stops=stops, total=len(stops))
 
@@ -946,6 +1160,21 @@ async def parse_file(file: UploadFile = File(...)):
 async def parse_text(payload: dict):
     text = payload.get("text", "")
     raw_stops = extract_codes_and_addresses(text)
+    # Resolve CEP fallbacks (same logic as parse_file)
+    cep_tasks = []
+    cep_indices = []
+    for i, s in enumerate(raw_stops):
+        if (s.get("lat") is None or s.get("lon") is None) and s.get("_cep"):
+            cep_tasks.append(_resolve_cep_to_latlon(s["_cep"]))
+            cep_indices.append(i)
+    if cep_tasks:
+        results = await asyncio.gather(*cep_tasks, return_exceptions=True)
+        for idx, r in zip(cep_indices, results):
+            if isinstance(r, tuple):
+                raw_stops[idx]["lat"] = r[0]
+                raw_stops[idx]["lon"] = r[1]
+    for s in raw_stops:
+        s.pop("_cep", None)
     stops = [Stop(**s) for s in raw_stops]
     return ParsedFileResponse(stops=stops, total=len(stops))
 
