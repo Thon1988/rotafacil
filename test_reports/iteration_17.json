@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 17 — scanner.tsx bug fix (scan should NOT auto-mark delivered) verified. ALL 8 TESTS PASS (4 static + 4 backend regression) + frontend smoke clean. STATIC #1 CODE-MATCH branch (scanner.tsx L143-168): processCode no longer contains `status: \"entregue\"` on the idx!==-1 branch; comment `SCAN ONLY IDENTIFIES / NUMBERS the package` present at L148-151; still calls speakStop(seq) L156, setLastScanned(...) L157, setFeedback(...) L158 with msg `📦 Parada ${seq}` (non-delivered case) and color=COLORS.primary — no more ✅/COLORS.success on scan. STATIC #2 confirmFallback (L225-259): maps `s => ({ ...s, codigo: scannedCode })` at L230-237 — NO status:entregue, NO timestamp; feedback msg `📦 Parada ${nextSequence} (identificada)` (old `(atribuída)` gone). STATIC #3 modal labels: fallback modal (`testID=fallback-modal`) L617-633 renders modalCancel(gray 'Cancelar') FIRST then modalConfirm(orange 'OK') SECOND — matches user request 'orange=OK, gray=Cancelar'; no `Marcar Parada` string anywhere in file. REGRESSION #4 /api/optimize with 5 SP stops → 200, 5 stops returned, metrics.total_distance_km=8.89 (ortools_haversine path executed — request had lat/lon so no geocoding needed). REGRESSION #5 /api/parse-text iteration-12 payload (3 space-separated Circuit rows) → 200, all 3 stops carry correct cliente (MILTON AMARAL PEREIRA / Ana Silva Costa / CARLOS RIBEIRO MENDES) + codigo_at (AT202607036QXO9/XP0/XQ1). REGRESSION #6a /api/parse-file (no multipart) → 422. REGRESSION #6b /api/auth/me (no token) → 401 with detail='missing_token'. FRONTEND SMOKE http://localhost:3000 at 390x844 → title 'Rota Rápida App', #root 5837 chars, landing screen visible ('Rota+Rápida App', 'Entrar com Google'), no red Metro overlay, only two benign console warnings (shadow* deprecation + expo-notifications web unsupported — both pre-existing, unrelated to scanner.tsx).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration17.py",
+    "/app/test_reports/pytest/iteration17_results.xml"
+  ],
+  "action_items": [
+    "Non-blocking (carry-over from iter 14-16): `yarn expo install --check` — expo@54.0.34→54.0.35, expo-font@14.0.11→14.0.12, expo-router@6.0.23→6.0.24 before creating any native build.",
+    "Not exercisable in web preview (needs Expo Go device): live camera scan → confirm stop stays 'pendente' in the /route list, TTS speaks 'Parada N', then tapping 'Entregue' button marks it delivered. Static verification of scanner.tsx confirms the intended behavior; only manual device QA can validate the full runtime UX end-to-end."
+  ],
+  "critical_code_review_comments": [
+    "scanner.tsx L26-33 header comment still says 'On scan -> finds the matching stop by code, marks as \"entregue\"' — this doc-comment is now STALE and contradicts the fixed behavior. Recommend main agent update lines 30-32 to say the scan only identifies/announces and delivery happens via the Entregue button on the route screen.",
+    "Carry-over from iter 16: server.py ~1867 lines and route.tsx ~1492 lines still oversized — consider modularization when time permits."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration17.py (new)",
+    "/app/test_reports/pytest/iteration17_results.xml (new)",
+    "/app/test_reports/iteration_17.json (new)"
+  ],
+  "success_rate": {"backend": "100% (4/4 regressions)", "frontend": "100% (4/4 static + smoke)"},
+  "seed_data_creation": "None — inline payloads. No DB writes.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 17 fixed 'Ao escanear está dando como entregue automaticamente' bug + modal button labels. Bug fix is entirely in /app/frontend/app/scanner.tsx (processCode CODE-MATCH branch, confirmFallback, and fallback modal button text/order). Backend untouched. Backend URL: https://rota-facil-mobile.preview.emergentagent.com. Test file /app/backend/tests/test_iteration17.py contains 4 static regex checks against scanner.tsx + 4 backend regression tests (optimize, parse-text, parse-file, auth/me) — all pass in ~10s. One stale doc-comment noted at scanner.tsx L26-33 (see critical_code_review_comments).",
+  "rca_of_issue": "ROOT CAUSE: In prior iterations scanner.tsx processCode() on the CODE-MATCH branch (idx !== -1) executed `setStops(prev => prev.map(...s, status: 'entregue' as const, timestamp: ...))` — meaning a single camera scan (or 4-second-debounced repeat) would mutate the stop status to 'entregue' and persist via saveRoute() before the driver had a chance to physically deliver the package. Users delivering by hand would scan to hear the parada number and unintentionally auto-complete the stop. FIX: processCode CODE-MATCH branch now only calls speakStop(seq) + setLastScanned + setFeedback (msg '📦 Parada N', color=COLORS.primary) — no more setStops/saveRoute on scan. confirmFallback (used when the scanned code isn't yet in the route) still adopts the code onto the next pending stop via `{ ...s, codigo: scannedCode }` BUT no longer flips status/timestamp — the stop stays 'pendente' until the driver taps 'Entregue' on the route card. Modal was also updated: the fallback confirm button now reads literal 'OK' (orange, positioned second) and the cancel button reads 'Cancelar' (gray, first), matching the user's screenshot request."
+}

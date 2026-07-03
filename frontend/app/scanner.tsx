@@ -145,19 +145,10 @@ export default function ScannerScreen() {
         const seq = idx + 1;
         const alreadyDelivered = stop.status === "entregue";
 
-        if (!alreadyDelivered) {
-          const updated = stops.map((s, i) =>
-            i === idx
-              ? {
-                  ...s,
-                  status: "entregue" as const,
-                  timestamp: new Date().toISOString(),
-                }
-              : s
-          );
-          setStops(updated);
-          await saveRoute(updated);
-        }
+        // SCAN ONLY IDENTIFIES / NUMBERS the package — it does NOT auto-mark
+        // as delivered. To mark as delivered, the driver must tap the
+        // "Entregue" button on the stop card. (User request 2026-07-03.)
+        // We DO NOT update status here. Just highlight + announce.
 
         if (Platform.OS !== "web") {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -165,9 +156,9 @@ export default function ScannerScreen() {
         speakStop(seq);
         setLastScanned({ sequence: seq, code: stop.codigo, address: stop.endereco });
         setFeedback({
-          msg: alreadyDelivered ? `Parada ${seq} (já bipada)` : `✅ Parada ${seq}`,
+          msg: alreadyDelivered ? `Parada ${seq} (já entregue)` : `📦 Parada ${seq}`,
           detail: stop.endereco,
-          color: alreadyDelivered ? COLORS.textSecondary : COLORS.success,
+          color: alreadyDelivered ? COLORS.textSecondary : COLORS.primary,
         });
 
         setTimeout(() => {
@@ -234,13 +225,13 @@ export default function ScannerScreen() {
   const confirmFallback = useCallback(async () => {
     if (!pendingFallback) return;
     const { nextIdx, nextSequence, scannedCode } = pendingFallback;
+    // Adopt the scanned code as this stop's tracker, but DO NOT mark as
+    // delivered — driver marks entrega via the "Entregue" button later.
     const updated = stops.map((s, i) =>
       i === nextIdx
         ? {
             ...s,
-            codigo: scannedCode, // adopt the scanned code as this stop's tracker
-            status: "entregue" as const,
-            timestamp: new Date().toISOString(),
+            codigo: scannedCode,
           }
         : s
     );
@@ -256,7 +247,7 @@ export default function ScannerScreen() {
       address: stops[nextIdx].endereco,
     });
     setFeedback({
-      msg: `✅ Parada ${nextSequence} (atribuída)`,
+      msg: `📦 Parada ${nextSequence} (identificada)`,
       detail: stops[nextIdx].endereco,
       color: COLORS.success,
     });
@@ -637,9 +628,7 @@ export default function ScannerScreen() {
                 testID="fallback-confirm-button"
               >
                 <Ionicons name="checkmark" size={18} color="#fff" />
-                <Text style={styles.modalConfirmText}>
-                  Marcar Parada {pendingFallback?.nextSequence ?? ""}
-                </Text>
+                <Text style={styles.modalConfirmText}>OK</Text>
               </TouchableOpacity>
             </View>
           </View>

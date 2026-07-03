@@ -227,7 +227,65 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: >-
-      Iteration 16 — 3 fixes.
+      Iteration 17 — scanner behavior + button labels.
+      BUG (user report): "Ao escanear está dando como entregue automaticamente".
+      Scanner was incorrectly marking status='entregue' the moment a code was
+      recognized. That's WRONG — the scanner should only IDENTIFY / NUMBER
+      the package (announce "Parada N" via TTS). Marking as delivered must
+      require the driver to press the "Entregue" button explicitly.
+      Also: modal confirmation buttons appear text-less in user's screenshot
+      → user wants the orange (top) button labelled "OK" and the gray button
+      "Cancelar" (already labelled Cancelar; only orange changed).
+      FIX (/app/frontend/app/scanner.tsx):
+      (1) processCode: removed the `status: "entregue"` mutation block. Now
+      on a successful scan, we ONLY call speakStop(seq), set lastScanned,
+      and show feedback. Feedback msg changed to "📦 Parada {n}" (not "✅")
+      and color from success→primary to reflect identify-not-deliver
+      semantics.
+      (2) confirmFallback (unknown code assigned to next pending stop):
+      previously set status="entregue" + timestamp. Now ONLY adopts the
+      scanned code as the stop's codigo; status stays "pendente". Same TTS
+      + feedback update, "📦 Parada N (identificada)".
+      (3) Modal button label: modalConfirm text changed from
+      "Marcar Parada {N}" → "OK". modalCancel still "Cancelar" (unchanged).
+      Please TEST:
+      - Backend regression: /api/optimize, /api/parse-file, /api/parse-text,
+      /api/geocode-batch, /api/auth/me all continue to work (no backend
+      changes this iteration).
+      - Static frontend inspection of /app/frontend/app/scanner.tsx:
+        (a) processCode block does NOT contain
+        `status: "entregue" as const` on scan-match branch (the block was
+        removed; comment "SCAN ONLY IDENTIFIES" now in its place).
+        (b) confirmFallback maps to `{...s, codigo: scannedCode}` (no
+        status/timestamp mutation).
+        (c) Feedback strings use "📦" instead of "✅" for identify path.
+        (d) modalConfirmText inside <Text> is literal "OK" (not
+        "Marcar Parada ...").
+        (e) modalCancelText remains "Cancelar".
+      Report to iteration_17.json.
+
+frontend_tasks_iteration_17:
+  - task: "Scanner no longer auto-marks as entregue"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/scanner.tsx"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+  - task: "confirmFallback keeps status pendente"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/scanner.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "Modal button labels: orange=OK, gray=Cancelar"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/scanner.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
       BUG (user report): Circuit PDF route points on the map are wrong;
       Excel points are correct. Also user wants (a) map screen to open
       FIRST after loading a file (both PDF and Excel), (b) scanner
