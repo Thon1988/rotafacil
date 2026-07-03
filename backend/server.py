@@ -635,7 +635,20 @@ def parse_pdf(content: bytes) -> str:
                                 code_match = f"SEQ{first_cell}"
                         if len(address) < 3:
                             address = "Endereço não detectado"
-                        lines_out.append(f"{first_cell} {address} {code_match}")
+                        # Preserve notes column extras (customer name, CEP, phone)
+                        # so downstream _extract_customer_and_at + CEP resolver
+                        # can find them. Strip the tracking code we already
+                        # extracted to avoid duplication.
+                        notes_extra = notes_blob or ""
+                        if code_match and not code_match.startswith("SEQ"):
+                            notes_extra = re.sub(
+                                re.escape(code_match), "", notes_extra, flags=re.IGNORECASE
+                            )
+                        notes_extra = re.sub(r"\s+", " ", notes_extra).strip(" ,;.-")
+                        line_parts = [first_cell, address, code_match]
+                        if notes_extra:
+                            line_parts.append(notes_extra)
+                        lines_out.append(" ".join(line_parts))
                         got_rows = True
                 if got_rows:
                     lines_out.append("")

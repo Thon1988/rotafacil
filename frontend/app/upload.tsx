@@ -108,13 +108,10 @@ export default function UploadScreen() {
       }));
       await saveRoute(initial);
 
-      if (opts.preserveOrder) {
-        setLoadingStep("Abrindo scanner...");
-        router.replace("/scanner");
-      } else {
-        setLoadingStep("Abrindo mapa...");
-        router.replace("/route");
-      }
+      // ALWAYS open the MAP first (per user request 2026-07-03). The driver
+      // will tap the camera icon there to open the scanner.
+      setLoadingStep("Abrindo mapa...");
+      router.replace("/route");
     } catch (e) {
       console.log("Process error:", e);
       Alert.alert("Erro", "Não foi possível processar a rota.");

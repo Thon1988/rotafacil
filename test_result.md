@@ -227,7 +227,66 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: >-
-      Iteration 15 — map fills freed space + notification with all 5
+      Iteration 16 — 3 fixes.
+      BUG (user report): Circuit PDF route points on the map are wrong;
+      Excel points are correct. Also user wants (a) map screen to open
+      FIRST after loading a file (both PDF and Excel), (b) scanner
+      accessed via a camera icon.
+      FIX 1 (Circuit PDF address quality — /app/backend/server.py):
+      In parse_pdf's TABLE extraction path, the constructed line used to
+      be `f"{first_cell} {address} {code_match}"` — this DROPPED the
+      Notes column content, meaning customer name, phone, and CEP that
+      Circuit puts in Notes were lost. Now we compute `notes_extra` by
+      stripping the tracking code from notes_blob and appending it to
+      the constructed line, preserving customer name (for
+      _extract_customer_and_at) AND CEP (for the CEP → ViaCEP resolver).
+      Better addresses = better geocoding = correct map points for
+      Circuit PDFs.
+      FIX 2 (upload flow — /app/frontend/app/upload.tsx):
+      processStops no longer branches on preserveOrder for navigation.
+      BOTH PDF and Excel/CSV/manual now go to /route first. Circuit
+      order preservation still works via CIRCUIT_KEY storage flag —
+      it's only the initial screen that changes.
+      FIX 3 (scanner icon — /app/frontend/app/route.tsx):
+      The scannerBtn in the map header now uses Ionicons name="camera"
+      instead of "scan" (per user request: "ícone de uma câmera").
+      Please TEST:
+      1) BUG regression via /api/parse-file simulating Circuit PDF row
+      where Notes column has "Cliente + BR code + CEP". Confirm the
+      resulting Stop has cliente populated AND either lat/lon set from
+      CEP resolution OR the address string ends with a valid CEP.
+      2) Frontend: /app/frontend/app/upload.tsx: processStops has ONE
+      router.replace('/route') call, no conditional branch to /scanner.
+      3) Frontend: /app/frontend/app/route.tsx scannerBtn uses
+      `name="camera"` (not "scan").
+      4) Backend regression: /api/optimize with 5 SP stops still works.
+      5) Frontend smoke: http://localhost:3000 compiles clean.
+      Reports to iteration_16.json.
+
+backend_tasks_iteration_16:
+  - task: "Preserve Notes column in parse_pdf table path (cliente + CEP)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+
+frontend_tasks_iteration_16:
+  - task: "Always open map first after upload (PDF and Excel)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/upload.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "Camera icon for scanner button in map screen"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/route.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
       identifiers (endereço, complemento, cliente, código Shopee/ML, AT,
       CEP).
       FIX 1 (map expansion): mapContainer changed from height:"42%" to

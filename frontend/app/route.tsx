@@ -647,8 +647,9 @@ export default function RouteScreen() {
           style={styles.scannerBtn}
           onPress={openScanner}
           testID="open-scanner-button"
+          accessibilityLabel="Abrir scanner de câmera"
         >
-          <Ionicons name="scan" size={22} color="#fff" />
+          <Ionicons name="camera" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
 

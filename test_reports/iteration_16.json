@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 16 — Circuit PDF Notes-column bug fix + UX rerouting verified. BACKEND 5/5 PASS. (1) BUG FIX: server.py parse_pdf now appends notes_extra to constructed line — confirmed by grep: L642 `notes_extra = notes_blob or \"\"`, L643-646 tracking-code stripped via `re.sub(re.escape(code_match), \"\", notes_extra, flags=re.IGNORECASE)` guarded by `not code_match.startswith(\"SEQ\")`, L647 collapses whitespace/punct, L649-650 `if notes_extra: line_parts.append(notes_extra)`. (2) BUG FIX (semantic): POST /api/parse-text with the merged text `\"1 Rua Miguel Yunes, 200 BR265114108628K MARIA SILVA COSTA 04785-010\\n2 Avenida Prof Edgar Santos, 514 BR265114108629X PEDRO OLIVEIRA 03560-080\"` → 200, total=2. Stop 1: codigo=BR265114108628K, cliente contains MARIA, lat/lon resolved via ViaCEP (04785-010, lat inside SP band -24.5<lat<-23.0). Stop 2: codigo=BR265114108629X, cliente contains PEDRO, lat/lon resolved via ViaCEP (03560-080, lat inside SP band). Confirms the Notes column (customer name + CEP) now flows through to _extract_customer_and_at + CEP → ViaCEP resolver as the fix intended. FRONTEND #1 STATIC: /app/frontend/app/upload.tsx processStops has exactly ONE `router.replace(\"/route\")` (L114), no `/scanner` branch; CIRCUIT_KEY set at L98 via `opts.preserveOrder ? \"1\" : \"0\"` — `isPdf` still passed as preserveOrder from handlePickFile (L62) so Circuit-lock semantics preserved even though initial screen is now always the map. FRONTEND #2 STATIC: /app/frontend/app/route.tsx L646-653 scannerBtn uses `<Ionicons name=\"camera\" size={22} color=\"#fff\" />` with testID='open-scanner-button' and accessibilityLabel='Abrir scanner de câmera'; grepped file — the only `name=\"scan\"` usage is inside the help card copy in upload.tsx L222 (decorative icon) and menu item L823 which is UNRELATED (menu action label). REGRESSION 3/3 PASS: /api/optimize 5 SP pending stops → 200, metrics returned (distance>0); /api/geocode-batch 3 SP addresses → 3/3 found=true, provider='google' for all; /api/auth/me no token → 401 with detail containing 'missing_token'. FRONTEND SMOKE: http://localhost:3000 on 390x844 mobile viewport — landing screen renders (5837 chars in #root, title 'Rota Rápida App', 'Entrar com Google' button visible), no red Metro overlay, no pageerrors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration16.py",
+    "/app/test_reports/pytest/iteration16_results.xml"
+  ],
+  "action_items": [
+    "Non-blocking (carry-over from iter 14/15): `yarn expo install --check` — expo@54.0.34→54.0.35, expo-font@14.0.11→14.0.12, expo-router@6.0.23→6.0.24 before native build.",
+    "Not tested here (needs device/Expo Go): end-to-end upload of a real Circuit PDF → observe MAP opens first (not scanner) → tap the CAMERA icon in the top-right of the map to launch scanner. Playwright web preview cannot exercise expo-document-picker or the native camera scanner path; validated via static code review only."
+  ],
+  "critical_code_review_comments": [
+    "server.py now ~1867 lines — carry-over recommendation to modularize (parsing, geocoding, auth, pix, history, admin).",
+    "route.tsx still ~1492 lines — carry-over recommendation to split styles/modals into dedicated components."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration16.py (new)",
+    "/app/test_reports/pytest/iteration16_results.xml (new)",
+    "/app/test_reports/iteration_16.json (new)"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% (smoke + 2/2 static)"},
+  "seed_data_creation": "None — inline payloads only. No persistent test data written.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 16 fixed the Circuit PDF address-quality bug (Notes column was being dropped by pdfplumber table extraction). Backend URL: https://rota-facil-mobile.preview.emergentagent.com. The parse_pdf → parse-text path is fully verified via the semantic test (customer name flows to `cliente`, CEP triggers ViaCEP resolution to lat/lon). Both upload.tsx and route.tsx now route driver to /route first and the scanner button on the map uses the `camera` Ionicon. All 5 backend tests + smoke pass on the deployed preview URL.",
+  "rca_of_issue": "ROOT CAUSE: In parse_pdf pdfplumber table branch (server.py ~L595-650), each row produced `f\"{first_cell} {address} {code_match}\"` — dropping the Notes column contents. Circuit-format PDFs place the customer name + phone + CEP in the Notes column, so downstream _extract_customer_and_at (needs the customer name string) and _resolve_cep_to_latlon (needs the 8-digit CEP) never saw that data and stops arrived at the frontend with cliente=null and lat/lon=null → user saw 'wrong points on the map'. FIX: append `notes_extra` (Notes minus the tracking code) to line_parts, so the merged text carries name + CEP through the same downstream extractors that already work for the text/manual path. VERIFICATION: /api/parse-text with the merged text produces cliente + lat/lon for both rows (test_parse_text_with_customer_and_cep_resolves_latlon)."
+}
