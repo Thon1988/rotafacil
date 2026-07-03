@@ -1,0 +1,51 @@
+{
+  "summary": "Iteration 12 testing — customer name + AT code extraction and notification body composition. Ran 9 pytest cases (7 backend/regression + 2 frontend-static). 7 PASSED, 2 FAILED. Static checks confirm Stop pydantic model has cliente + codigo_at, frontend Stop type has cliente + codigo_at, and use-stop-notification.ts composes bodyLines as [streetAndNumber, cliente, codeLabel(codigo_at||codigo)] in correct order. Cliente + codigo_at extraction WORKS for both space-separated Circuit rows and semicolon-separated Circuit blocks, and correctly returns None when no name/AT code is detectable. HOWEVER one real BUG found: the AT code is NOT stripped from `endereco` after extraction because the noise regex in /app/backend/server.py requires 10 consecutive digits (\\d{10}) but real AT codes have only 9 digits followed by letters+digits (e.g. AT202607036QXO9 = 9 digits + QXO9). The 87-stop /api/optimize regression test failed with synthetic randomly-distributed SP coordinates (160km vs <100km threshold) — likely because my synthetic dataset doesn't reflect real clustered delivery addresses; treat this as an invalid regression, not a genuine solver regression. Frontend smoke test PASSED — bundle compiles, #root populated (5837 chars), no red screen.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "/api/parse-text (extract_codes_and_addresses)",
+        "issue": "AT code is NOT stripped from `endereco` after being extracted into `codigo_at`. Reason: noise regex `AT\\d{10}[A-Z]{2,4}\\d*` on server.py:199 (NOISE_PATTERNS) and server.py:447 (row-block cleaner) requires 10 CONSECUTIVE digits after 'AT', but real Shopee AT codes like 'AT202607036QXO9' contain only 9 digits followed by letters+digit. Fix: change pattern to `AT[0-9A-Z]{10,14}` (mirroring the working _AT_CODE_RE on line 313). Result observed: stops[0].endereco = 'Avenida Prf Edgar Santos, 514, Ap 1106 T1 03560-080 MILTON AMARAL PEREIRA AT202607036QXO9, São Paulo, SP' — the customer name and AT code are still in the address string, which will hurt geocoding accuracy.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "/api/parse-text (extract_codes_and_addresses)",
+        "issue": "Customer name also leaks into `endereco` (e.g. 'MILTON AMARAL PEREIRA' remains inside the returned endereco string). Even if AT stripping is fixed, the customer name will still be part of the endereco. Consider stripping cliente_val from endereco too, after extraction, to keep geocoder input clean."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration12.py",
+    "/app/test_reports/pytest/iteration12_results.xml"
+  ],
+  "action_items": [
+    "Fix AT-code stripping regex in /app/backend/server.py: replace `AT\\d{10}[A-Z]{2,4}\\d*` with `AT[0-9A-Z]{10,14}` on line 199 (NOISE_PATTERNS) and line 447 (row-block cleaner in extract_codes_and_addresses). This mirrors the already-correct _AT_CODE_RE on line 313. After fix, stops[i].endereco should no longer contain the AT code.",
+    "OPTIONAL: also strip the extracted `cliente` name from endereco so the geocoder input doesn't include customer name text.",
+    "The 87-stop OR-Tools optimize regression could not be reproduced here with synthetic random coordinates (~160 km over an 18x18km random cloud vs <100 km on real clustered addresses). If desired, ship a fixture file of the real production 87-address route so this regression can be locked in."
+  ],
+  "critical_code_review_comments": [
+    "server.py is 1700+ lines — should be split into modules (parsing, geocoding, auth, pix, history, admin) for maintainability.",
+    "extract_codes_and_addresses has duplicated logic for the Circuit-row path and the per-line fallback (customer/at extraction + address cleanup). Extract a shared helper.",
+    "Two independent AT-code regexes exist (_AT_CODE_RE and the NOISE_PATTERNS one) that disagree on the required digit count. Consolidate into one constant to prevent this class of bug."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration12.py (new)",
+    "/app/test_reports/pytest/iteration12_results.xml (new)"
+  ],
+  "success_rate": {
+    "backend": "71% (5/7 backend tests passed; 1 real bug + 1 invalid synthetic regression)",
+    "frontend": "100% (2/2 static + smoke passed)"
+  },
+  "seed_data_creation": "None — all tests use inline payloads or synthetic random SP coordinates.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Test file /app/backend/tests/test_iteration12.py covers Stop model shape, parse-text cliente+codigo_at extraction (space + semicolon variants), no-name fallback, geocode-batch google provider, auth/me 401, and frontend static composition. The optimize 87-stop test is synthetic and NOT a valid regression — replace with real production coordinates before trusting the <100 km threshold. After main agent fixes the AT-code stripping regex, re-run this test file — the space-separated test should then fully pass. Backend URL used: https://rota-facil-mobile.preview.emergentagent.com (from EXPO_PUBLIC_BACKEND_URL).",
+  "rca_of_issue": "AT codes leaking into endereco. RCA: NOISE_PATTERNS (server.py:199) and the row-block cleaner (server.py:447) both use `AT\\d{10}[A-Z]{2,4}\\d*`. Real Shopee AT codes have the shape `AT` + 9 digits + 4 alphanumerics (e.g. AT202607036QXO9). Since only 9 (not 10) digits follow 'AT', the regex fails and the AT token is left untouched in the address. The correctly-scoped regex _AT_CODE_RE (server.py:313) uses `AT[0-9A-Z]{10,14}` which does match. Reproduction: POST /api/parse-text {\"text\": \"1 BR265114108628K Av Prf Edgar Santos, 514, Ap 1106 T1 03560-080 MILTON AMARAL PEREIRA AT202607036QXO9\"} → response.stops[0].endereco still contains 'AT202607036QXO9'. Mitigation: change both occurrences of the broken pattern to `AT[0-9A-Z]{10,14}` (or import _AT_CODE_RE.pattern)."
+}

@@ -100,6 +100,8 @@ class Stop(BaseModel):
     timestamp: Optional[str] = None
     lat: Optional[float] = None
     lon: Optional[float] = None
+    cliente: Optional[str] = None
+    codigo_at: Optional[str] = None
 
 
 class ParsedFileResponse(BaseModel):
@@ -307,6 +309,82 @@ def _extract_cep_from_text(text: str) -> Optional[str]:
     return f"{m.group(1)}-{m.group(2)}"
 
 
+# AT code (Shopee tracker): AT + 10-14 alphanumeric chars, e.g. AT202607036QXO9
+_AT_CODE_RE = re.compile(r"\bAT[0-9A-Z]{10,14}\b")
+
+# Customer name heuristic: 2-5 words either FULL uppercase (MILTON AMARAL PEREIRA)
+# or Proper Case (Milton Amaral Pereira). Requires at least 2 words, each ≥3 chars.
+# Filters out street prefixes and known noise tokens.
+_NAME_STOP_WORDS = {
+    "RUA", "AVENIDA", "AV", "AVDA", "ALAMEDA", "AL", "TRAVESSA", "TRAV",
+    "PRACA", "PRAÇA", "PCA", "PÇA", "R", "ESTRADA", "EST", "RODOVIA", "ROD",
+    "LARGO", "VIELA", "VILA", "JARDIM", "CONJUNTO", "SÃO", "SAO", "PAULO",
+    "BAIRRO", "AP", "APTO", "APARTAMENTO", "SN", "SEM", "NUMERO", "NÚMERO",
+    "CEP", "BRASIL", "BR", "COMPLEMENTO", "COMP", "BLOCO", "BL", "CASA",
+    "FUNDOS", "TÉRREO", "TERREO", "LOJA", "GALPAO", "GALPÃO", "SP", "MG", "RJ",
+    # Honorifics + abbreviations often embedded in street names (Prof., Dr., etc.)
+    # These are frequently mistaken for the customer's first name.
+    "PROF", "PROFA", "PROFESSOR", "PROFESSORA", "DR", "DRA", "DOUTOR", "DOUTORA",
+    "PRF", "ENG", "ENGENHEIRO", "CEL", "CORONEL", "GEN", "GENERAL",
+    "MAL", "MARECHAL", "MIN", "MINISTRO", "PADRE", "PE", "SÃOFRANCISCO",
+    "IRMÃ", "IRMA", "FREI", "JD", "PQ", "PARQUE", "PRESIDENTE", "PRES",
+    "GOV", "GOVERNADOR", "ARQ", "ARQUITETO",
+}
+
+
+def _extract_customer_and_at(block: str) -> tuple:
+    """Extract (customer_name, at_code) from a Circuit-row block. Returns (None, None) if nothing found."""
+    at_match = _AT_CODE_RE.search(block or "")
+    at_code = at_match.group(0) if at_match else None
+
+    if not block:
+        return (None, at_code)
+
+    # Split into candidate segments (semicolons / pipes / newlines are section separators
+    # in Circuit exports). Then scan each segment for a full-name-looking token sequence.
+    # If no clear segmentation is present (space-separated only), fall back to scanning
+    # the ENTIRE block for uppercase/proper-case name patterns.
+    segments = re.split(r"[;\|\n]+", block)
+    if len(segments) < 2:
+        # No obvious separators — also try scanning the whole block, plus segments
+        # split by 2+ consecutive spaces (common in PDF column exports).
+        segments = segments + re.split(r"\s{2,}", block)
+        segments.append(block)
+    best: Optional[str] = None
+    for seg in segments:
+        seg = seg.strip()
+        if not seg or len(seg) < 6:
+            continue
+        # Try UPPERCASE-name regex first (most common in Circuit exports)
+        m_iter = list(re.finditer(
+            r"\b([A-ZÀ-Ý][A-ZÀ-Ý'\-]{2,}(?:\s+(?:DA|DE|DO|DOS|DAS|E)?\s*[A-ZÀ-Ý][A-ZÀ-Ý'\-]{2,}){1,4})\b",
+            seg,
+        ))
+        # Then try proper-case names (Fulano de Tal)
+        m_iter.extend(list(re.finditer(
+            r"\b([A-ZÀ-Ý][a-zà-ý'\-]{2,}(?:\s+(?:da|de|do|dos|das|e)?\s*[A-ZÀ-Ý][a-zà-ý'\-]{2,}){1,4})\b",
+            seg,
+        )))
+        for m in m_iter:
+            candidate = m.group(1).strip()
+            parts = candidate.split()
+            # Reject candidates that CONTAIN a stop word (Rua/Av/Prf/Dr/etc.)
+            if any(p.upper().rstrip(".,") in _NAME_STOP_WORDS for p in parts):
+                continue
+            # Reject candidates that appear as an ADDRESS COMPLEMENT right after
+            # `<number>,` (e.g. `514, Ap 1106` or `200, Casa 2`). We look for
+            # a comma immediately preceded by digits, followed by ≤3 chars of
+            # whitespace before the match.
+            span_start = m.start()
+            context = seg[max(0, span_start - 10):span_start]
+            if re.search(r"\d,\s{0,3}$", context):
+                continue
+            if best is None or len(candidate) > len(best):
+                best = candidate
+
+    return (best, at_code)
+
+
 def extract_codes_and_addresses(text: str) -> List[dict]:
     """Extract stops preserving Circuit PDF order.
 
@@ -345,6 +423,8 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
             # Detect inline coordinates in the FULL row block (before we strip)
             coord_pair = _extract_coords_from_text(block)
             cep_val = _extract_cep_from_text(block)
+            # Extract customer name + AT code from the FULL block (before stripping)
+            cliente_val, at_code_val = _extract_customer_and_at(block)
 
             # Find first matching code inside this row block
             codigo = None
@@ -380,6 +460,8 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
                 "timestamp": None,
                 "lat": coord_pair[0] if coord_pair else None,
                 "lon": coord_pair[1] if coord_pair else None,
+                "cliente": cliente_val,
+                "codigo_at": at_code_val,
                 "_circuit_order": row_num,
             }
             if not coord_pair and cep_val:
@@ -422,6 +504,7 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
         # Detect inline coords / CEP in the FULL original line (before stripping)
         coord_pair = _extract_coords_from_text(line)
         cep_val = _extract_cep_from_text(line)
+        cliente_val, at_code_val = _extract_customer_and_at(line)
 
         row_match = re.match(r"^\s*(\d{1,3})\b\s+(?=[A-ZÀ-Ýa-zà-ý])", raw)
         circuit_order: Optional[int] = None
@@ -447,6 +530,8 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
             "timestamp": None,
             "lat": coord_pair[0] if coord_pair else None,
             "lon": coord_pair[1] if coord_pair else None,
+            "cliente": cliente_val,
+            "codigo_at": at_code_val,
             "_circuit_order": circuit_order,
         }
         if not coord_pair and cep_val:

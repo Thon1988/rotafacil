@@ -227,8 +227,79 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: >-
-      Iteration 11 — in-app card removed, persistent notification when
-      backgrounded added, expo-notifications installed.
+      Iteration 12 — customer name + AT code in notification.
+      USER ASK: Put customer name in the popup. Format: line 1 = street +
+      number, line 2 = customer name, line 3 = AT code.
+      BACKEND (server.py):
+      (1) Added `cliente: Optional[str]` and `codigo_at: Optional[str]`
+      to the Stop pydantic model.
+      (2) New helper `_extract_customer_and_at(block)` → (name, at_code).
+      AT code regex: `\bAT[0-9A-Z]{10,14}\b`. Customer-name detection is
+      heuristic: prefers UPPERCASE full-name patterns (MILTON AMARAL
+      PEREIRA), falls back to proper-case (Ana Silva Costa). Rejects
+      candidates containing stop words (Rua/Av/Prf/Dr/Prof/etc.) or
+      appearing right after `<number>,` (address complement pattern).
+      Handles both semicolon-separated Circuit exports and space-only
+      multi-line PDF text.
+      (3) Wired the helper into BOTH extraction paths (Circuit row-based
+      + per-line fallback) so `cliente` and `codigo_at` are populated
+      on every parsed stop.
+      Smoke tested 4 real-format inputs → 4/4 correct extraction:
+      MILTON AMARAL PEREIRA, MILTON AMARAL PEREIRA (multi-line), Ana
+      Silva Costa, CARLOS RIBEIRO MENDES. All AT codes captured.
+      FRONTEND:
+      (4) `Stop` interface in `/app/frontend/src/types/stop.ts` now
+      includes `cliente?: string | null` and `codigo_at?: string | null`.
+      (5) Notification body in `use-stop-notification.ts` now formats:
+      Line 1: streetAndNumber (first 2 comma-parts of endereco)
+      Line 2: cliente
+      Line 3: codigo_at (falls back to codigo when AT missing)
+      Empty lines are filtered out via `.filter(Boolean)`.
+      NO CHANGE to in-app UI — the popup still only appears when app is
+      backgrounded (via AppState listener), per previous iteration.
+      Please test:
+      (a) POST /api/parse-text with body containing 3 Circuit-style rows
+      each with a customer name and AT code (see smoke test above).
+      Expect all 3 stops to have `cliente` populated AND `codigo_at`
+      populated. Address should NOT contain the AT code.
+      (b) Regression: /api/optimize still returns 87 SP stops in <100 km
+      via ortools_haversine.
+      (c) Static: hook body composes [streetAndNumber, cliente,
+      codigo_at || codigo] joined by '\\n', with empty lines filtered.
+      (d) Static: Stop type includes new optional fields.
+      Report to iteration_12.json.
+
+backend_tasks_iteration_12:
+  - task: "Stop model: cliente + codigo_at fields"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "_extract_customer_and_at helper + integration in both extractors"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+
+frontend_tasks_iteration_12:
+  - task: "Stop type extended with cliente + codigo_at"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/types/stop.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+  - task: "Notification body: street/number + cliente + AT code"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/hooks/use-stop-notification.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
       SUMMARY of user's screenshots feedback:
       (a) 'Otimizar' must show km + time each time it runs → both
       optimizeTSP and reoptimize now Alert.alert with `${km} • ${time}`.

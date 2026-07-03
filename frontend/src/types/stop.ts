@@ -8,5 +8,7 @@ export interface Stop {
   timestamp: string | null;
   lat: number | null;
   lon: number | null;
+  cliente?: string | null;
+  codigo_at?: string | null;
   duration_seconds?: number | null; // time taken from previous to this delivery
 }

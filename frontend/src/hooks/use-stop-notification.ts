@@ -74,14 +74,20 @@ function truncate(text: string, max = 80): string {
 async function showNotificationForStop(index: number, s: Stop, total: number) {
   const stopNumber = String(index + 1).padStart(2, "0");
   const title = `Parada ${stopNumber} de ${String(total).padStart(2, "0")}`;
-  // Try to break address into "street, number" and "extras"
+  // Body format (per user spec):
+  //   Line 1: Street name + number (first 2 segments of endereco)
+  //   Line 2: Customer name (if available)
+  //   Line 3: AT code (or fallback to codigo)
   const parts = s.endereco.split(",").map((p) => p.trim()).filter(Boolean);
-  const primary = parts.slice(0, 2).join(", ");
-  const secondary = parts.slice(2).join(", ");
-  const body =
-    (primary ? `${primary}\n` : "") +
-    (secondary ? `${secondary}\n` : "") +
-    `Código: ${s.codigo}`;
+  const streetAndNumber = parts.slice(0, 2).join(", ");
+  const cliente = (s as any).cliente || "";
+  const codeLabel = ((s as any).codigo_at as string) || s.codigo || "";
+  const bodyLines = [
+    streetAndNumber,
+    cliente,
+    codeLabel,
+  ].filter(Boolean);
+  const body = bodyLines.join("\n");
   try {
     await Notifications.dismissNotificationAsync(NOTIF_ID).catch(() => {});
     await Notifications.scheduleNotificationAsync({
