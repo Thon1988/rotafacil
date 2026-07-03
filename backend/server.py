@@ -196,7 +196,7 @@ STREET_PREFIX_RE = re.compile(
 
 # Common noise tokens to strip before geocoding
 NOISE_PATTERNS = [
-    r"AT\d{10}[A-Z]{2,4}\d*",       # Circuit route codes (AT2026061969UZ6)
+    r"AT[0-9A-Z]{10,14}",            # Circuit route codes (AT2026061969UZ6, AT202607036QXO9)
     r"\b\d{2}:\d{2}\b",              # timestamps like 13:23
     r"\b\d{10,11}\b",                # phone numbers
     r"\b(?:no fundo|casa|apto|apartamento|bloco|fundos|sala|loja)\s*\w*",
@@ -443,8 +443,11 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
 
             # Clean address: strip code, semicolons, then run normal cleaner
             raw = re.sub(re.escape(codigo), "", block, flags=re.IGNORECASE)
-            # Remove the Circuit route header noise tokens early
-            raw = re.sub(r"AT\d{10}[A-Z]{2,4}\d*", " ", raw)
+            # Remove the Circuit route header noise tokens early (broader AT match)
+            raw = _AT_CODE_RE.sub(" ", raw)
+            # Also strip the extracted customer name so it doesn't pollute the address
+            if cliente_val:
+                raw = re.sub(re.escape(cliente_val), " ", raw, flags=re.IGNORECASE)
             raw = re.sub(r"[;\t\|]+", " ", raw)
             raw = re.sub(r"\s+", " ", raw).strip(" ,.-;")
             cleaned = clean_address(raw)

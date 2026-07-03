@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 13 — RE-TEST of iteration 12 AT-code stripping bug fix. Ran 5 focused pytest cases (the 5 items explicitly listed in E1's review request). ALL 5 PASSED (100%). The regex fix on server.py:199 (NOISE_PATTERNS `AT[0-9A-Z]{10,14}`) and server.py:447 (`_AT_CODE_RE.sub`) works correctly. Also confirmed the cliente-name strip line at server.py:449-450 is in place and effective. Verified per-stop: (a) cliente correct, (b) codigo_at correct, (c) endereco has NO 'AT202' substring and no AT[0-9A-Z]{10,14} match, (d) customer name does NOT leak into endereco. Regressions all green: /api/optimize (5 SP stops) returned 200 with metrics.total_distance_km > 0; /api/geocode-batch (3 SP addresses) returned provider='google' for all 3; /api/auth/me without token → 401 with 'missing_token' wording. Iteration 12 bug is fully resolved.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration13_retest.py",
+    "/app/test_reports/pytest/iteration13_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py remains 1854 lines — recommend splitting into modules (parsing, geocoding, auth, pix, history, admin) for maintainability (carried forward from iteration 12).",
+    "Now that _AT_CODE_RE is used in both NOISE_PATTERNS scope and the row-block cleaner, consider making NOISE_PATTERNS reference _AT_CODE_RE.pattern instead of a duplicated literal to prevent future regex drift."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration13_retest.py (new)",
+    "/app/test_reports/pytest/iteration13_results.xml (new)",
+    "/app/test_reports/iteration_12.json (retest-verified marker added)"
+  ],
+  "success_rate": {
+    "backend": "100% (5/5)",
+    "frontend": "not tested (backend-only per E1 request)"
+  },
+  "seed_data_creation": "None — all payloads are inline in the test file.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "AT-code stripping bug from iteration 12 is now verified fixed. Test file /app/backend/tests/test_iteration13_retest.py can be reused as regression coverage. Backend URL used: https://rota-facil-mobile.preview.emergentagent.com (from EXPO_PUBLIC_BACKEND_URL).",
+  "rca_of_issue": "Iteration 12 RCA — resolved. Original bug: NOISE_PATTERNS `AT\\d{10}[A-Z]{2,4}\\d*` required 10 consecutive digits after 'AT', but real Shopee AT codes contain 9 digits + 4 alphanumerics (e.g. AT202607036QXO9). Fix applied by main agent: replaced with `AT[0-9A-Z]{10,14}` on server.py:199 and switched row-block cleaner (server.py:447) to `_AT_CODE_RE.sub` (which uses the same 10-14 range). Also added cliente-name strip on server.py:449-450 so customer names no longer pollute the geocoder input. Verified via POST /api/parse-text with the 3-row payload — all AT codes and names are stripped from endereco."
+}

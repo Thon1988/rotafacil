@@ -44,8 +44,9 @@
     "frontend": "100% (2/2 static + smoke passed)"
   },
   "seed_data_creation": "None — all tests use inline payloads or synthetic random SP coordinates.",
-  "retest_needed": true,
-  "should_main_agent_self_test": true,
+  "retest_needed": false,
+  "retest_verified_at_iteration_13": "PASS — main agent fix (server.py:199 -> AT[0-9A-Z]{10,14}; server.py:447 -> _AT_CODE_RE.sub; server.py:449-450 -> cliente name strip) verified working. 5/5 re-tests passed. See /app/test_reports/iteration_13.json and /app/backend/tests/test_iteration13_retest.py.",
+  "should_main_agent_self_test": false,
   "context_for_next_testing_agent": "Test file /app/backend/tests/test_iteration12.py covers Stop model shape, parse-text cliente+codigo_at extraction (space + semicolon variants), no-name fallback, geocode-batch google provider, auth/me 401, and frontend static composition. The optimize 87-stop test is synthetic and NOT a valid regression — replace with real production coordinates before trusting the <100 km threshold. After main agent fixes the AT-code stripping regex, re-run this test file — the space-separated test should then fully pass. Backend URL used: https://rota-facil-mobile.preview.emergentagent.com (from EXPO_PUBLIC_BACKEND_URL).",
   "rca_of_issue": "AT codes leaking into endereco. RCA: NOISE_PATTERNS (server.py:199) and the row-block cleaner (server.py:447) both use `AT\\d{10}[A-Z]{2,4}\\d*`. Real Shopee AT codes have the shape `AT` + 9 digits + 4 alphanumerics (e.g. AT202607036QXO9). Since only 9 (not 10) digits follow 'AT', the regex fails and the AT token is left untouched in the address. The correctly-scoped regex _AT_CODE_RE (server.py:313) uses `AT[0-9A-Z]{10,14}` which does match. Reproduction: POST /api/parse-text {\"text\": \"1 BR265114108628K Av Prf Edgar Santos, 514, Ap 1106 T1 03560-080 MILTON AMARAL PEREIRA AT202607036QXO9\"} → response.stops[0].endereco still contains 'AT202607036QXO9'. Mitigation: change both occurrences of the broken pattern to `AT[0-9A-Z]{10,14}` (or import _AT_CODE_RE.pattern)."
 }
