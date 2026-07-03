@@ -21,6 +21,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { usePersistentStopNotification } from "@/src/hooks/use-stop-notification";
 
 import { COLORS, RADIUS, SPACING, API } from "@/src/constants/theme";
 import RouteMap, { MapHandle, MapMessage } from "@/src/components/route-map";
@@ -52,6 +53,11 @@ export default function RouteScreen() {
   const [editLoading, setEditLoading] = useState(false);
   const [circuitMode, setCircuitMode] = useState(false);
   const [stopCardHidden, setStopCardHidden] = useState(false);
+
+  // Show the persistent "current stop" system notification whenever the
+  // driver leaves the app (goes to Waze/Maps for navigation). Never shows
+  // while the app is foregrounded.
+  usePersistentStopNotification(stops);
   const lastStopTimeRef = useRef<number>(Date.now());
 
   const backgroundGeocode = useCallback(async (current: Stop[], indices: number[]) => {
@@ -285,9 +291,16 @@ export default function RouteScreen() {
       setMetrics(m);
       setCircuitMode(false);
       await storage.setItem("rota:circuit_mode", "0");
+      const kmStr = m ? `${m.total_distance_km.toFixed(1)} km` : "";
+      const timeStr = m
+        ? m.estimated_minutes >= 60
+          ? `${Math.floor(m.estimated_minutes / 60)}h ${Math.round(m.estimated_minutes % 60)}min`
+          : `${Math.round(m.estimated_minutes)}min`
+        : "";
       Alert.alert(
-        invertEndpoints ? "Rota invertida + reotimizada" : "Rota reotimizada",
-        `Primeira e última paradas fixas. ${orderedMiddle.length} paradas intermediárias reorganizadas.`
+        invertEndpoints ? "Rota invertida + reotimizada ⚡" : "Rota reotimizada ⚡",
+        [kmStr, timeStr].filter(Boolean).join(" • ") +
+          `\n${orderedMiddle.length} paradas intermediárias reorganizadas.`
       );
     } catch (e) {
       console.log("reoptimize error", e);
@@ -740,98 +753,9 @@ export default function RouteScreen() {
         />
       </View>
 
-      {/* CIRCUIT-STYLE FLOATING STOP CARD — shows next pending stop with quick actions */}
-      {(() => {
-        if (stopCardHidden) return null;
-        // Active stop = user-tapped OR first pending
-        const idx =
-          activeIdx !== null && stops[activeIdx]?.status === "pendente"
-            ? activeIdx
-            : stops.findIndex((s) => s.status === "pendente");
-        if (idx < 0 || !stops[idx]) return null;
-        const s = stops[idx];
-        const openMaps = () => {
-          const q = s.lat != null && s.lon != null
-            ? `${s.lat},${s.lon}`
-            : encodeURIComponent(s.endereco);
-          const url = `https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=driving`;
-          Linking.openURL(url).catch(() => Alert.alert("Erro", "Não foi possível abrir o Maps."));
-        };
-        return (
-          <View style={styles.stopCard} testID="active-stop-card" pointerEvents="box-none">
-            <View style={styles.stopCardInner}>
-              <View style={styles.stopCardHeader}>
-                <View style={styles.stopCardBadge}>
-                  <Text style={styles.stopCardBadgeText}>
-                    {String(idx + 1).padStart(2, "0")}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.stopCardAddr} numberOfLines={1}>
-                    {s.endereco.split(",").slice(0, 2).join(",") || s.endereco}
-                  </Text>
-                  <Text style={styles.stopCardSub} numberOfLines={1}>
-                    {s.codigo}
-                    {s.lat != null && s.lon != null ? "" : " • 📍 sem localização"}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => setStopCardHidden(true)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  style={styles.stopCardClose}
-                  testID="stop-card-close"
-                >
-                  <Ionicons name="close" size={20} color={COLORS.textSecondary} />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.stopCardActions}>
-                <TouchableOpacity
-                  style={styles.stopCardAction}
-                  onPress={openMaps}
-                  testID="stop-card-open-maps"
-                >
-                  <Ionicons name="navigate" size={16} color={COLORS.textPrimary} />
-                  <Text style={styles.stopCardActionText}>Abrir app</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.stopCardAction, styles.stopCardActionFail]}
-                  onPress={() => {
-                    setActiveIdx(idx);
-                    setTimeout(() => markStop("falhou"), 0);
-                  }}
-                  testID="stop-card-fail"
-                >
-                  <Ionicons name="close-circle" size={16} color="#fff" />
-                  <Text style={[styles.stopCardActionText, { color: "#fff" }]}>Não entregue</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.stopCardAction, styles.stopCardActionOk]}
-                  onPress={() => {
-                    setActiveIdx(idx);
-                    setTimeout(() => markStop("entregue"), 0);
-                  }}
-                  testID="stop-card-deliver"
-                >
-                  <Ionicons name="checkmark-circle" size={16} color="#fff" />
-                  <Text style={[styles.stopCardActionText, { color: "#fff" }]}>Entregue</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        );
-      })()}
-
-      {/* Show a small "restore card" pill when card is dismissed */}
-      {stopCardHidden && pendingCount > 0 && (
-        <TouchableOpacity
-          style={styles.restoreCardPill}
-          onPress={() => setStopCardHidden(false)}
-          testID="restore-stop-card"
-        >
-          <Ionicons name="chevron-up" size={16} color="#fff" />
-          <Text style={styles.restoreCardText}>Mostrar próxima parada</Text>
-        </TouchableOpacity>
-      )}
+      {/* NOTE: In-app floating stop card was removed per user request —
+          driver only wants the popup to appear OUTSIDE the app (when
+          navigating in Waze/Maps). See usePersistentStopNotification hook. */}
       <View style={styles.actionBar} testID="action-bar">
         <View style={styles.actionRow}>
           <TouchableOpacity

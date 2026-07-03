@@ -227,7 +227,107 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: >-
-      Iteration 10 — OR-Tools TSP + Circuit-style floating stop card.
+      Iteration 11 — in-app card removed, persistent notification when
+      backgrounded added, expo-notifications installed.
+      SUMMARY of user's screenshots feedback:
+      (a) 'Otimizar' must show km + time each time it runs → both
+      optimizeTSP and reoptimize now Alert.alert with `${km} • ${time}`.
+      (b) The Circuit-style popup should NOT appear inside Rota+Rápida →
+      removed the entire floating stop card block and its restore pill.
+      (c) The popup SHOULD appear when the driver leaves the app (to
+      Waze/Maps) → added /app/frontend/src/hooks/use-stop-notification.ts
+      which listens to AppState and shows/updates a persistent LOCAL
+      notification with the next pending stop (address, house number
+      parsed from endereco parts, code). Notification is dismissed when
+      the app returns to foreground OR all stops are done.
+      IMPLEMENTATION:
+      - Installed expo-notifications@0.32.17 via `yarn expo install`.
+      - New hook `usePersistentStopNotification(stops: Stop[])` wired
+      into BOTH /route and /scanner screens (driver typically opens
+      Waze from either).
+      - Android channel `rota-facil-active-stop` with LOW importance
+      (no sound, no vibration), sticky:true, autoDismiss:false so it
+      stays until removed. iOS shows in Notification Center.
+      - Notification handler globally set to `shouldShowBanner: false`
+      so foregrounded state never displays it.
+      - app.json now includes ["expo-notifications", {"color": "#f97316"}].
+      LIMITATIONS:
+      - Works in native builds; on Expo Go Android SDK 53+ push is
+      blocked but LOCAL notifications when app is backgrounded still
+      appear. Verified via unit-testable module.
+      - iOS: notification appears in Notification Center; user has to
+      swipe from top to see it (there's no "always visible" bubble on
+      iOS without Live Activities).
+      Please TEST:
+      (1) Static inspection: /app/frontend/src/hooks/use-stop-notification.ts
+      defines usePersistentStopNotification, uses AppState listener,
+      shows notification via Notifications.scheduleNotificationAsync
+      with sticky:true (Android) and dismisses on state='active'.
+      (2) route.tsx imports the hook and calls it with `stops` state.
+      (3) scanner.tsx imports the hook and calls it with `stops` state.
+      (4) route.tsx NO LONGER contains the in-app floating card
+      (search: no `active-stop-card`, `stop-card-close`, `restore-stop-card`).
+      Note: the stopCardHidden state var may remain unused — that's OK.
+      (5) reoptimize() Alert.alert now includes km + time (search for
+      `Rota reotimizada ⚡` and `Math.floor(m.estimated_minutes / 60)`).
+      (6) app.json plugins include ["expo-notifications", …].
+      (7) Backend regression: /api/optimize still returns <100km for 87
+      SP stops; /api/geocode-batch, /api/parse-text still work.
+      No frontend E2E needed (Google auth blocks automated flows).
+      Report to iteration_11.json.
+
+backend_tasks_iteration_11: []
+
+frontend_tasks_iteration_11:
+  - task: "Remove in-app floating stop card from route.tsx"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/route.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >-
+          Entire floating card block + restore pill removed. User does
+          not want any popup inside Rota+Rápida; only when app is
+          backgrounded.
+  - task: "usePersistentStopNotification hook + expo-notifications"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/hooks/use-stop-notification.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >-
+          Listens to AppState, shows sticky Android notification (or
+          iOS banner) with next pending stop when app is backgrounded.
+          Auto-dismisses on return to foreground or route complete.
+  - task: "Wire notification hook into route.tsx + scanner.tsx"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/route.tsx, /app/frontend/app/scanner.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "Reotimizar Alert now shows km + time"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/route.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+  - task: "expo-notifications plugin in app.json"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app.json"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
       BUG: user showed screenshots where Rota+Rápida did 177.6 km / 7h23min
       for 87 stops while Circuit did 49.5 km / same 87 stops (3.6× worse).
       Root cause: Google Directions optimize_waypoints only handles 25

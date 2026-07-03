@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 11 — persistent-notification refactor verified. STATIC + BACKEND + FRONTEND smoke all pass. STATIC #1 PASS: grep of route.tsx returns 'NO OCCURRENCES' for testIDs 'active-stop-card', 'stop-card-close', 'stop-card-open-maps', 'stop-card-fail', 'stop-card-deliver', 'restore-stop-card' — the entire in-app floating card block is gone. Comment on route.tsx:758 mentions 'usePersistentStopNotification hook' — allowed. STATIC #2 PASS: /app/frontend/src/hooks/use-stop-notification.ts exists, exports usePersistentStopNotification (line 114), imports expo-notifications (line 3) and AppState from react-native (line 2), contains AppState.addEventListener('change', ...) at line 146, calls Notifications.scheduleNotificationAsync with identifier 'active-stop' (const NOTIF_ID at line 26; used line 88) and Android-only sticky:true (line 96), calls Notifications.dismissNotificationAsync on foreground return (line 159) AND when no pending stop (line 125 dismissNotification()), and uses setNotificationHandler with shouldShowBanner:false at line 31. STATIC #3 PASS: route.tsx:24 imports usePersistentStopNotification and route.tsx:60 calls it with `stops`. STATIC #4 PASS: scanner.tsx:24 imports the hook and scanner.tsx:40 calls it with `stops`. STATIC #5 PASS: app.json plugins array (lines 54-59) includes ['expo-notifications', {color:'#f97316'}]. STATIC #6 PASS: route.tsx:294-303 declares kmStr/timeStr and Alert.alert('Rota reotimizada ⚡' at line 301) body concatenates `[kmStr, timeStr].filter(Boolean).join(' • ')` + paradas intermediárias count. STATIC #7 PASS: route.tsx:222-224 formats km + time with `${m.total_distance_km.toFixed(1)} km • ~${timeStr}` for 'Rota Otimizada ⚡'. BACKEND #8-11 REGRESSION: 9/9 pytest PASS in 25.98s via /app/backend/tests/test_iteration10.py (reused). 87 SP-scattered stops → OR-Tools returns 58.3 km (log: 'optimize: 87 stops via ortools_haversine → 58.3 km' in backend.err.log), well under 100 km threshold (assertion 30<=km<100 held). Geocode-batch: 3/3 SP addresses returned provider='google' inside SP bounds. Parse-text: stop 0 exact inline coords (-23.5893,-46.6337), stop 1 CEP 01310-100 resolved to SP bounds, stop 2 lat=lon=null. auth/me missing token → 401 with detail containing 'missing_token'. FRONTEND SMOKE: http://localhost:3000 in 375x667 viewport — #root populated with 5837 chars, title='Rota Rápida App', body renders 'Rota+Rápida App' + tagline + '14 dias grátis' + 4 feature cards + 'Entrar com Google' CTA. Zero console errors, zero pageerrors, no red-screen. Bundle compiled cleanly WITH expo-notifications imported by the new hook.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Expo SDK version drift (carry-over)", "issue": "expo@54.0.34 (expected ~54.0.35), expo-font@14.0.11 (expected ~14.0.12), expo-router@6.0.23 (expected ~6.0.24). Carry-over from iterations 2-10. Non-blocking."},
+      {"component": "expo-notifications native-build caveat", "issue": "Per hook comment (use-stop-notification.ts:19-22) and Expo SDK 53+ docs, local notifications when app is backgrounded require a native build (APK/IPA) to fully verify. Web preview + Expo Go cannot observe the background-notification behavior — UI-level testing of the persistent notification is deferred to native build. This is expected/documented — flagging so main agent conveys to user before demo."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration10.py",
+    "/app/test_reports/pytest/iteration11_results.xml"
+  ],
+  "action_items": [
+    "(none blocking) — All 11 checklist items pass. Main agent may proceed to demo/handoff.",
+    "NOTE for main agent: Communicate to user that the persistent stop notification only fires on a native build (EAS APK/IPA). Web preview / Expo Go SDK 53+ cannot render the OS-level notification when app goes to background. Hook logic + wiring are 100% correct per static review.",
+    "LOW (carry-over) — align Expo package versions: cd /app/frontend && npx expo install expo expo-font expo-router."
+  ],
+  "critical_code_review_comments": [
+    "use-stop-notification.ts:29-36 setNotificationHandler is called at module top-level (not inside the hook) — correct: it must register once before any notification fires. shouldShowBanner:false + shouldShowList:true means the notification will still appear in the notification tray/lock-screen when backgrounded but never as a foreground banner, matching Circuit behavior the user requested.",
+    "use-stop-notification.ts:121-137 first useEffect keeps currentStopRef in sync with the pendente stop AND dismisses when no pendente exists — this handles the 'route complete' case (item vi of STATIC #2) elegantly.",
+    "use-stop-notification.ts:146-161 AppState listener only fires scheduleNotificationAsync on active→background transition and dismissNotificationAsync on background→active — no wasted work on same-state transitions.",
+    "use-stop-notification.ts:163-167 cleanup calls sub.remove() AND dismissNotification() on unmount — good hygiene; prevents ghost notifications when user logs out.",
+    "use-stop-notification.ts:38-53 setNotificationChannelAsync uses AndroidImportance.LOW + vibrationPattern:[0] + enableVibrate:false — silent sticky notification, exactly what a delivery driver needs (no beeping every stop).",
+    "use-stop-notification.ts:78-84 body construction breaks endereco on commas and puts 'Código: XXX' on its own line — matches user spec of 'address, house number, and delivery code'.",
+    "route.tsx:60 usePersistentStopNotification(stops) is called at top level of the component, before any early return — safe under Rules of Hooks. Same for scanner.tsx:40.",
+    "route.tsx:294-303 Reotimizar Alert uses [kmStr, timeStr].filter(Boolean).join(' • ') — defensive against missing metrics (if m is null, both strings are '' and only the paradas count line renders). Nice touch.",
+    "app.json:54-59 expo-notifications plugin declared with only 'color' prop — no icon set (icon defaults to app icon). Fine for MVP; main agent may want to add a dedicated monochrome notification icon per Android Material guidelines later.",
+    "Both route.tsx and scanner.tsx wire the same hook with the local `stops` state — so the currently-visible stop set drives the notification regardless of which screen is active. Consistent."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (9/9 pytest)", "frontend": "100% (static inspection + smoke render)"},
+  "seed_data_creation": "Ephemeral only — 87-stop optimize payload uses random.seed(1234) for reproducibility; no DB writes.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 11 reused /app/backend/tests/test_iteration10.py (identical checklist for backend items #8-11). To run: `export EXPO_PUBLIC_BACKEND_URL=$(grep EXPO_PUBLIC_BACKEND_URL /app/frontend/.env | cut -d= -f2); pytest /app/backend/tests/test_iteration10.py -v`. The persistent notification (expo-notifications) is testable end-to-end ONLY via native EAS build — web preview will render nothing on background because window.blur does not translate to a real Android/iOS system notification. Static hook verification is sufficient for iterations 11+.",
+  "rca_of_issue": "N/A — all 11 checklist items verified. This iteration was a UX refactor (in-app card → OS-level persistent notification) per user request; no bug to RCA. Reotimizar Alert now consistently shows km+time (matches Otimizar's existing behavior), addressing user feedback item (a). Notification hook correctly gates on AppState.currentState !== 'active' so it fires only when user navigates away to Waze/Maps, addressing feedback items (b) removal-of-in-app-card and (c) OS-level popup on background."
+}

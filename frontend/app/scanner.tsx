@@ -21,6 +21,7 @@ import * as Speech from "expo-speech";
 import { COLORS, RADIUS, SPACING } from "@/src/constants/theme";
 import { loadRoute, saveRoute, clearRoute } from "@/src/lib/route-store";
 import { Stop } from "@/src/types/stop";
+import { usePersistentStopNotification } from "@/src/hooks/use-stop-notification";
 
 /**
  * Pivot scanner screen:
@@ -34,6 +35,9 @@ export default function ScannerScreen() {
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const [stops, setStops] = useState<Stop[]>([]);
+
+  // Show persistent notification with next stop when driver switches to Waze/Maps
+  usePersistentStopNotification(stops);
   const [feedback, setFeedback] = useState<{
     msg: string;
     detail?: string;
