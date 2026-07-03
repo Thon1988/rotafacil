@@ -24,12 +24,15 @@ import { Stop } from "@/src/types/stop";
 import { usePersistentStopNotification } from "@/src/hooks/use-stop-notification";
 
 /**
- * Pivot scanner screen:
- *  - Loads stops from PDF (already saved by /upload).
+ * Scanner screen:
+ *  - Loads stops from PDF/Excel (already saved by /upload or /route).
  *  - Camera is always on (full screen).
- *  - On scan -> finds the matching stop by code, marks as "entregue",
- *    speaks "Parada N" using expo-speech, shows X de Y counter.
- *  - The route order from the PDF is preserved (we never reorder).
+ *  - On scan -> finds the matching stop by code and ONLY announces
+ *    "Parada N" via expo-speech (identify + number the package).
+ *    Marking as "entregue" or "falhou" requires the driver to press
+ *    the corresponding button in the UI — the scanner NEVER auto-
+ *    marks status.
+ *  - The route order is preserved from the PDF / user's manual order.
  */
 export default function ScannerScreen() {
   const router = useRouter();
