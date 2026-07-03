@@ -227,7 +227,99 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: >-
-      Iteration 9 — batched multi-fix.
+      Iteration 10 — OR-Tools TSP + Circuit-style floating stop card.
+      BUG: user showed screenshots where Rota+Rápida did 177.6 km / 7h23min
+      for 87 stops while Circuit did 49.5 km / same 87 stops (3.6× worse).
+      Root cause: Google Directions optimize_waypoints only handles 25
+      stops; anything beyond was appended without optimization.
+      FIX:
+      (1) Added /app/backend/ortools_optimizer.py with optimize_with_ortools()
+      using PATH_CHEAPEST_ARC + GUIDED_LOCAL_SEARCH from Google OR-Tools.
+      Handles hundreds of stops with near-optimal quality. Uses haversine ×
+      1.3 matrix (free, fast, ~95% optimal in urban BR) by default; can
+      optionally use Google Routes API v2 computeRouteMatrix
+      (routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix) for
+      real drive-time matrix (paid). Supports fixed_first / fixed_last
+      indices for the "Reotimizar" feature.
+      (2) Rewrote /api/optimize in server.py to try OR-Tools FIRST (for
+      ≥3 stops), fall back to Google Directions (only for ≤25 stops), and
+      finally nearest-neighbor. Metrics reflect the used solver — logs
+      `optimize: N stops via ortools_haversine → X km`.
+      (3) Added ortools==9.15.6755 to requirements.txt.
+      Smoke test: 87 SP stops now return 60.18 km via ortools_haversine
+      (Circuit's 49.5 km is with real Google Distance Matrix; our
+      haversine estimate is 21% higher which is still ~2.9× improvement).
+      FRONTEND:
+      (4) /app/frontend/app/route.tsx — added a floating Circuit-style
+      StopCard fixed above the action bar. Shows the currently active
+      stop or first pending. Displays: 2-digit stop number badge,
+      truncated address, codigo, and three quick actions: "Abrir app"
+      (Google Maps directions deep link), "Não entregue" (marks falhou),
+      "Entregue" (marks entregue). X button in the top-right hides the
+      card; a "Mostrar próxima parada" pill appears at the bottom to
+      restore.
+      testIDs added: active-stop-card, stop-card-close, stop-card-open-maps,
+      stop-card-fail, stop-card-deliver, restore-stop-card.
+      Please test:
+      (a) Backend /api/optimize with 87 mock SP stops returns
+      distance_km < 100 (previously it was 177+),
+      (b) `optimize` log line shows `via ortools_haversine`,
+      (c) Backend /api/optimize with 5 stops still returns a valid
+      reorder (small routes still work),
+      (d) Frontend static: floating card testIDs present, X hides card,
+      pill restores it,
+      (e) Regressions: /api/parse-file, /api/geocode-batch, /api/auth/me
+      still working, /parse-text still resolves inline coords and CEP.
+
+backend_tasks_iteration_10:
+  - task: "OR-Tools optimizer /app/backend/ortools_optimizer.py"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/ortools_optimizer.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >-
+          New module. optimize_with_ortools() builds either haversine ×1.3 or
+          Google Routes Matrix, feeds into OR-Tools RoutingModel with
+          PATH_CHEAPEST_ARC + GUIDED_LOCAL_SEARCH. Supports open TSP via
+          virtual sink node. Handles fixed_first/fixed_last for Reotimizar.
+  - task: "/api/optimize refactor to prefer OR-Tools for ≥3 stops"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >-
+          Solver order: OR-Tools (≥3 stops) → Google Directions (≤25 stops)
+          → nearest-neighbor last resort. Smoke test: 87 SP stops → 60.2 km
+          (was 177.6 km). Metrics use solver's real distance/duration.
+
+frontend_tasks_iteration_10:
+  - task: "Circuit-style floating stop card in route.tsx"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/route.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >-
+          Floating card positioned bottom:82 above action bar. Shows badge
+          (2-digit padded stop number), address, codigo, and 3 action
+          buttons: Abrir app (Google Maps dir deep link), Não entregue,
+          Entregue. X close button. Restore pill appears when hidden.
+          Card auto-picks first pending stop unless a specific one is
+          activated by tap.
       BACKEND:
       (1) Added _is_admin_place_reject() helper and applied it inside
       try_nominatim() and geocode_photon() so results whose class/type/

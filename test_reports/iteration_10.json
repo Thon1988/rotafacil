@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 10 OR-Tools TSP fix verified — 9/9 pytest PASS in 25.88s. (BUG FIX #1) /api/optimize with 87 SP-scattered stops (seed=1234, ±0.03 deg spread) returned total_distance_km=58.3 km (previously ~177 km, ~3× reduction). Backend log line: 'optimize: 87 stops via ortools_haversine → 58.3 km' confirms OR-Tools path. Second run in this iteration hit 60.2 km. Assertion 30<=km<100 held. (BUG FIX #2) /api/optimize with 5 SP stops used OR-Tools ('optimize: 5 stops via ortools_haversine → 22.3 km') — >=3 threshold correctly triggered. Response has 5 stops + metrics. (BUG FIX #3) /api/optimize with 2 SP stops fell through OR-Tools (below 3-stop threshold), used Google Directions ('optimize: 2 stops via google_directions → 2.8 km'), returned 2 stops. (BUG FIX #4) /api/optimize with 2 stops both status=entregue returned 200 with 2 stops unchanged, no metrics — spec: 'no metrics required'. (BUG FIX #5) /api/optimize with 2 done + 4 pending returned 6 stops with the 2 entregue stops staying at result[0:2] and the 4 pendente at result[2:6] — done-first ordering preserved. (REGRESSION geocode-batch) 3 SP addresses (Av. Paulista 1000 / R. Augusta 500 / Rua Oscar Freire 200) all returned provider='google' with lat/lon inside SP bounds. (REGRESSION parse-text) 3-line payload: stop 0 (-23.5893, -46.6337) inline coords exact, stop 1 CEP=01310-100 resolved to SP bounds via ViaCEP+geocoder, stop 2 lat=null/lon=null. (REGRESSION auth/me) missing token → 401 with detail containing 'missing_token'. (REGRESSION parse-file) POST without file → 422. FRONTEND STATIC: /app/frontend/app/route.tsx line 761 has <View testID='active-stop-card'> containing a 2-digit padded stop number badge at line 766 (String(idx+1).padStart(2,'0')), TouchableOpacity testID='stop-card-close' at line 782 calling setStopCardHidden(true), testID='stop-card-open-maps' at 791 opening https://www.google.com/maps/dir/?api=1&destination=... via Linking.openURL, testID='stop-card-fail' at 802 firing markStop('falhou'), testID='stop-card-deliver' at 813 firing markStop('entregue'), and testID='restore-stop-card' pill at line 829 rendered only when stopCardHidden===true AND pendingCount>0. Card computes idx as (activeIdx if active && pendente) else first-pending (line 747-750). FRONTEND SMOKE: http://localhost:3000 loaded in 375x667 viewport — #root has 5837 chars, title='Rota Rápida App', body renders 'Rota+Rápida App' + tagline + trial badge + 4 feature cards + 'Entrar com Google' CTA. No red Metro screen. Only console warnings: 'shadow*' style props deprecated (react-native-web, carry-over). Expo SDK drift (expo@54.0.34 vs ~54.0.35, expo-font@14.0.11 vs ~14.0.12, expo-router@6.0.23 vs ~6.0.24) still present, non-blocking.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Expo SDK version drift", "issue": "expo@54.0.34 (expected ~54.0.35), expo-font@14.0.11 (expected ~14.0.12), expo-router@6.0.23 (expected ~6.0.24). Carry-over from iterations 2-9. Non-blocking. Reference: /var/log/supervisor/expo.err.log."},
+      {"component": "React Native Web deprecation", "issue": "Console warning: 'shadow*' style props are deprecated. Use 'boxShadow'. Non-blocking but should be migrated. Reference: browser console on landing page."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration10.py",
+    "/app/test_reports/pytest/iteration10_results.xml"
+  ],
+  "action_items": [
+    "(none blocking) — All 12 checklist items pass. Main agent may proceed with demo/handoff.",
+    "LOW (carry-over) — align Expo package versions: cd /app/frontend && npx expo install expo expo-font expo-router.",
+    "LOW — migrate 'shadow*' RN style props to 'boxShadow' for react-native-web compat (silences console warning)."
+  ],
+  "critical_code_review_comments": [
+    "server.py:1249-1268 OR-Tools branch fires when len(pending)>=3 with use_google_matrix=False (Haversine × 1.3). Sets used_solver='ortools_haversine' — matches expected log token 'via ortools_haversine'.",
+    "server.py:1271-1284 Google Directions optimize branch is now gated by 'not optimized and len(pending) <= 25' — so ≤25 stops that fail OR-Tools can still recover via Google, but ≥26 skip Google entirely (which was the root cause of 177km routes: Google's optimize:true only handles 25 waypoints, remainder was tail-appended).",
+    "server.py:1287-1303 Nearest-neighbor is now a last-resort fallback only when both OR-Tools and Google fail — good defensive layering.",
+    "server.py:1323 final = done + optimized preserves the done-first invariant across all solver branches — Bug Fix #5 verified.",
+    "server.py:1229-1230 early return for len(pending)==0 correctly avoids metrics computation — Bug Fix #4 spec-compliant.",
+    "ortools_optimizer.py:174-283 optimize_with_ortools() uses PATH_CHEAPEST_ARC + GUIDED_LOCAL_SEARCH with 8s time limit — matches spec. Open-TSP via virtual node (line 135) for return_to_start=false. fixed_first / fixed_last hooks reserved for Reotimizar flow.",
+    "ortools_optimizer.py:60-117 _build_google_distance_matrix() batches 25×25 sub-matrices for Routes API v2 — solid for future use_google_matrix=True switch when quota allows.",
+    "route.tsx:743-822 floating stop card is a self-contained IIFE {(() => {...})()} — encapsulates idx computation, openMaps handler, and 3-action row cleanly. pointerEvents='box-none' on outer View lets map interactions pass through empty areas — nice touch.",
+    "route.tsx:825-830 restore-stop-card pill is gated by (stopCardHidden && pendingCount > 0) — correctly hides itself when everything is delivered so user isn't offered a card that has nothing to show.",
+    "route.tsx:798-812 fail/deliver TouchableOpacities call setActiveIdx(idx) THEN setTimeout(markStop, 0) — this defers the state read inside markStop() until the activeIdx state has committed. Correct pattern for React batching."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (9/9 pytest)", "frontend": "100% (static inspection + smoke render)"},
+  "seed_data_creation": "Ephemeral only — 87-stop optimize payload uses random.seed(1234) for reproducibility; no DB writes.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 10 test file: /app/backend/tests/test_iteration10.py — 9 tests: 5 optimize bug fixes (87 / 5 / 2 / 0 / mixed stops), 3 regressions (geocode-batch, parse-text, auth-me / parse-file). Backend log signature to grep for future OR-Tools regressions: 'optimize: N stops via ortools_haversine → K km' in /var/log/supervisor/backend.err.log. Threshold: 87-stop SP-scattered route must stay < 100 km (was 177 pre-fix, is now 58-60 km). Frontend Playwright UI tests for the floating stop card (tap X → restore pill → tap restore → card returns) require an authenticated route with pending stops. Static verification of testIDs and handlers was thorough. To unlock UI-level flow tests in the future, main agent should add a dev-mode localStorage seed for rota:token + rota:stops.",
+  "rca_of_issue": "N/A — all 12 checklist items verified. Pre-fix RCA (documented by main agent): Google Directions API 'waypoints=optimize:true' only accepts ≤25 waypoints. For >25 stops, server.py used to append tail-first (nearest-neighbor-ish) which produced ~177km routes for 87 SP stops. Fix inserts OR-Tools solver (PATH_CHEAPEST_ARC + GUIDED_LOCAL_SEARCH) before the Google branch and unconditionally handles ≥3 stops, dropping the 87-stop route to ~60 km."
+}

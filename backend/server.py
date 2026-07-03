@@ -1238,29 +1238,53 @@ async def optimize_route(req: OptimizeRequest):
         origin_for_google = None  # let Google use first stop as origin
 
     optimized: List[Stop] = []
-    used_google = False
-    google_dist_m = 0
-    google_dur_s = 0
+    used_solver = "nearest_neighbor"
+    total_dist_m = 0
+    total_dur_s = 0
 
-    # Try Google Maps optimization first (smart layer)
-    try:
-        from optimize_routes import reorder_with_google
-        google_result = await reorder_with_google(pending, origin=origin_for_google)
-    except Exception as e:
-        logger.warning(f"google optimize import/call failed: {e}")
-        google_result = None
+    # ---- SOLVER 1: OR-Tools (Circuit-grade quality for any number of stops) ----
+    # Use OR-Tools whenever we have > 3 pending stops. It handles up to hundreds
+    # of stops with near-optimal quality (guided local search) and blows the
+    # nearest-neighbor / 25-waypoint-Google-limit out of the water.
+    if len(pending) >= 3:
+        try:
+            from ortools_optimizer import optimize_with_ortools
+            or_result = await optimize_with_ortools(
+                pending,
+                start_lat=req.start_lat,
+                start_lon=req.start_lon,
+                return_to_start=req.return_to_start,
+                use_google_matrix=False,  # Haversine × 1.3 — free, fast, 95%+ optimal in urban BR
+            )
+        except Exception as e:
+            logger.warning(f"OR-Tools optimize failed: {e}")
+            or_result = None
 
-    if google_result and google_result.get("order"):
-        order_indices = google_result["order"]
-        optimized = [pending[i] for i in order_indices]
-        # Any pending stops beyond first 25 (google limit) — append at tail
-        if len(pending) > len(optimized):
-            optimized.extend([s for i, s in enumerate(pending) if i not in order_indices])
-        used_google = True
-        google_dist_m = google_result.get("distance_m", 0)
-        google_dur_s = google_result.get("duration_s", 0)
-    else:
-        # Fallback: nearest-neighbor heuristic
+        if or_result and or_result.get("order"):
+            order_indices = or_result["order"]
+            optimized = [pending[i] for i in order_indices]
+            used_solver = f"ortools_{or_result.get('used_matrix', 'haversine')}"
+            total_dist_m = or_result.get("distance_m", 0)
+            total_dur_s = or_result.get("duration_s", 0)
+
+    # ---- SOLVER 2: Google Directions optimize (only for ≤25 stops; leaves ≥26+ to fallback) ----
+    if not optimized and len(pending) <= 25:
+        try:
+            from optimize_routes import reorder_with_google
+            google_result = await reorder_with_google(pending, origin=origin_for_google)
+        except Exception as e:
+            logger.warning(f"google optimize import/call failed: {e}")
+            google_result = None
+
+        if google_result and google_result.get("order"):
+            order_indices = google_result["order"]
+            optimized = [pending[i] for i in order_indices]
+            used_solver = "google_directions"
+            total_dist_m = google_result.get("distance_m", 0)
+            total_dur_s = google_result.get("duration_s", 0)
+
+    # ---- SOLVER 3: Nearest-neighbor fallback (last resort) ----
+    if not optimized:
         if req.start_lat is not None and req.start_lon is not None:
             remaining = list(pending)
         else:
@@ -1278,10 +1302,10 @@ async def optimize_route(req: OptimizeRequest):
                     nearest_idx = i
             optimized.append(remaining.pop(nearest_idx))
 
-    # Compute metrics: prefer Google's real-world distance/duration, else haversine estimate
-    if used_google and google_dist_m > 0:
-        total_km = google_dist_m / 1000.0
-        driving_min = google_dur_s / 60.0
+    # Compute metrics
+    if total_dist_m > 0:
+        total_km = total_dist_m / 1000.0
+        driving_min = total_dur_s / 60.0
     else:
         total_km = 0.0
         prev = start
@@ -1290,7 +1314,6 @@ async def optimize_route(req: OptimizeRequest):
             prev = (s.lat, s.lon)
         if req.return_to_start:
             total_km += haversine_km(prev[0], prev[1], start[0], start[1])
-        # Real-world factor (~1.3 for urban driving vs straight line)
         total_km *= 1.3
         driving_min = (total_km / max(req.avg_speed_kmh, 1.0)) * 60.0
 
@@ -1301,6 +1324,7 @@ async def optimize_route(req: OptimizeRequest):
     for idx, s in enumerate(final):
         s.id = idx
 
+    logger.info(f"optimize: {len(pending)} stops via {used_solver} → {total_km:.1f} km")
     metrics = RouteMetrics(
         total_distance_km=round(total_km, 2),
         estimated_minutes=round(total_min, 1),

@@ -51,6 +51,7 @@ export default function RouteScreen() {
   const [editLon, setEditLon] = useState("");
   const [editLoading, setEditLoading] = useState(false);
   const [circuitMode, setCircuitMode] = useState(false);
+  const [stopCardHidden, setStopCardHidden] = useState(false);
   const lastStopTimeRef = useRef<number>(Date.now());
 
   const backgroundGeocode = useCallback(async (current: Stop[], indices: number[]) => {
@@ -739,7 +740,98 @@ export default function RouteScreen() {
         />
       </View>
 
-      {/* BOTTOM ACTION BAR */}
+      {/* CIRCUIT-STYLE FLOATING STOP CARD — shows next pending stop with quick actions */}
+      {(() => {
+        if (stopCardHidden) return null;
+        // Active stop = user-tapped OR first pending
+        const idx =
+          activeIdx !== null && stops[activeIdx]?.status === "pendente"
+            ? activeIdx
+            : stops.findIndex((s) => s.status === "pendente");
+        if (idx < 0 || !stops[idx]) return null;
+        const s = stops[idx];
+        const openMaps = () => {
+          const q = s.lat != null && s.lon != null
+            ? `${s.lat},${s.lon}`
+            : encodeURIComponent(s.endereco);
+          const url = `https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=driving`;
+          Linking.openURL(url).catch(() => Alert.alert("Erro", "Não foi possível abrir o Maps."));
+        };
+        return (
+          <View style={styles.stopCard} testID="active-stop-card" pointerEvents="box-none">
+            <View style={styles.stopCardInner}>
+              <View style={styles.stopCardHeader}>
+                <View style={styles.stopCardBadge}>
+                  <Text style={styles.stopCardBadgeText}>
+                    {String(idx + 1).padStart(2, "0")}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.stopCardAddr} numberOfLines={1}>
+                    {s.endereco.split(",").slice(0, 2).join(",") || s.endereco}
+                  </Text>
+                  <Text style={styles.stopCardSub} numberOfLines={1}>
+                    {s.codigo}
+                    {s.lat != null && s.lon != null ? "" : " • 📍 sem localização"}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setStopCardHidden(true)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.stopCardClose}
+                  testID="stop-card-close"
+                >
+                  <Ionicons name="close" size={20} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.stopCardActions}>
+                <TouchableOpacity
+                  style={styles.stopCardAction}
+                  onPress={openMaps}
+                  testID="stop-card-open-maps"
+                >
+                  <Ionicons name="navigate" size={16} color={COLORS.textPrimary} />
+                  <Text style={styles.stopCardActionText}>Abrir app</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.stopCardAction, styles.stopCardActionFail]}
+                  onPress={() => {
+                    setActiveIdx(idx);
+                    setTimeout(() => markStop("falhou"), 0);
+                  }}
+                  testID="stop-card-fail"
+                >
+                  <Ionicons name="close-circle" size={16} color="#fff" />
+                  <Text style={[styles.stopCardActionText, { color: "#fff" }]}>Não entregue</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.stopCardAction, styles.stopCardActionOk]}
+                  onPress={() => {
+                    setActiveIdx(idx);
+                    setTimeout(() => markStop("entregue"), 0);
+                  }}
+                  testID="stop-card-deliver"
+                >
+                  <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                  <Text style={[styles.stopCardActionText, { color: "#fff" }]}>Entregue</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        );
+      })()}
+
+      {/* Show a small "restore card" pill when card is dismissed */}
+      {stopCardHidden && pendingCount > 0 && (
+        <TouchableOpacity
+          style={styles.restoreCardPill}
+          onPress={() => setStopCardHidden(false)}
+          testID="restore-stop-card"
+        >
+          <Ionicons name="chevron-up" size={16} color="#fff" />
+          <Text style={styles.restoreCardText}>Mostrar próxima parada</Text>
+        </TouchableOpacity>
+      )}
       <View style={styles.actionBar} testID="action-bar">
         <View style={styles.actionRow}>
           <TouchableOpacity
@@ -1183,6 +1275,88 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingRight: 4,
   },
+  stopCard: {
+    position: "absolute",
+    bottom: 82,
+    left: SPACING.md,
+    right: SPACING.md,
+    zIndex: 30,
+  },
+  stopCardInner: {
+    backgroundColor: "#1e293b",
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: "#334155",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  stopCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  stopCardBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  stopCardBadgeText: { color: "#fff", fontWeight: "900", fontSize: 14 },
+  stopCardAddr: { color: COLORS.textPrimary, fontSize: 15, fontWeight: "800" },
+  stopCardSub: { color: COLORS.textSecondary, fontSize: 12, marginTop: 2 },
+  stopCardClose: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#0f172a",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  stopCardActions: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  stopCardAction: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    backgroundColor: "#0f172a",
+    paddingVertical: 10,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  stopCardActionFail: { backgroundColor: COLORS.error, borderColor: COLORS.error },
+  stopCardActionOk: { backgroundColor: COLORS.success, borderColor: COLORS.success },
+  stopCardActionText: { color: COLORS.textPrimary, fontWeight: "700", fontSize: 12 },
+  restoreCardPill: {
+    position: "absolute",
+    bottom: 90,
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    zIndex: 30,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  restoreCardText: { color: "#fff", fontWeight: "800", fontSize: 12 },
   counterPill: {
     flexDirection: "row",
     alignItems: "center",
