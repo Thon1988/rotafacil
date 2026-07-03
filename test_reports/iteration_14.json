@@ -1,0 +1,30 @@
+{
+  "summary": "Iteration 14 — verified all 5 static assertions + 3 backend regressions + 1 frontend smoke. STATIC #1 route.tsx: BottomSheet + BottomSheetView imported from '@gorhom/bottom-sheet' (L19-21), bottomSheetRef (L59), snapPoints=['18%','50%','92%'] wrapped in useMemo (L60), enableContentPanningGesture={false} (L688), handleIndicatorStyle/handleStyle/backgroundStyle all set (L685-687); Roteirizar button (testID='roteirizar-button', L707) is INSIDE the BottomSheetView content (L690-772) so it's visible at every snap point. STATIC #2 use-stop-notification.ts: import Constants + ExecutionEnvironment from expo-constants (L3), IS_EXPO_GO=ExecutionEnvironment.StoreClient (L22), expo-notifications is loaded via require inside try/catch (L28-34), every Notifications call is guarded (setNotificationHandler L40, ensureAndroidChannel L52, ensurePermission L69, showNotificationForStop L89, dismissNotification L149, ensureCategory L160). STATIC #3: title=`${stopNumber} · ${collapsedTitle}` with collapsedTitle=streetAndNumber (L103,114), body=complement (2nd+3rd address segments, L94,104,116), Android style={type:'bigText', text:expandedBody} where expandedBody joins streetAndNumber+complement+cliente+codeLabel with \\n (L105-107,137). STATIC #4: setNotificationCategoryAsync('STOP_ACTIONS', [...]) with 3 entries OPEN_MAPS/MARK_FAILED/MARK_DELIVERED titled 'Abrir app'/'Não entregue'/'Entregue' all opensAppToForeground:true (L162-178); content.categoryIdentifier='STOP_ACTIONS' (L128). STATIC #5: '@gorhom/bottom-sheet':'^5.2.14' present in package.json (L17). FRONTEND SMOKE: http://localhost:3000 loaded cleanly — #root populated (5837 chars), NO red Metro overlay, NO expo-notifications SDK 53 crash, login screen 'Entrar com Google' renders correctly (mobile 390x844 viewport). Dynamic require guard works — the stale bundler error from before is gone after supervisorctl restart expo. BACKEND (3/3 PASS): /api/optimize 5 SP stops → 200 with metrics.total_distance_km=9.1km, backend log confirms 'optimize: 5 stops via ortools_haversine → 9.1 km'; /api/parse-text 3 Circuit rows → total=3, each stop has cliente + codigo_at set, endereco free of 'AT202' and AT[0-9A-Z]{10,14} pattern; /api/auth/me no token → 401 with 'missing_token' wording.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration14.py",
+    "/app/test_reports/pytest/iteration14_results.xml"
+  ],
+  "action_items": [
+    "Expo doctor warns three packages are slightly behind the SDK 54 targets (expo@54.0.34→54.0.35, expo-font@14.0.11→14.0.12, expo-router@6.0.23→6.0.24). Non-blocking but recommend running `yarn expo install --check` before native build."
+  ],
+  "critical_code_review_comments": [
+    "route.tsx is now 1484 lines — consider splitting the huge inline StyleSheet, the modal bodies (menu / manual / edit-location), and the notification/optimize handlers into dedicated components.",
+    "server.py remains 1854+ lines — carry-over recommendation to modularize (parsing, geocoding, auth, pix, history, admin)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration14.py (new)",
+    "/app/test_reports/pytest/iteration14_results.xml (new)"
+  ],
+  "success_rate": {"backend": "100% (3/3)", "frontend": "100% (smoke + 5/5 static)"},
+  "seed_data_creation": "None — inline payloads only.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 14 delivered the @gorhom/bottom-sheet 3-snap-point stops panel and the safe dynamic require of expo-notifications (fixes SDK 53 Expo Go crash). Web preview renders cleanly. Bottom-sheet drag/snap and the collapsed/expanded native notification behavior can only be verified end-to-end on a real Android build — Expo Go on Android SDK 53+ intentionally NO-OPs the notification path via the IS_EXPO_GO guard. Backend URL: https://rota-facil-mobile.preview.emergentagent.com (from EXPO_PUBLIC_BACKEND_URL)."
+}

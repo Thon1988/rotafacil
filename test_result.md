@@ -227,7 +227,71 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: >-
-      Iteration 12 — customer name + AT code in notification.
+      Iteration 14 — bottom sheet + rich notification (collapsed/expanded).
+      TASK #1 (Bottom sheet):
+      Installed @gorhom/bottom-sheet@5.2.14 and refactored the paradas
+      panel in /app/frontend/app/route.tsx into a 3-snap-point sheet
+      wrapping <BottomSheet ref={bottomSheetRef} snapPoints=["18%","50%","92%"]>.
+      Handle bar (44×5px gray pill) at top of the sheet is draggable
+      (enableContentPanningGesture={false} so DraggableFlatList inside
+      keeps its long-press-to-reorder gesture without conflict).
+      - Collapsed (18%): shows only the "Paradas · N restantes" header
+      + "Roteirizar / Reotimizar / Importar Circuit" action row.
+      - Default (50%): also shows metrics bar (km / tempo / paradas).
+      - Expanded (92%): shows entire draggable list of stops.
+      Padding moved from listContainer → each child (listHeader,
+      primaryActionRow, metricsBar) so the sheet content fills correctly.
+      TASK #2 (Rich Android notification — collapsed pill + tap-to-expand):
+      Rewrote /app/frontend/src/hooks/use-stop-notification.ts to:
+      (a) Guard expo-notifications import against Expo Go on Android SDK
+      53+ (dynamic require inside try/catch; NOTIFICATIONS_UNSUPPORTED
+      const short-circuits when running in StoreClient on Android).
+      (b) Show COLLAPSED body = complement (e.g. "Ap 1106 T1, São Paulo")
+      and EXPANDED body via BigTextStyle = streetAndNumber + complement
+      + cliente + AT code. Title = "01 · Av Prf Edgar Santos, 514".
+      (c) Notification category STOP_ACTIONS with 3 buttons: "Abrir app",
+      "Não entregue", "Entregue" — all with opensAppToForeground:true.
+      (d) Sticky + LOW importance channel (no sound / vibration).
+      Please TEST:
+      1) Static: /app/frontend/app/route.tsx imports BottomSheet and
+      BottomSheetView from '@gorhom/bottom-sheet', uses snapPoints
+      ["18%","50%","92%"], has enableContentPanningGesture={false}, and
+      contains handleIndicatorStyle for the visible grip bar.
+      2) Static: /app/frontend/src/hooks/use-stop-notification.ts uses
+      require() inside a try/catch and skips execution when Notifications
+      is null (fix for Expo Go SDK 53+ crash).
+      3) Static: notification content contains categoryIdentifier
+      'STOP_ACTIONS' and BigTextStyle {type:'bigText'} on Android.
+      4) Static: setNotificationCategoryAsync('STOP_ACTIONS', [...])
+      with buttons OPEN_MAPS / MARK_FAILED / MARK_DELIVERED.
+      5) Frontend smoke: http://localhost:3000 compiles without red
+      Metro errors; no "expo-notifications was removed from Expo Go"
+      crash blocking the bundle.
+      6) Backend regression: /api/optimize, /api/parse-text, /api/auth/me
+      still working.
+
+frontend_tasks_iteration_14:
+  - task: "Bottom sheet with 3 snap points (18/50/92%) via @gorhom/bottom-sheet"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/route.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "Guard expo-notifications for Expo Go SDK 53+ crash"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/hooks/use-stop-notification.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+  - task: "Notification collapsed/expanded (BigTextStyle) + action buttons"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/hooks/use-stop-notification.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
       USER ASK: Put customer name in the popup. Format: line 1 = street +
       number, line 2 = customer name, line 3 = AT code.
       BACKEND (server.py):

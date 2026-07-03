@@ -16,6 +16,9 @@ import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
+import BottomSheet, {
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -53,6 +56,9 @@ export default function RouteScreen() {
   const [editLoading, setEditLoading] = useState(false);
   const [circuitMode, setCircuitMode] = useState(false);
   const [stopCardHidden, setStopCardHidden] = useState(false);
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const snapPoints = useMemo(() => ["18%", "50%", "92%"], []);
+  const [sheetIndex, setSheetIndex] = useState(1);
 
   // Show the persistent "current stop" system notification whenever the
   // driver leaves the app (goes to Waze/Maps for navigation). Never shows
@@ -670,87 +676,101 @@ export default function RouteScreen() {
 
       {/* STOPS LIST */}
       <View style={styles.listContainer}>
-        <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Paradas</Text>
-          <View style={styles.counterPill}>
-            <Ionicons name="flash" size={12} color="#fff" />
-            <Text style={styles.counterText} testID="pending-counter">
-              {pendingCount} restantes
-            </Text>
-          </View>
-        </View>
+        <BottomSheet
+          ref={bottomSheetRef}
+          snapPoints={snapPoints}
+          index={sheetIndex}
+          onChange={setSheetIndex}
+          enablePanDownToClose={false}
+          backgroundStyle={styles.sheetBackground}
+          handleIndicatorStyle={styles.sheetHandle}
+          handleStyle={styles.sheetHandleContainer}
+          enableContentPanningGesture={false}
+        >
+          <BottomSheetView style={{ flex: 1 }}>
+            <View style={styles.listHeader}>
+              <Text style={styles.listTitle}>Paradas</Text>
+              <View style={styles.counterPill}>
+                <Ionicons name="flash" size={12} color="#fff" />
+                <Text style={styles.counterText} testID="pending-counter">
+                  {pendingCount} restantes
+                </Text>
+              </View>
+            </View>
 
-        {/* PRIMARY ACTION ROW — Roteirizar / Reotimizar / Importar Circuit */}
-        <View style={styles.primaryActionRow}>
-          <TouchableOpacity
-            style={[styles.primaryBtn, optimizing && styles.primaryBtnDisabled]}
-            onPress={optimizeTSP}
-            disabled={optimizing}
-            testID="roteirizar-button"
-          >
-            {optimizing ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Ionicons name="flash" size={18} color="#fff" />
+            {/* PRIMARY ACTION ROW — Roteirizar / Reotimizar / Importar Circuit */}
+            <View style={styles.primaryActionRow}>
+              <TouchableOpacity
+                style={[styles.primaryBtn, optimizing && styles.primaryBtnDisabled]}
+                onPress={optimizeTSP}
+                disabled={optimizing}
+                testID="roteirizar-button"
+              >
+                {optimizing ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="flash" size={18} color="#fff" />
+                )}
+                <Text style={styles.primaryBtnText}>
+                  {optimizing ? "Roteirizando..." : "Roteirizar"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.secondaryBtn}
+                onPress={showReoptimizeChoices}
+                disabled={optimizing}
+                testID="reotimizar-button"
+              >
+                <Ionicons name="git-network-outline" size={16} color={COLORS.textPrimary} />
+                <Text style={styles.secondaryBtnText}>Reotimizar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.secondaryBtn}
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.push("/upload");
+                }}
+                testID="import-circuit-button"
+              >
+                <Ionicons name="document-text-outline" size={16} color={COLORS.textPrimary} />
+                <Text style={styles.secondaryBtnText}>Importar Circuit</Text>
+              </TouchableOpacity>
+            </View>
+
+            {metrics && (
+              <View style={styles.metricsBar} testID="metrics-bar">
+                <View style={styles.metricsItem}>
+                  <Ionicons name="navigate" size={14} color={COLORS.primary} />
+                  <Text style={styles.metricsValue}>{metrics.total_distance_km.toFixed(1)} km</Text>
+                </View>
+                <View style={styles.metricsDivider} />
+                <View style={styles.metricsItem}>
+                  <Ionicons name="time" size={14} color={COLORS.primary} />
+                  <Text style={styles.metricsValue}>
+                    {metrics.estimated_minutes >= 60
+                      ? `${Math.floor(metrics.estimated_minutes / 60)}h ${Math.round(metrics.estimated_minutes % 60)}min`
+                      : `${Math.round(metrics.estimated_minutes)}min`}
+                  </Text>
+                </View>
+                <View style={styles.metricsDivider} />
+                <View style={styles.metricsItem}>
+                  <Ionicons name="cube" size={14} color={COLORS.primary} />
+                  <Text style={styles.metricsValue}>{pendingCount}</Text>
+                </View>
+              </View>
             )}
-            <Text style={styles.primaryBtnText}>
-              {optimizing ? "Roteirizando..." : "Roteirizar"}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={showReoptimizeChoices}
-            disabled={optimizing}
-            testID="reotimizar-button"
-          >
-            <Ionicons name="git-network-outline" size={16} color={COLORS.textPrimary} />
-            <Text style={styles.secondaryBtnText}>Reotimizar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={() => {
-              setMenuOpen(false);
-              router.push("/upload");
-            }}
-            testID="import-circuit-button"
-          >
-            <Ionicons name="document-text-outline" size={16} color={COLORS.textPrimary} />
-            <Text style={styles.secondaryBtnText}>Importar Circuit</Text>
-          </TouchableOpacity>
-        </View>
 
-        {metrics && (
-          <View style={styles.metricsBar} testID="metrics-bar">
-            <View style={styles.metricsItem}>
-              <Ionicons name="navigate" size={14} color={COLORS.primary} />
-              <Text style={styles.metricsValue}>{metrics.total_distance_km.toFixed(1)} km</Text>
-            </View>
-            <View style={styles.metricsDivider} />
-            <View style={styles.metricsItem}>
-              <Ionicons name="time" size={14} color={COLORS.primary} />
-              <Text style={styles.metricsValue}>
-                {metrics.estimated_minutes >= 60
-                  ? `${Math.floor(metrics.estimated_minutes / 60)}h ${Math.round(metrics.estimated_minutes % 60)}min`
-                  : `${Math.round(metrics.estimated_minutes)}min`}
-              </Text>
-            </View>
-            <View style={styles.metricsDivider} />
-            <View style={styles.metricsItem}>
-              <Ionicons name="cube" size={14} color={COLORS.primary} />
-              <Text style={styles.metricsValue}>{pendingCount}</Text>
-            </View>
-          </View>
-        )}
-
-        <DraggableFlatList
-          data={stops}
-          keyExtractor={(item) => String(item.id) + "-" + item.codigo}
-          onDragEnd={handleDragEnd}
-          renderItem={renderStopItem}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: SPACING.sm }}
-          activationDistance={10}
-        />
+            <DraggableFlatList
+              data={stops}
+              keyExtractor={(item) => String(item.id) + "-" + item.codigo}
+              onDragEnd={handleDragEnd}
+              renderItem={renderStopItem}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: SPACING.sm, paddingHorizontal: SPACING.md }}
+              activationDistance={10}
+            />
+          </BottomSheetView>
+        </BottomSheet>
       </View>
 
       {/* NOTE: In-app floating stop card was removed per user request —
@@ -1151,18 +1171,35 @@ const styles = StyleSheet.create({
   activeStreet: { color: COLORS.textPrimary, fontSize: 15, fontWeight: "800" },
   activeSub: { color: COLORS.textSecondary, fontSize: 12, marginTop: 2 },
 
-  listContainer: { flex: 1, paddingHorizontal: SPACING.md, paddingTop: SPACING.md },
+  listContainer: { flex: 1, backgroundColor: "transparent" },
+  sheetBackground: {
+    backgroundColor: "#0f172a",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  sheetHandle: {
+    backgroundColor: "#64748b",
+    width: 44,
+    height: 5,
+    borderRadius: 3,
+  },
+  sheetHandleContainer: {
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
   listHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.md,
   },
   listTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: "800" },
   primaryActionRow: {
     flexDirection: "row",
     gap: SPACING.sm,
     marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.md,
   },
   primaryBtn: {
     flex: 1.2,
@@ -1296,7 +1333,8 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "space-around",
     backgroundColor: COLORS.bgSurface, borderRadius: RADIUS.md,
     paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.primary,
+    marginBottom: SPACING.sm, marginHorizontal: SPACING.md,
+    borderWidth: 1, borderColor: COLORS.primary,
   },
   metricsItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   metricsValue: { color: COLORS.textPrimary, fontWeight: "800", fontSize: 13 },
