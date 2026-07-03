@@ -227,7 +227,59 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: >-
-      Iteration 14 — bottom sheet + rich notification (collapsed/expanded).
+      Iteration 15 — map fills freed space + notification with all 5
+      identifiers (endereço, complemento, cliente, código Shopee/ML, AT,
+      CEP).
+      FIX 1 (map expansion): mapContainer changed from height:"42%" to
+      flex:1 so the map fills all vertical space between header and
+      action bar. listContainer changed to position:'absolute' filling
+      the same area with pointerEvents='box-none'. The BottomSheet from
+      @gorhom/bottom-sheet is inherently absolute-positioned and floats
+      on top of the map. Net effect: when sheet collapses to 18%, the
+      map is visible for the top ~82% of the vertical space (grows for
+      better visualization). When sheet expands to 92%, the map is
+      barely visible (~8%). No more dark empty area.
+      FIX 2 (notification body): expanded view now shows:
+        Line 1: `Parada 01 de 87`
+        Line 2: `Av Prf Edgar Santos, 514` (street + number)
+        Line 3: `Ap 1106 T1, São Paulo` (complement)
+        Line 4: `Cliente: <NAME>` (customer name — from PDF parser's
+                `cliente` field which is the package RECIPIENT, never
+                the driver's name)
+        Line 5: `Código: BR265114108628K` (Shopee/ML tracking)
+        Line 6: `AT: AT202607036QXO9` (Circuit internal AT)
+        Line 7: `CEP: 03560-080` (extracted via regex from endereco)
+      Collapsed pill still shows only:
+        title = `01 · Av Prf Edgar Santos, 514`
+        body  = complement (e.g. `Ap 1106 T1, São Paulo`)
+      Please TEST:
+      1) Static: route.tsx mapContainer style is {flex:1,...} (NOT
+      height:"42%"); listContainer is {position:'absolute', top/left/
+      right/bottom: 0, backgroundColor:'transparent'} with
+      pointerEvents='box-none' on the wrapping View.
+      2) Static: use-stop-notification.ts showNotificationForStop
+      composes expandedLines with the 7 identifiers above (Parada X/Y,
+      streetAndNumber, complement, `Cliente:` prefix, `Código:` prefix
+      with s.codigo, `AT:` prefix with codigo_at, `CEP:` prefix from
+      regex).
+      3) Backend regression (no changes): /api/optimize, /api/parse-text,
+      /api/auth/me still fine.
+
+frontend_tasks_iteration_15:
+  - task: "Map fills freed area when sheet collapses (no dark gap)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/route.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+  - task: "Notification with 7-line expanded body (all identifiers)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/hooks/use-stop-notification.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
       TASK #1 (Bottom sheet):
       Installed @gorhom/bottom-sheet@5.2.14 and refactored the paradas
       panel in /app/frontend/app/route.tsx into a 3-snap-point sheet

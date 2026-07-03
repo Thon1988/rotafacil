@@ -674,8 +674,8 @@ export default function RouteScreen() {
         </View>
       )}
 
-      {/* STOPS LIST */}
-      <View style={styles.listContainer}>
+      {/* STOPS LIST (overlays map so map expands into freed area when sheet is collapsed) */}
+      <View style={styles.listContainer} pointerEvents="box-none">
         <BottomSheet
           ref={bottomSheetRef}
           snapPoints={snapPoints}
@@ -1110,7 +1110,7 @@ function getStatusColor(status: string): string {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bgBase },
-  mapContainer: { height: "42%", backgroundColor: COLORS.bgSurface, position: "relative" },
+  mapContainer: { flex: 1, backgroundColor: COLORS.bgSurface, position: "relative" },
   menuBtn: {
     position: "absolute",
     top: SPACING.md,
@@ -1171,7 +1171,14 @@ const styles = StyleSheet.create({
   activeStreet: { color: COLORS.textPrimary, fontSize: 15, fontWeight: "800" },
   activeSub: { color: COLORS.textSecondary, fontSize: 12, marginTop: 2 },
 
-  listContainer: { flex: 1, backgroundColor: "transparent" },
+  listContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "transparent",
+  },
   sheetBackground: {
     backgroundColor: "#0f172a",
     borderTopLeftRadius: 20,

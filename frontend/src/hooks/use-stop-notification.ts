@@ -92,19 +92,32 @@ async function showNotificationForStop(index: number, s: Stop, total: number) {
   const parts = s.endereco.split(",").map((p) => p.trim()).filter(Boolean);
   const streetAndNumber = parts.slice(0, 2).join(", ");
   const complement = parts.slice(2, 4).join(", "); // e.g. "Ap 1106 T1, São Paulo"
-  const cliente = (s as any).cliente || "";
-  const codeLabel = ((s as any).codigo_at as string) || s.codigo || "";
+  const cliente = ((s as any).cliente || "").trim();
+  const codigoShopeeML = s.codigo || ""; // BR... or MLB...
+  const codigoAt = ((s as any).codigo_at as string) || "";
+  // Try to extract a CEP from anywhere in the address
+  const cepMatch = s.endereco.match(/\b(\d{5})-?(\d{3})\b/);
+  const cep = cepMatch ? `${cepMatch[1]}-${cepMatch[2]}` : "";
 
   // COLLAPSED view (small pill in notification tray):
-  //   title: Av Prf Edgar Santos, 514
-  //   body:  Ap 1106 T1, São Paulo
+  //   title:  01 · Av Prf Edgar Santos, 514
+  //   body:   Ap 1106 T1, São Paulo
   // EXPANDED view (user taps chevron to expand):
-  //   Same title + full body with cliente + code
+  //   Full info: address, complement, customer name, Shopee/ML code,
+  //   AT code, CEP. Customer name (dono do pacote) never Milton — comes
+  //   from PDF parser (`cliente` field).
   const collapsedTitle = truncate(streetAndNumber || s.endereco, 60);
-  const collapsedBody = complement || s.codigo;
-  const expandedBody = [streetAndNumber, complement, cliente, codeLabel]
-    .filter(Boolean)
-    .join("\n");
+  const collapsedBody = complement || codigoShopeeML;
+  const expandedLines: string[] = [
+    `Parada ${stopNumber} de ${totalStr}`,
+    streetAndNumber,
+    complement,
+    cliente ? `Cliente: ${cliente}` : "",
+    codigoShopeeML ? `Código: ${codigoShopeeML}` : "",
+    codigoAt ? `AT: ${codigoAt}` : "",
+    cep ? `CEP: ${cep}` : "",
+  ].filter(Boolean);
+  const expandedBody = expandedLines.join("\n");
 
   try {
     await Notifications.dismissNotificationAsync(NOTIF_ID).catch(() => {});
@@ -114,13 +127,12 @@ async function showNotificationForStop(index: number, s: Stop, total: number) {
         title: `${stopNumber} · ${collapsedTitle}`,
         subtitle: `Parada ${stopNumber} de ${totalStr}`,
         body: truncate(collapsedBody, 120),
-        // Android will show `body` in collapsed view; `expandedBody` when user
-        // taps the chevron. iOS shows all of it in the expanded card by default.
         data: {
           stopId: s.id,
           codigo: s.codigo,
           cliente,
-          codeLabel,
+          codigoAt,
+          cep,
           expandedBody,
         },
         sound: null,

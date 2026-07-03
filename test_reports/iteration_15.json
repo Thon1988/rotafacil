@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 15 — verified all 3 static code changes + 4/4 backend regressions + frontend smoke. STATIC #1 route.tsx L1113: mapContainer = { flex: 1, backgroundColor: COLORS.bgSurface, position: 'relative' } (NOT height:'42%'); L1174-1181: listContainer = { position:'absolute', top:0, left:0, right:0, bottom:0, backgroundColor:'transparent' }; L678: wrapping <View style={styles.listContainer} pointerEvents='box-none'> — so the map now fills the freed space when the bottom sheet is dragged to 18% and touches pass through the transparent listContainer area to the map. STATIC #2 use-stop-notification.ts L88-120 showNotificationForStop composes expandedLines with exactly the 7 identifiers in the required order with .filter(Boolean): L112 `Parada ${stopNumber} de ${totalStr}`, L113 streetAndNumber (parts.slice(0,2)), L114 complement (parts.slice(2,4)), L115 cliente ? `Cliente: ${cliente}` : '', L116 codigoShopeeML ? `Código: ${codigoShopeeML}` : '', L117 codigoAt ? `AT: ${codigoAt}` : '', L118 cep ? `CEP: ${cep}` : '' (regex \\b(\\d{5})-?(\\d{3})\\b at L99). L149 BigTextStyle Android: style={ type:'bigText', text: expandedBody }. L110 collapsedBody = complement || codigoShopeeML (unchanged). STATIC #3 backend cliente extraction unchanged — server.py L427/510 uses _extract_customer_and_at per-row-block; test_parse_text_cliente_per_row confirms rows 2 & 3 never inherit 'MILTON AMARAL PEREIRA'. BACKEND REGRESSION 4/4 PASS: /api/parse-text 3 Circuit rows → 3 stops each with cliente + codigo_at, endereco free of AT code (also verified 'MILTON' absent from rows 2 & 3); /api/optimize 5 SP stops → 200, backend log 'optimize: 5 stops via ortools_haversine → 9.1 km'; /api/auth/me no token → 401 with 'missing_token'. FRONTEND SMOKE: http://localhost:3000 loads on mobile viewport 390x844, #root populated (5837 chars), landing screen 'Rota+Rápida App' + 'Entrar com Google' renders, no red Metro overlay, no pageerrors, no new import errors from the layout/notification changes. Only pre-existing noisy warnings observed ('shadow* style props deprecated' from RN web, 'expo-notifications push token not supported on web').",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration15.py",
+    "/app/test_reports/pytest/iteration15_results.xml"
+  ],
+  "action_items": [
+    "Non-blocking (carry-over from iter 14): `yarn expo install --check` — expo@54.0.34→54.0.35, expo-font@14.0.11→14.0.12, expo-router@6.0.23→6.0.24 before native build.",
+    "Full drag interaction of the bottom sheet from 50%→18% and observation that the map physically expands into the freed area can only be validated on device / real touch device (Playwright web preview does not exercise @gorhom/bottom-sheet gesture handler). Code changes are correct per static review — recommend E1 verify visually on Expo Go or a native build."
+  ],
+  "critical_code_review_comments": [
+    "route.tsx now 1491 lines — carry-over recommendation to split styles/modals into dedicated components.",
+    "server.py remains 1854+ lines — carry-over recommendation to modularize (parsing, geocoding, auth, pix, history, admin)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration15.py (new)",
+    "/app/test_reports/pytest/iteration15_results.xml (new)"
+  ],
+  "success_rate": {"backend": "100% (4/4)", "frontend": "100% (smoke + 3/3 static)"},
+  "seed_data_creation": "None — inline payloads only.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 15 was a minor UI polish: (a) map fills the space above the bottom sheet by making mapContainer flex:1 and overlaying listContainer as an absolute-positioned pointerEvents='box-none' wrapper — the map is now the base layer and the bottom sheet floats on top; (b) notification expanded body enriched with 7 identifier lines including 'Cliente:', 'Código:', 'AT:', 'CEP:'. Backend URL: https://rota-facil-mobile.preview.emergentagent.com. Bottom-sheet drag physics + Android BigTextStyle expansion + notification foreground/background behavior must be verified on a native APK build — the web preview and Expo Go on Android SDK 53+ intentionally NO-OP the notification path (guarded by IS_EXPO_GO)."
+}
