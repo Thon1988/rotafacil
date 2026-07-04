@@ -244,7 +244,16 @@ def clean_address(raw: str) -> str:
 
     # Find ALL street-prefix occurrences and use the LAST one
     matches = list(STREET_PREFIX_RE.finditer(text))
+    house_number_prefix = ""
     if matches:
+        # Before slicing, try to preserve a house number that appears BEFORE
+        # the FIRST street prefix. Some Circuit PDF rows put the number on the
+        # left side of the row ("150 Rua Major Freire ...") and slicing to the
+        # last street prefix would drop it.
+        head = text[: matches[0].start()]
+        num_match = re.search(r"\b(\d{1,6})\b\s*$", head)
+        if num_match:
+            house_number_prefix = num_match.group(1)
         text = text[matches[-1].start():]
 
     # Remove known noise tokens
@@ -257,12 +266,26 @@ def clean_address(raw: str) -> str:
     # Expand abbreviations (R -> Rua, Av -> Avenida, ...) for better geocoding
     text = _expand_address_abbrev(text)
 
+    # Re-insert the house number captured before the slice, if not already
+    # present anywhere in the cleaned text.
+    if house_number_prefix and not re.search(rf"\b{re.escape(house_number_prefix)}\b", text):
+        # Insert right after the street name (first token block ending before
+        # first comma or bairro separator). Fallback: prepend at the end of
+        # street portion using a comma.
+        first_comma = text.find(",")
+        if first_comma > 0:
+            text = text[:first_comma].rstrip() + f", {house_number_prefix}" + text[first_comma:]
+        else:
+            text = f"{text}, {house_number_prefix}"
+
     # Truncate at clearly unrelated content
     if len(text) > 160:
         text = text[:160]
 
     # Ensure city context if missing
     if "são paulo" not in text.lower() and "sp" not in text.lower()[-12:]:
+        # Ensure comma separator between the last part and city context.
+        text = text.rstrip(" ,.-;")
         text = text + ", São Paulo, SP"
 
     return text

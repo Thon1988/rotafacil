@@ -766,7 +766,8 @@ export default function RouteScreen() {
               keyExtractor={(item) => String(item.id) + "-" + item.codigo}
               onDragEnd={handleDragEnd}
               renderItem={renderStopItem}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={true}
+              simultaneousHandlers={bottomSheetRef}
               contentContainerStyle={{ paddingBottom: SPACING.sm, paddingHorizontal: SPACING.md }}
               containerStyle={{ flex: 1 }}
               activationDistance={10}
