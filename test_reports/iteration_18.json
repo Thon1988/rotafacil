@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 18 verification of 3 code fixes from prior session (backend restart already done by main agent). ALL 4 BACKEND PYTEST CHECKS PASS + 3 static frontend code verifications PASS + frontend web smoke clean. (1) BACKEND parse-file fallback strip (server.py L510-517): TWO pytest cases posted single/multi-line CSVs to /api/parse-file with lines containing AT codes (AT202607036QXO9, AT2025010001ABCD1, AT2025010002EFGH2) + customer names (MILTON AMARAL PEREIRA, Ana Silva Costa, CARLOS RIBEIRO MENDES) + tracking codes + real addresses (Rua Teste Fallback 123 - Sao Paulo / Av Paulista 1000 / Rua Augusta 500). Response 'endereco' fields verified to NOT contain any AT code or customer name substring, AND the real street/city text was preserved (e.g. 'Avenida Paulista 1000 - Sao Paulo, São Paulo, SP'). The strip fix runs BEFORE clean_address() as intended. cliente + codigo_at fields correctly populated as side-effect. (2) BACKEND /api/optimize with 30 stops around São Paulo returned 200 with all 30 stops preserved (ids 0..29) and metrics.total_distance_km=53.8 via ortools_haversine (log line 'optimize: 30 stops via ortools_haversine → 53.8 km' confirmed in backend.err.log). OR-Tools working after restart. (3) STATIC index.tsx: 4 ActionCards present at L145-177 with testIDs landing-action-load/save-pdf/map/optimize titled 'Carregar rota' / 'Salvar em PDF' / 'Mapa' / 'Otimização'; primary CTA at L182-192 renders '<Ionicons name=\"camera\" size={22} /> Bipar pacotes • {routeCount}' when hasRoute, testID=landing-continue-route-button — fallback path when no route shows 'Carregar rota' upload CTA (L193-202). Note: review request said 'Salvar em pdf' but code uses 'Salvar em PDF' (title case) — acceptable and more correct Portuguese. (4) STATIC upload.tsx L114 uses `router.replace(\"/\")` for BOTH PDF and non-PDF branches — successful upload always returns to landing (no more direct redirect to /route). Old comment at L50-54 is now STALE (still mentions 'PDF from Circuit → go straight to scanner' / 'Anything else → go to the map/route screen') but the actual code correctly does router.replace('/') unconditionally. (5) STATIC route.tsx L764-773 DraggableFlatList inside BottomSheetView has containerStyle={{ flex: 1 }} (L771), activationDistance=10, contentContainerStyle with paddingBottom+paddingHorizontal. Fix present as expected. FRONTEND SMOKE at 390x844: web preview loads to the Google-Auth login screen ('Rota+Rápida App', 'Entrar com Google', 4 feature cards including 'Lê PDF do Circuit', 'Scanner com voz', 'Mapa + Otimização', 'R$ 20/mês após o trial'). No Metro red screen; only two pre-existing benign warnings ('shadow*' deprecation + expo-notifications web unsupported). Landing/Upload/Route screens are behind Google OAuth so live UI dragging/upload flow cannot be exercised in a headless preview — this is documented and expected. Deprecated packages detected: NONE (expo-av not imported anywhere; only version drift for expo/expo-font/expo-router which is a compatibility warning, not deprecation).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration18.py",
+    "/app/test_reports/pytest/iteration18_results.xml"
+  ],
+  "action_items": [
+    "Non-blocking cleanup: /app/frontend/app/upload.tsx L50-54 has STALE comment '// PDF from Circuit → preserve the exact sequence and go straight to scanner. // Anything else (Excel, CSV, TXT) → go to the map/route screen' — the code no longer branches to /scanner or /route; it now always router.replace('/') at L114. Update the comment to reflect the new 'always return to landing' behavior to prevent developer confusion.",
+    "Non-blocking carry-over (from iter 14-17): `yarn expo install --check` — expo@54.0.34→54.0.35, expo-font@14.0.11→14.0.12, expo-router@6.0.23→6.0.24 before creating any native build.",
+    "Manual device QA needed (cannot exercise in headless web preview because Google OAuth gates the landing/upload/route screens): (a) upload a 30+ stop PDF → verify redirect lands on '/' and 'Bipar pacotes • 30' CTA shows; (b) open /route with 30+ stops → verify DraggableFlatList scrolls inside the BottomSheet and drag-from-top-to-bottom works without layout break."
+  ],
+  "critical_code_review_comments": [
+    "server.py is 1874 lines (was 1867 last iter) — modularization still recommended when time permits.",
+    "route.tsx is 1494 lines — same recommendation.",
+    "upload.tsx has an inconsistency between the comment (L50-54, mentions /scanner and /route redirects) and the actual code (L114 always router.replace('/')). Only cosmetic but should be corrected."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration18.py (new)",
+    "/app/test_reports/pytest/iteration18_results.xml (new)",
+    "/app/test_reports/iteration_18.json (new)"
+  ],
+  "success_rate": {"backend": "100% (4/4 pytest)", "frontend": "100% (3/3 static + web smoke clean)"},
+  "seed_data_creation": "None — inline CSV/TXT/JSON payloads only, no DB writes.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 18 verified the 3 fixes E1 applied but had not yet re-tested after backend restart: (a) server.py L510-517 strip cliente_val+at_code_val from raw BEFORE clean_address in the parse-file line-by-line fallback path, (b) route.tsx L771 containerStyle={{ flex: 1 }} on DraggableFlatList, (c) index.tsx has 4 ActionCards + 'Bipar pacotes • {count}' CTA with camera icon. All pass. Backend URL: https://rota-facil-mobile.preview.emergentagent.com. Test file /app/backend/tests/test_iteration18.py contains 4 pytest cases (parse-file single-line strip, parse-file multi-line strip, optimize-30-stops, auth-me 401 guard) — all pass in ~9s. One stale comment noted in upload.tsx L50-54 (see critical_code_review_comments and action_items).",
+  "rca_of_issue": "N/A — this iteration is a verification-only pass of already-applied fixes. All 3 target changes present in code and behavior matches spec. No new bug found."
+}

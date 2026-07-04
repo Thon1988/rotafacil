@@ -133,11 +133,47 @@ export default function Index() {
         )}
       </View>
 
+      {hasRoute && (
+        <View style={styles.routeLoadedBanner} testID="route-loaded-banner">
+          <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+          <Text style={styles.routeLoadedText}>
+            Rota carregada • {routeCount} paradas
+          </Text>
+        </View>
+      )}
+
       <View style={styles.featuresGrid}>
-        <FeatureCard icon="document-text" title="PDF Circuit" desc="Ordem preservada" />
-        <FeatureCard icon="scan" title="Scanner" desc="Bipe e ouça a parada" />
-        <FeatureCard icon="map" title="Mapa" desc="Visualize paradas" />
-        <FeatureCard icon="flash" title="Otimização" desc="Google Maps TSP" />
+        <ActionCard
+          icon="cloud-upload"
+          title="Carregar rota"
+          desc="Excel / PDF"
+          onPress={() => router.push("/upload")}
+          testID="landing-action-load"
+        />
+        <ActionCard
+          icon="document-text"
+          title="Salvar em PDF"
+          desc={hasRoute ? "Exportar rota" : "Carregue uma rota"}
+          disabled={!hasRoute}
+          onPress={() => router.push("/route?export=1")}
+          testID="landing-action-save-pdf"
+        />
+        <ActionCard
+          icon="map"
+          title="Mapa"
+          desc={hasRoute ? "Ver paradas" : "Carregue uma rota"}
+          disabled={!hasRoute}
+          onPress={() => router.push("/route")}
+          testID="landing-action-map"
+        />
+        <ActionCard
+          icon="flash"
+          title="Otimização"
+          desc={hasRoute ? "Roteirizar TSP" : "Carregue uma rota"}
+          disabled={!hasRoute}
+          onPress={() => router.push("/route?optimize=1")}
+          testID="landing-action-optimize"
+        />
       </View>
 
       <View style={styles.ctaSection}>
@@ -149,9 +185,9 @@ export default function Index() {
                 onPress={() => router.push("/scanner")}
                 testID="landing-continue-route-button"
               >
-                <Ionicons name="scan" size={20} color="#fff" />
+                <Ionicons name="camera" size={22} color="#fff" />
                 <Text style={styles.primaryButtonText}>
-                  Continuar Rota • {routeCount} paradas
+                  Bipar pacotes • {routeCount}
                 </Text>
               </TouchableOpacity>
             ) : (
@@ -161,31 +197,11 @@ export default function Index() {
                 testID="landing-start-route-button"
               >
                 <Ionicons name="cloud-upload" size={20} color="#fff" />
-                <Text style={styles.primaryButtonText}>Carregar PDF do Circuit</Text>
+                <Text style={styles.primaryButtonText}>Carregar rota</Text>
               </TouchableOpacity>
             )}
 
             <View style={styles.secondaryRow}>
-              {hasRoute && (
-                <TouchableOpacity
-                  style={styles.secondaryButton}
-                  onPress={() => router.push("/route")}
-                  testID="landing-map-button"
-                >
-                  <Ionicons name="map" size={18} color={COLORS.textPrimary} />
-                  <Text style={styles.secondaryButtonText}>Mapa</Text>
-                </TouchableOpacity>
-              )}
-              {hasRoute && (
-                <TouchableOpacity
-                  style={styles.secondaryButton}
-                  onPress={() => router.push("/upload")}
-                  testID="landing-new-route-button"
-                >
-                  <Ionicons name="cloud-upload-outline" size={18} color={COLORS.textPrimary} />
-                  <Text style={styles.secondaryButtonText}>Nova rota</Text>
-                </TouchableOpacity>
-              )}
               <TouchableOpacity
                 style={styles.secondaryButton}
                 onPress={() => router.push("/history")}
@@ -213,6 +229,38 @@ export default function Index() {
         )}
       </View>
     </SafeAreaView>
+  );
+}
+
+function ActionCard({
+  icon,
+  title,
+  desc,
+  onPress,
+  disabled,
+  testID,
+}: {
+  icon: any;
+  title: string;
+  desc: string;
+  onPress: () => void;
+  disabled?: boolean;
+  testID?: string;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.featureCard, disabled && styles.featureCardLocked]}
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.75}
+      testID={testID}
+    >
+      <View style={styles.featureIconRow}>
+        <Ionicons name={icon} size={26} color={disabled ? COLORS.textSecondary : COLORS.primary} />
+      </View>
+      <Text style={[styles.featureTitle, disabled && { color: COLORS.textSecondary }]}>{title}</Text>
+      <Text style={styles.featureDesc}>{desc}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -278,6 +326,20 @@ const styles = StyleSheet.create({
   },
   expiredBadgeText: { color: COLORS.error, fontWeight: "800", fontSize: 12 },
   featuresGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.md, justifyContent: "space-between" },
+  routeLoadedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(34,197,94,0.12)",
+    borderColor: COLORS.success,
+    borderWidth: 1,
+    borderRadius: RADIUS.md,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: SPACING.sm,
+    alignSelf: "center",
+  },
+  routeLoadedText: { color: COLORS.success, fontWeight: "800", fontSize: 13 },
   featureCard: {
     width: "47%", backgroundColor: COLORS.bgSurface, borderRadius: RADIUS.lg,
     padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border, gap: SPACING.sm,

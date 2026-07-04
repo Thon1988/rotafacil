@@ -108,10 +108,10 @@ export default function UploadScreen() {
       }));
       await saveRoute(initial);
 
-      // ALWAYS open the MAP first (per user request 2026-07-03). The driver
-      // will tap the camera icon there to open the scanner.
-      setLoadingStep("Abrindo mapa...");
-      router.replace("/route");
+      // ALWAYS return to the LANDING screen after loading — user picks
+      // the next action (Mapa / Otimização / Bipar pacotes) from there.
+      setLoadingStep("Rota carregada...");
+      router.replace("/");
     } catch (e) {
       console.log("Process error:", e);
       Alert.alert("Erro", "Não foi possível processar a rota.");

@@ -509,6 +509,13 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
         cep_val = _extract_cep_from_text(line)
         cliente_val, at_code_val = _extract_customer_and_at(line)
 
+        # Strip AT code + customer name from raw address text so they don't
+        # pollute the geocoder query. Mirrors the Circuit row-based path.
+        raw = _AT_CODE_RE.sub(" ", raw)
+        if cliente_val:
+            raw = re.sub(re.escape(cliente_val), " ", raw, flags=re.IGNORECASE)
+        raw = re.sub(r"\s+", " ", raw).strip(" ,.-;")
+
         row_match = re.match(r"^\s*(\d{1,3})\b\s+(?=[A-ZÀ-Ýa-zà-ý])", raw)
         circuit_order: Optional[int] = None
         if row_match:

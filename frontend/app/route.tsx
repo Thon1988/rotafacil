@@ -768,6 +768,7 @@ export default function RouteScreen() {
               renderItem={renderStopItem}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: SPACING.sm, paddingHorizontal: SPACING.md }}
+              containerStyle={{ flex: 1 }}
               activationDistance={10}
             />
           </BottomSheetView>
