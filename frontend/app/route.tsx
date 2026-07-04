@@ -21,9 +21,11 @@ import BottomSheet, {
 } from "@gorhom/bottom-sheet";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { usePersistentStopNotification } from "@/src/hooks/use-stop-notification";
 
 import { COLORS, RADIUS, SPACING, API } from "@/src/constants/theme";
@@ -37,6 +39,7 @@ import { storage } from "@/src/utils/storage";
 
 export default function RouteScreen() {
   const router = useRouter();
+  const { export: exportParam, optimize: optimizeParam } = useLocalSearchParams<{ export?: string; optimize?: string }>();
   const mapRef = useRef<MapHandle>(null);
   const [stops, setStops] = useState<Stop[]>([]);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
@@ -101,6 +104,39 @@ export default function RouteScreen() {
     }
   }, []);
 
+  // Export current route to PDF (Circuit-style) and open the native share sheet.
+  const exportToPdf = async () => {
+    if (stops.length === 0) return;
+    try {
+      const rows = stops
+        .map(
+          (s, i) =>
+            `<tr><td>${i + 1}</td><td>${s.codigo}</td><td>${s.endereco}</td><td>${s.status}</td></tr>`
+        )
+        .join("");
+      const html = `<html><head><meta charset="utf-8"/><style>
+        body{font-family:-apple-system,Roboto,Arial,sans-serif;padding:16px;color:#111}
+        h1{font-size:20px;margin:0 0 12px 0}
+        table{border-collapse:collapse;width:100%;font-size:12px}
+        th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;vertical-align:top}
+        th{background:#f4f4f4}
+      </style></head><body>
+        <h1>Rota+Rápida — ${stops.length} paradas</h1>
+        <table><thead><tr><th>#</th><th>Código</th><th>Endereço</th><th>Status</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </body></html>`;
+      const { uri } = await Print.printToFileAsync({ html });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, { UTI: ".pdf", mimeType: "application/pdf" });
+      } else {
+        Alert.alert("PDF gerado", `Arquivo salvo em: ${uri}`);
+      }
+    } catch (e: any) {
+      Alert.alert("Erro ao gerar PDF", String(e?.message || e));
+    }
+  };
+
   // Load stops on focus
   useFocusEffect(
     useCallback(() => {
@@ -127,6 +163,22 @@ export default function RouteScreen() {
       };
     }, [router, backgroundGeocode])
   );
+
+  // Auto-trigger PDF export when navigated via router.push('/route?export=1')
+  useEffect(() => {
+    if (exportParam === "1" && stops.length > 0) {
+      exportToPdf();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exportParam, stops.length]);
+
+  // Auto-trigger TSP optimization when navigated via router.push('/route?optimize=1')
+  useEffect(() => {
+    if (optimizeParam === "1" && stops.length > 0 && !optimizing) {
+      optimizeTSP();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optimizeParam, stops.length]);
 
   // Initial stops for map (snapshot). Live updates via postMessage.
   const initialStops = useMemo(() => stops, [stops.length === 0 ? 0 : 1]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -538,6 +590,36 @@ export default function RouteScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
   };
 
+  // Ask the driver to confirm before removing a stop they don't want to visit.
+  const deleteStop = (index: number) => {
+    const target = stops[index];
+    if (!target) return;
+    Alert.alert(
+      "Excluir parada?",
+      `Remover "${target.codigo}" da rota?\n${target.endereco}`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            const filtered = stops.filter((_, i) => i !== index);
+            // Reassign sequential ids so the map/list stay coherent.
+            const reindexed = filtered.map((s, i) => ({ ...s, id: i }));
+            setStops(reindexed);
+            await saveRoute(reindexed);
+            if (activeIdx === index) {
+              setActiveIdx(null);
+            } else if (activeIdx !== null && activeIdx > index) {
+              setActiveIdx(activeIdx - 1);
+            }
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+          },
+        },
+      ]
+    );
+  };
+
   const renderStopItem = ({ item, drag, isActive, getIndex }: RenderItemParams<Stop>) => {
     const index = getIndex() ?? 0;
     return (
@@ -587,6 +669,14 @@ export default function RouteScreen() {
             testID={`edit-location-${index}`}
           >
             <Ionicons name="create-outline" size={18} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => deleteStop(index)}
+            style={styles.deleteIcon}
+            testID={`delete-stop-${index}`}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="trash-outline" size={18} color="#ef4444" />
           </TouchableOpacity>
         </TouchableOpacity>
       </ScaleDecorator>
@@ -1370,6 +1460,10 @@ const styles = StyleSheet.create({
   editIcon: {
     width: 32, height: 32, justifyContent: "center", alignItems: "center",
     borderRadius: RADIUS.full, backgroundColor: COLORS.bgElevated,
+  },
+  deleteIcon: {
+    width: 32, height: 32, justifyContent: "center", alignItems: "center",
+    borderRadius: RADIUS.full, backgroundColor: COLORS.bgElevated, marginLeft: 4,
   },
 
   editTabs: {
