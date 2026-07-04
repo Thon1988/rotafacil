@@ -47,9 +47,9 @@ export default function UploadScreen() {
       const asset = result.assets[0];
       const name = (asset.name || "").toLowerCase();
       const mime = (asset.mimeType || "").toLowerCase();
-      // PDF from Circuit → preserve the exact sequence and go straight to scanner.
-      // Anything else (Excel, CSV, TXT) → go to the map/route screen so the
-      // driver can hit "Otimizar Rota" before scanning.
+      // All file types (PDF, Excel, CSV, TXT) → after upload, return to the
+      // landing page so the driver can choose the next action (Mapa,
+      // Otimização, Bipar pacotes, Salvar em pdf) from the redesigned home.
       const isPdf =
         name.endsWith(".pdf") || mime === "application/pdf";
       await processStops(
