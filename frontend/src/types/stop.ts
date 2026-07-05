@@ -10,5 +10,6 @@ export interface Stop {
   lon: number | null;
   cliente?: string | null;
   codigo_at?: string | null;
+  cep?: string | null;
   duration_seconds?: number | null; // time taken from previous to this delivery
 }

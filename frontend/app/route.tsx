@@ -215,9 +215,11 @@ export default function RouteScreen() {
     }
     const now = Date.now();
     const elapsed = Math.round((now - lastStopTimeRef.current) / 1000);
+    const idx = activeIdx;
+    const prev = stops[idx];
     const updated = [...stops];
-    updated[activeIdx] = {
-      ...updated[activeIdx],
+    updated[idx] = {
+      ...prev,
       status,
       timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
       duration_seconds: elapsed,
@@ -233,6 +235,57 @@ export default function RouteScreen() {
       );
     }
     setActiveIdx(null);
+    // Confirmation with UNDO + NAVIGATE options — user asked for a way to
+    // recover if they hit Entregue/Falhou by accident.
+    const label = status === "entregue" ? "Entregue" : "Falhou";
+    Alert.alert(
+      `${label} • ${prev.codigo}`,
+      prev.cliente ? `${prev.cliente}\n${prev.endereco}` : prev.endereco,
+      [
+        { text: "OK", style: "default" },
+        {
+          text: "Navegar",
+          onPress: () => {
+            const q = encodeURIComponent(prev.endereco);
+            Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${q}`);
+          },
+        },
+        {
+          text: "Desfazer",
+          style: "destructive",
+          onPress: async () => {
+            const reverted = [...stops];
+            reverted[idx] = { ...prev, status: "pendente", timestamp: null };
+            setStops(reverted);
+            await saveRoute(reverted);
+            setActiveIdx(idx);
+          },
+        },
+      ]
+    );
+  };
+
+  // Manual undo for a stop already marked (invoked by tapping the status
+  // badge on the list). Reverts to "pendente" after confirmation.
+  const undoStopStatus = (index: number) => {
+    const target = stops[index];
+    if (!target || target.status === "pendente") return;
+    Alert.alert(
+      "Desfazer marcação?",
+      `Reabrir "${target.codigo}" como pendente?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Desfazer",
+          onPress: async () => {
+            const reverted = [...stops];
+            reverted[index] = { ...target, status: "pendente", timestamp: null };
+            setStops(reverted);
+            await saveRoute(reverted);
+          },
+        },
+      ]
+    );
   };
 
   const navigateExternal = () => {
@@ -648,19 +701,26 @@ export default function RouteScreen() {
             <Text style={styles.stopNumText}>{index + 1}</Text>
           </View>
           <View style={{ flex: 1 }}>
+            {!!item.cliente && (
+              <Text style={styles.stopClient} numberOfLines={1}>
+                {item.cliente}
+              </Text>
+            )}
             <Text style={styles.stopCode} numberOfLines={1}>
               {item.codigo}
             </Text>
-            <Text style={styles.stopAddr} numberOfLines={2}>
+            <Text style={styles.stopAddr} numberOfLines={3}>
               {item.endereco}
             </Text>
             {(item.lat == null || item.lon == null) && (
               <Text style={styles.stopWarn}>📍 Sem localização — toque ✏️ para corrigir</Text>
             )}
             {item.status !== "pendente" && (
-              <Text style={[styles.stopStatus, { color: getStatusColor(item.status) }]}>
-                {item.status.toUpperCase()} • {item.timestamp}
-              </Text>
+              <TouchableOpacity onPress={() => undoStopStatus(index)} testID={`undo-status-${index}`}>
+                <Text style={[styles.stopStatus, { color: getStatusColor(item.status) }]}>
+                  {item.status.toUpperCase()} • {item.timestamp}  ↩︎ desfazer
+                </Text>
+              </TouchableOpacity>
             )}
           </View>
           <TouchableOpacity
@@ -1502,6 +1562,7 @@ const styles = StyleSheet.create({
   },
   stopNumText: { color: "#fff", fontWeight: "900", fontSize: 13 },
   stopCode: { color: COLORS.primary, fontSize: 13, fontWeight: "700" },
+  stopClient: { color: COLORS.textPrimary, fontSize: 14, fontWeight: "700", marginBottom: 2 },
   stopAddr: { color: COLORS.textPrimary, fontSize: 13, marginTop: 2 },
   stopStatus: { fontSize: 11, fontWeight: "700", marginTop: 4 },
 

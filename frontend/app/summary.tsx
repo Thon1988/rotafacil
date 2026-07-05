@@ -121,7 +121,8 @@ function StopCard({ stop, index, statusColor }: { stop: Stop; index: number; sta
         <Text style={styles.stopCodigo}>#{index + 1} • {stop.codigo}</Text>
         {stop.timestamp && <Text style={styles.stopTime}>{stop.timestamp}</Text>}
       </View>
-      <Text style={styles.stopAddr} numberOfLines={2}>{stop.endereco}</Text>
+      {!!stop.cliente && <Text style={styles.stopCliente} numberOfLines={1}>{stop.cliente}</Text>}
+      <Text style={styles.stopAddr} numberOfLines={3}>{stop.endereco}</Text>
       {stop.duration_seconds && stop.duration_seconds > 0 && (
         <View style={styles.durBadge}>
           <Ionicons name="walk" size={12} color={COLORS.textSecondary} />
@@ -180,6 +181,7 @@ const styles = StyleSheet.create({
   stopHeader: { flexDirection: "row", justifyContent: "space-between" },
   stopCodigo: { color: COLORS.primary, fontWeight: "700", fontSize: 13 },
   stopTime: { color: COLORS.textTertiary, fontSize: 11 },
+  stopCliente: { color: COLORS.textPrimary, fontWeight: "700", fontSize: 14, marginTop: 4 },
   stopAddr: { color: COLORS.textPrimary, fontSize: 13, marginTop: 4 },
   durBadge: {
     flexDirection: "row", alignItems: "center", gap: 4,

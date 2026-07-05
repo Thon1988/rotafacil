@@ -102,6 +102,7 @@ class Stop(BaseModel):
     lon: Optional[float] = None
     cliente: Optional[str] = None
     codigo_at: Optional[str] = None
+    cep: Optional[str] = None
 
 
 class ParsedFileResponse(BaseModel):
@@ -207,27 +208,29 @@ NOISE_PATTERNS = [
 
 def _expand_address_abbrev(text: str) -> str:
     """Expand common Brazilian address abbreviations before geocoding.
-    Uses word-boundary regexes so we don't mangle words like 'Trav' inside
-    'Travessia' — the trailing '\b' plus a following space keeps replacements safe.
+    Uses lookahead (?=[A-ZÀ-Úa-zà-ú]) so the space is preserved after the
+    replacement — this prevents mangling addresses like "R Palmeira das
+    Bermudas, 892" into "Rua, 892" (which happened when \\s+ consumed the
+    separator and a subsequent rule matched more aggressively).
     """
     substitutions = [
-        (r"\bAv\.?\s+", "Avenida "),
-        (r"\bAvda\.?\s+", "Avenida "),
-        (r"\bR\.?\s+", "Rua "),
-        (r"\bRUA\s+", "Rua "),
-        (r"\bAl\.?\s+", "Alameda "),
-        (r"\bTrav\.?\s+", "Travessa "),
-        (r"\bTv\.?\s+", "Travessa "),
-        (r"\bPça\.?\s+", "Praça "),
-        (r"\bPca\.?\s+", "Praça "),
-        (r"\bDr\.?\s+", "Doutor "),
-        (r"\bDra\.?\s+", "Doutora "),
-        (r"\bProf\.?\s+", "Professor "),
-        (r"\bProfa\.?\s+", "Professora "),
-        (r"\bEng\.?\s+", "Engenheiro "),
-        (r"\bCel\.?\s+", "Coronel "),
-        (r"\bMal\.?\s+", "Marechal "),
-        (r"\bJd\.?\s+", "Jardim "),
+        (r"\bAv\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Avenida "),
+        (r"\bAvda\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Avenida "),
+        (r"\bR\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Rua "),
+        (r"\bRUA\s+(?=[A-ZÀ-Úa-zà-ú])", "Rua "),
+        (r"\bAl\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Alameda "),
+        (r"\bTrav\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Travessa "),
+        (r"\bTv\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Travessa "),
+        (r"\bPça\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Praça "),
+        (r"\bPca\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Praça "),
+        (r"\bDr\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Doutor "),
+        (r"\bDra\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Doutora "),
+        (r"\bProf\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Professor "),
+        (r"\bProfa\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Professora "),
+        (r"\bEng\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Engenheiro "),
+        (r"\bCel\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Coronel "),
+        (r"\bMal\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Marechal "),
+        (r"\bJd\.?\s+(?=[A-ZÀ-Úa-zà-ú])", "Jardim "),
     ]
     for pat, repl in substitutions:
         text = re.sub(pat, repl, text, flags=re.IGNORECASE)
@@ -582,6 +585,147 @@ def extract_codes_and_addresses(text: str) -> List[dict]:
         s.pop("_circuit_order", None)
 
     return stops
+
+
+def _detect_excel_columns(df: 'pd.DataFrame') -> Optional[dict]:
+    """Look through the first ~5 rows of the DataFrame to find a header row.
+    Returns a dict mapping normalized column names -> column indexes, or None
+    if no recognizable header is found.
+    Recognized columns (case-insensitive, accent-insensitive):
+      - lat: latitude/lat
+      - lon: longitude/lng/lon
+      - cep: cep/zipcode/postal code
+      - customer: destination/customer/cliente/nome/recipient/destinatario
+      - address: address/endereco/endereço/rua
+      - code: codigo/código/code/tracking/at
+    """
+    def _norm(s: str) -> str:
+        s = str(s).strip().lower()
+        s = re.sub(r"[àáâãä]", "a", s)
+        s = re.sub(r"[éêë]", "e", s)
+        s = re.sub(r"[íîï]", "i", s)
+        s = re.sub(r"[óôõö]", "o", s)
+        s = re.sub(r"[úûü]", "u", s)
+        s = re.sub(r"ç", "c", s)
+        return s
+
+    ALIASES = {
+        "lat": {"lat", "latitude"},
+        "lon": {"lon", "lng", "longitude"},
+        "cep": {"cep", "zipcode", "postal code", "postalcode", "zip"},
+        "customer": {"destination", "customer", "cliente", "nome", "recipient", "destinatario", "nome do cliente"},
+        "address": {"address", "endereco", "rua", "logradouro"},
+        "code": {"codigo", "code", "tracking", "at", "codigo at", "tracking code"},
+    }
+    max_scan = min(5, len(df))
+    for row_idx in range(max_scan):
+        cells = df.iloc[row_idx].tolist()
+        norm_cells = [_norm(c) if pd.notna(c) else "" for c in cells]
+        mapping: dict = {}
+        for col_idx, val in enumerate(norm_cells):
+            for key, aliases in ALIASES.items():
+                if val in aliases:
+                    mapping.setdefault(key, col_idx)
+        # A row is a valid header only if it identifies at least an address
+        # OR (lat AND lon). This avoids matching a data row by accident.
+        if "address" in mapping or ("lat" in mapping and "lon" in mapping):
+            mapping["_header_row"] = row_idx
+            return mapping
+    return None
+
+
+def parse_excel_structured(content: bytes) -> Optional[List[dict]]:
+    """Column-aware Excel parser. Returns a list of stop dicts when a
+    recognizable header is present. Returns None when the sheet has no
+    header (in which case the caller falls back to flat-text extraction).
+    """
+    try:
+        df = pd.read_excel(io.BytesIO(content), header=None, sheet_name=0)
+    except Exception as e:
+        logging.error(f"Excel structured parse error: {e}")
+        return None
+    cols = _detect_excel_columns(df)
+    if not cols:
+        return None
+    header_row = cols.pop("_header_row")
+    stops: List[dict] = []
+    seen_codes: set = set()
+    counter = 0
+    for i in range(header_row + 1, len(df)):
+        row = df.iloc[i]
+
+        def _cell(key: str) -> Optional[str]:
+            idx = cols.get(key)
+            if idx is None or idx >= len(row):
+                return None
+            v = row.iloc[idx] if hasattr(row, "iloc") else row[idx]
+            if pd.isna(v):
+                return None
+            return str(v).strip() or None
+
+        lat_str = _cell("lat")
+        lon_str = _cell("lon")
+        cep_val = _cell("cep")
+        customer = _cell("customer")
+        addr_val = _cell("address") or ""
+        code_val = _cell("code")
+
+        # Skip fully empty rows.
+        if not (lat_str or lon_str or addr_val or cep_val or customer):
+            continue
+
+        lat_f: Optional[float] = None
+        lon_f: Optional[float] = None
+        try:
+            if lat_str is not None:
+                lat_f = float(str(lat_str).replace(",", "."))
+            if lon_str is not None:
+                lon_f = float(str(lon_str).replace(",", "."))
+            # Sanity check for Brazil bounds.
+            if lat_f is not None and not (-34 <= lat_f <= 5):
+                lat_f = None
+            if lon_f is not None and not (-74 <= lon_f <= -34):
+                lon_f = None
+        except (ValueError, TypeError):
+            lat_f = None
+            lon_f = None
+
+        if cep_val:
+            m = re.search(r"(\d{5})-?(\d{3})", cep_val)
+            cep_norm = f"{m.group(1)}-{m.group(2)}" if m else None
+        else:
+            cep_norm = None
+
+        cleaned_addr = clean_address(addr_val) if addr_val else "Endereço não detectado"
+        if len(cleaned_addr) < 5:
+            cleaned_addr = "Endereço não detectado"
+
+        codigo = code_val or f"SEQ{counter + 1:04d}"
+        # Dedup codigos.
+        base = codigo
+        n = 2
+        while codigo in seen_codes:
+            codigo = f"{base}-{n}"
+            n += 1
+        seen_codes.add(codigo)
+
+        stop_obj = {
+            "id": counter,
+            "codigo": codigo,
+            "endereco": cleaned_addr,
+            "status": "pendente",
+            "timestamp": None,
+            "lat": lat_f,
+            "lon": lon_f,
+            "cliente": customer,
+            "codigo_at": code_val if code_val and re.match(r"^AT[0-9A-Z]{10,14}$", code_val) else None,
+            "cep": cep_norm,
+        }
+        if cep_norm and (lat_f is None or lon_f is None):
+            stop_obj["_cep"] = cep_norm
+        stops.append(stop_obj)
+        counter += 1
+    return stops if stops else None
 
 
 def parse_excel(content: bytes) -> str:
@@ -1257,13 +1401,23 @@ async def _resolve_cep_to_latlon(cep: str) -> Optional[tuple]:
 async def parse_file(file: UploadFile = File(...)):
     content = await file.read()
     filename = (file.filename or "").lower()
+    raw_stops: List[dict] = []
     if filename.endswith((".xlsx", ".xls")):
-        text = parse_excel(content)
+        # Prefer the column-aware parser when the sheet has a recognizable
+        # header (Latitude/Longitude/CEP/Customer). This lets us skip the
+        # heavy geocoding step for stops that already ship with coordinates.
+        structured = parse_excel_structured(content)
+        if structured:
+            raw_stops = structured
+        else:
+            text = parse_excel(content)
+            raw_stops = extract_codes_and_addresses(text)
     elif filename.endswith(".pdf"):
         text = parse_pdf(content)
+        raw_stops = extract_codes_and_addresses(text)
     else:
         text = parse_csv(content)
-    raw_stops = extract_codes_and_addresses(text)
+        raw_stops = extract_codes_and_addresses(text)
 
     # For stops WITHOUT coords BUT with a detected CEP, resolve CEP → lat/lon.
     # This runs concurrently but is capped to a small pool to be gentle on ViaCEP.
