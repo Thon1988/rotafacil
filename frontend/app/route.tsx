@@ -40,6 +40,40 @@ import { storage } from "@/src/utils/storage";
 export default function RouteScreen() {
   const router = useRouter();
   const { export: exportParam, optimize: optimizeParam } = useLocalSearchParams<{ export?: string; optimize?: string }>();
+
+  // Force the vertical scrollbar of the stops list to be visible on WEB
+  // (react-native-web hides it by default). Circuit-style always-on bar so
+  // the driver can see where they are in a long list and quickly grab #60.
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const id = "rota-scrollbar-style";
+    if (typeof document === "undefined" || document.getElementById(id)) return;
+    const style = document.createElement("style");
+    style.id = id;
+    style.innerHTML = `
+      .rota-scrollbar, .rota-scrollbar * {
+        scrollbar-width: auto !important;
+        scrollbar-color: #ea580c #1f2937 !important;
+      }
+      .rota-scrollbar ::-webkit-scrollbar,
+      .rota-scrollbar::-webkit-scrollbar {
+        width: 10px !important;
+        height: 10px !important;
+        display: block !important;
+      }
+      .rota-scrollbar ::-webkit-scrollbar-track,
+      .rota-scrollbar::-webkit-scrollbar-track {
+        background: #1f2937;
+      }
+      .rota-scrollbar ::-webkit-scrollbar-thumb,
+      .rota-scrollbar::-webkit-scrollbar-thumb {
+        background: #ea580c;
+        border-radius: 6px;
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
   const mapRef = useRef<MapHandle>(null);
   const [stops, setStops] = useState<Stop[]>([]);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
@@ -811,8 +845,13 @@ export default function RouteScreen() {
               <Text style={styles.activeBadgeText}>{String((activeIdx ?? 0) + 1).padStart(2, "0")}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.activeStreet} numberOfLines={1}>
-                {activeStop.endereco.split(",")[0] || "Endereço"}
+              {!!activeStop.cliente && (
+                <Text style={styles.activeClient} numberOfLines={1}>
+                  {activeStop.cliente}
+                </Text>
+              )}
+              <Text style={styles.activeStreet} numberOfLines={2}>
+                {activeStop.endereco || "Endereço"}
               </Text>
               <Text style={styles.activeSub} numberOfLines={1}>
                 {activeStop.codigo}
@@ -826,7 +865,12 @@ export default function RouteScreen() {
       )}
 
       {/* STOPS LIST (overlays map so map expands into freed area when sheet is collapsed) */}
-      <View style={styles.listContainer} pointerEvents="box-none">
+      <View
+        style={styles.listContainer}
+        pointerEvents="box-none"
+        // @ts-expect-error web-only className for custom scrollbar CSS
+        className={Platform.OS === "web" ? "rota-scrollbar" : undefined}
+      >
         <BottomSheet
           ref={bottomSheetRef}
           snapPoints={snapPoints}
@@ -1323,8 +1367,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   activeBadgeText: { color: "#fff", fontWeight: "900", fontSize: 14 },
-  activeStreet: { color: COLORS.textPrimary, fontSize: 15, fontWeight: "800" },
-  activeSub: { color: COLORS.textSecondary, fontSize: 12, marginTop: 2 },
+  activeClient: { color: COLORS.primary, fontSize: 12, fontWeight: "700", marginBottom: 2 },
+  activeStreet: { color: COLORS.textPrimary, fontSize: 14, fontWeight: "800" },
+  activeSub: { color: COLORS.textSecondary, fontSize: 11, marginTop: 2 },
 
   listContainer: {
     position: "absolute",

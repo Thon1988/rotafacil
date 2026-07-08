@@ -628,9 +628,14 @@ def _detect_excel_columns(df: 'pd.DataFrame') -> Optional[dict]:
         "lat": {"lat", "latitude"},
         "lon": {"lon", "lng", "longitude"},
         "cep": {"cep", "zipcode", "postal code", "postalcode", "zip"},
-        "customer": {"destination", "customer", "cliente", "nome", "recipient", "destinatario", "nome do cliente"},
-        "address": {"address", "endereco", "rua", "logradouro"},
-        "code": {"codigo", "code", "tracking", "at", "codigo at", "tracking code"},
+        "customer": {"destination", "customer", "cliente", "nome", "recipient", "destinatario", "nome do cliente", "nome do destinatario"},
+        "address": {"address", "endereco", "rua", "logradouro", "street", "avenida", "endereço completo"},
+        "number": {"numero", "number", "n", "no", "nº", "num", "house number"},
+        "complement": {"complemento", "complement", "compl"},
+        "neighborhood": {"bairro", "neighborhood", "district"},
+        "city": {"cidade", "city", "municipio", "municipality"},
+        "state": {"estado", "state", "uf"},
+        "code": {"codigo", "code", "tracking", "at", "codigo at", "tracking code", "codigo de rastreio", "cod"},
     }
     max_scan = min(5, len(df))
     for row_idx in range(max_scan):
@@ -682,8 +687,33 @@ def parse_excel_structured(content: bytes) -> Optional[List[dict]]:
         lon_str = _cell("lon")
         cep_val = _cell("cep")
         customer = _cell("customer")
-        addr_val = _cell("address") or ""
+        street = _cell("address") or ""
+        number = _cell("number")
+        complement = _cell("complement")
+        neighborhood = _cell("neighborhood")
+        city = _cell("city")
+        state = _cell("state")
         code_val = _cell("code")
+
+        # Compose a full address string when the sheet splits it across
+        # multiple columns (Rua | Numero | Bairro | Cidade | UF).
+        parts: List[str] = []
+        if street:
+            if number and not re.search(rf"\b{re.escape(number)}\b", street):
+                parts.append(f"{street}, {number}")
+            else:
+                parts.append(street)
+        elif number:
+            parts.append(number)
+        if complement:
+            parts.append(complement)
+        if neighborhood:
+            parts.append(neighborhood)
+        if city:
+            parts.append(city)
+        if state:
+            parts.append(state)
+        addr_val = ", ".join([p for p in parts if p])
 
         # Skip fully empty rows.
         if not (lat_str or lon_str or addr_val or cep_val or customer):

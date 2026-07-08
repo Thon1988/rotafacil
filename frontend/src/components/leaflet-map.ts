@@ -48,10 +48,10 @@ export function buildLeafletHTML(stops: Stop[]): string {
   // Build a labeled circular marker via SVG data-URI so we don't depend on
   // AdvancedMarker (which requires Map ID + billing config).
   function buildMarkerIcon(label, color) {
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">'
-      + '<circle cx="18" cy="18" r="15" fill="' + color + '" stroke="#ffffff" stroke-width="3"/>'
-      + '<text x="18" y="23" text-anchor="middle" font-family="-apple-system,Roboto,sans-serif" '
-      + 'font-size="14" font-weight="700" fill="#ffffff">' + String(label) + '</text>'
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">'
+      + '<circle cx="12" cy="12" r="10" fill="' + color + '" stroke="#ffffff" stroke-width="2"/>'
+      + '<text x="12" y="16" text-anchor="middle" font-family="-apple-system,Roboto,sans-serif" '
+      + 'font-size="10" font-weight="700" fill="#ffffff">' + String(label) + '</text>'
       + '</svg>';
     return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
   }
@@ -79,8 +79,8 @@ export function buildLeafletHTML(stops: Stop[]): string {
         title: (s.codigo || '') + ' — ' + (s.endereco || ''),
         icon: {
           url: buildMarkerIcon(idx + 1, color),
-          scaledSize: new google.maps.Size(36, 36),
-          anchor: new google.maps.Point(18, 18),
+          scaledSize: new google.maps.Size(24, 24),
+          anchor: new google.maps.Point(12, 12),
         },
         optimized: true,
       });
