@@ -967,6 +967,9 @@ export default function RouteScreen() {
               contentContainerStyle={{ paddingBottom: SPACING.sm, paddingHorizontal: SPACING.md }}
               containerStyle={{ flex: 1 }}
               activationDistance={10}
+              autoscrollThreshold={60}
+              autoscrollSpeed={150}
+              dragItemOverflow={true}
             />
           </BottomSheetView>
         </BottomSheet>
