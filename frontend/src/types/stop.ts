@@ -11,5 +11,6 @@ export interface Stop {
   cliente?: string | null;
   codigo_at?: string | null;
   cep?: string | null;
+  bipado?: boolean;
   duration_seconds?: number | null; // time taken from previous to this delivery
 }

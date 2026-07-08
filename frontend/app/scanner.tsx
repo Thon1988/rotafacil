@@ -104,7 +104,12 @@ export default function ScannerScreen() {
   const counts = useMemo(() => {
     const done = stops.filter((s) => s.status === "entregue").length;
     const failed = stops.filter((s) => s.status === "falhou").length;
-    return { done, failed, total: stops.length, remaining: stops.length - done - failed };
+    const bipados = stops.filter((s) => s.bipado).length;
+    // "remaining" = packages still to be bipped/scanned (Circuit-style counter)
+    const remaining = stops.filter(
+      (s) => !s.bipado && s.status !== "entregue"
+    ).length;
+    return { done, failed, total: stops.length, remaining, bipados };
   }, [stops]);
 
   const speakStop = useCallback((sequenceNumber: number) => {
@@ -151,7 +156,15 @@ export default function ScannerScreen() {
         // SCAN ONLY IDENTIFIES / NUMBERS the package — it does NOT auto-mark
         // as delivered. To mark as delivered, the driver must tap the
         // "Entregue" button on the stop card. (User request 2026-07-03.)
-        // We DO NOT update status here. Just highlight + announce.
+        // We only flip the "bipado" flag so the landing counter decrements
+        // (60 → 59 → 58 …).
+        if (!stop.bipado) {
+          const updated = stops.map((s, i) =>
+            i === idx ? { ...s, bipado: true } : s
+          );
+          setStops(updated);
+          await saveRoute(updated);
+        }
 
         if (Platform.OS !== "web") {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -235,6 +248,7 @@ export default function ScannerScreen() {
         ? {
             ...s,
             codigo: scannedCode,
+            bipado: true,
           }
         : s
     );

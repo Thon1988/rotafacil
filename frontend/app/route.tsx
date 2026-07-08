@@ -917,6 +917,8 @@ export default function RouteScreen() {
               onDragEnd={handleDragEnd}
               renderItem={renderStopItem}
               showsVerticalScrollIndicator={true}
+              persistentScrollbar={true}
+              indicatorStyle="white"
               simultaneousHandlers={bottomSheetRef}
               contentContainerStyle={{ paddingBottom: SPACING.sm, paddingHorizontal: SPACING.md }}
               containerStyle={{ flex: 1 }}
@@ -1553,14 +1555,14 @@ const styles = StyleSheet.create({
   stopRowDone: { opacity: 0.5 },
   stopRowActive: { borderColor: COLORS.primary, borderWidth: 2 },
   stopNum: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: COLORS.primary,
     justifyContent: "center",
     alignItems: "center",
   },
-  stopNumText: { color: "#fff", fontWeight: "900", fontSize: 13 },
+  stopNumText: { color: "#fff", fontWeight: "800", fontSize: 11 },
   stopCode: { color: COLORS.primary, fontSize: 13, fontWeight: "700" },
   stopClient: { color: COLORS.textPrimary, fontSize: 14, fontWeight: "700", marginBottom: 2 },
   stopAddr: { color: COLORS.textPrimary, fontSize: 13, marginTop: 2 },

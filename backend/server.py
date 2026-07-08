@@ -405,6 +405,21 @@ def _extract_customer_and_at(block: str) -> tuple:
             context = seg[max(0, span_start - 10):span_start]
             if re.search(r"\d,\s{0,3}$", context):
                 continue
+            # Reject candidates that appear right after a STREET PREFIX
+            # (e.g. "Rua Palmeira das Bermudas" — "Palmeira das Bermudas" is
+            # the street name, NOT a customer). Look at the last word(s) of
+            # the context: if it ends with Rua/Av/R/Al/Trav/Estr/Rod/... then
+            # this candidate is the street name and should be skipped.
+            if re.search(
+                r"\b(?:Rua|R\.?|Avenida|Av\.?|Alameda|Al\.?|Travessa|Tv\.?|"
+                r"Estrada|Estr\.?|Rodovia|Rod\.?|Praça|Praca|Pça\.?|Pca\.?|"
+                r"Largo|Lgo\.?|Viaduto|Vd\.?|Marginal|Caminho|Beco|"
+                r"Doutor|Dr\.?|Doutora|Dra\.?|Professor|Prof\.?|Professora|Profa\.?|"
+                r"Coronel|Cel\.?|Marechal|Mal\.?|Engenheiro|Eng\.?)\s*$",
+                context,
+                re.IGNORECASE,
+            ):
+                continue
             if best is None or len(candidate) > len(best):
                 best = candidate
 

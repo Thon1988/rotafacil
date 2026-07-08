@@ -25,7 +25,12 @@ export default function Index() {
   const refreshRoute = useCallback(async () => {
     const route = await loadRoute();
     setHasRoute(route.length > 0);
-    setRouteCount(route.length);
+    // Circuit-style counter: decrements as packages get scanned (bipado)
+    // AND does not include already-delivered stops. 60 → 59 → 58 …
+    const remaining = route.filter(
+      (s: any) => !s.bipado && s.status !== "entregue"
+    ).length;
+    setRouteCount(remaining);
   }, []);
 
   useEffect(() => {
