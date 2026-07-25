@@ -623,11 +623,6 @@
 
         <div class="divisor-menu"></div>
 
-        <div class="menu-item" onclick="abrirConfigurarRota(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            Configurar Rota
-        </div>
-
         <div class="menu-item" onclick="abrirScanner(); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2-2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
             Escanear Pacotes
@@ -740,20 +735,6 @@
         </div>
     </div>
 
-    <!-- MODAL CONFIGURAR ROTA -->
-    <div id="modalConfigRota" class="modal-overlay">
-        <div class="modal-body">
-            <h3 style="margin-top:0; color:var(--cor-laranja);">Configurar Rota</h3>
-            <p style="font-size:13px; color:var(--texto-secundario);">Gerencie ou insira parâmetros para sua rota atual.</p>
-            <div style="margin: 15px 0;">
-                <label style="font-size:12px; color:var(--texto-secundario);">Ações Rápidas:</label>
-                <button class="btn-sheet-action" style="width:100%; margin-top:8px;" onclick="abrirSeletorArquivo(); fecharConfigurarRota();">📄 Importar Nova Planilha/PDF</button>
-                <button class="btn-sheet-action" style="width:100%; margin-top:8px;" onclick="inserirCodigoManual(); fecharConfigurarRota();">✏️ Inserir Código Manual</button>
-            </div>
-            <button class="btn-sheet-action destaque" style="width:100%; margin-top:15px;" onclick="fecharConfigurarRota()">Fechar</button>
-        </div>
-    </div>
-
     <!-- MODAL EDITAR ENDEREÇO -->
     <div id="modalEdit" class="modal-overlay">
         <div class="modal-body">
@@ -802,10 +783,12 @@
                 <div class="scanner-stat-num" id="scanner-stat-faltam">0</div>
                 <div class="scanner-stat-label">Faltam</div>
             </div>
+            <!-- Elemento Faltante Adicionado de Volta -->
             <div class="scanner-stat-card" style="display:none;">
                 <div class="scanner-stat-num" id="scanner-stat-total">0</div>
                 <div class="scanner-stat-label">Total</div>
             </div>
+            <!-- Botão de Inserir Código Manual adicionado aqui na barra de estatísticas -->
             <div class="scanner-stat-card" onclick="inserirCodigoManual()">
                 <div class="scanner-stat-num">✏️</div>
                 <div class="scanner-stat-label">Digitar Código</div>
@@ -897,14 +880,6 @@
             document.getElementById('menu-lateral').classList.remove('aberto');
         }
 
-        function abrirConfigurarRota() {
-            document.getElementById('modalConfigRota').style.display = 'flex';
-        }
-
-        function fecharConfigurarRota() {
-            document.getElementById('modalConfigRota').style.display = 'none';
-        }
-
         function inicializarSortable() {
             const el = document.getElementById('lista-paradas');
             sortableInstance = new Sortable(el, {
@@ -983,8 +958,8 @@
                         
                         let partesEndereco = [];
                         if (endKey && row[endKey]) partesEndereco.push(String(row[endKey]).trim());
-                        if (bairroKey && row[bairroKey]) partesEndereco.push(String(bairroKey]).trim());
-                        if (cidadeKey && row[cidadeKey]) partesEndereco.push(String(cidadeKey]).trim());
+                        if (bairroKey && row[bairroKey]) partesEndereco.push(String(row[bairroKey]).trim());
+                        if (cidadeKey && row[cidadeKey]) partesEndereco.push(String(row[cidadeKey]).trim());
                         if (cepKey && row[cepKey]) partesEndereco.push(`CEP ${String(row[cepKey]).trim()}`);
 
                         let enderecoTexto = partesEndereco.join(', ');
@@ -1009,7 +984,7 @@
                 leitor.onload = async function() {
                     try {
                         const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                        let itensExtraidos = [];
+                        let textoCompletoPaginas = "";
 
                         for (let i = 1; i <= pdf.numPages; i++) {
                             const page = await pdf.getPage(i);
@@ -1032,56 +1007,49 @@
 
                             let chavesY = Object.keys(linhasPorY).sort((a,b) => b - a);
                             chavesY.forEach(y => {
-                                let linhaTexto = linhasPorY[y].join(" ");
-                                let matchCod = linhaTexto.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|\b\d{10,14}\b)/i);
-                                if (matchCod) {
-                                    let codigo = matchCod[0].toUpperCase();
-                                    let endereco = linhaTexto.replace(codigo, '').replace(/^[;,-\s]+|[;,-\s]+$/g, '').trim();
-                                    if (endereco.length > 3 && !endereco.toLowerCase().includes("powered by")) {
-                                        itensExtraidos.push({
-                                            codigo: codigo,
-                                            endereco: endereco.replace(/\s+/g, ' '),
-                                            lat: null,
-                                            lon: null
-                                        });
-                                    }
-                                }
+                                textoCompletoPaginas += " " + linhasPorY[y].join(" ");
                             });
                         }
 
+                        let textoUnificado = textoCompletoPaginas.replace(/\s+/g, ' ').trim();
+                        let regexBlocos = /(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|\b\d{10,14}\b)/g;
+                        let posicoes = [];
+                        let match;
+
+                        while ((match = regexBlocos.exec(textoUnificado)) !== null) {
+                            posicoes.push({ codigo: match[0].toUpperCase(), index: match.index });
+                        }
+
+                        let itensExtraidos = [];
+                        for (let j = 0; j < posicoes.length; j++) {
+                            let inicio = posicoes[j].index;
+                            let fim = (j < posicoes.length - 1) ? posicoes[j + 1].index : textoUnificado.length;
+                            let pedaco = textoUnificado.substring(inicio, fim);
+
+                            let codigo = posicoes[j].codigo;
+                            let endereco = pedaco.replace(codigo, '').replace(/^[;,-\s]+|[;,-\s]+$/g, '').trim();
+
+                            if (endereco.length > 5 && !endereco.toLowerCase().includes("powered by")) {
+                                itensExtraidos.push({
+                                    codigo: codigo,
+                                    endereco: endereco.replace(/\s+/g, ' '),
+                                    lat: null,
+                                    lon: null
+                                });
+                            }
+                        }
+
                         if (itensExtraidos.length === 0) {
-                            let textoCompletoPaginas = "";
-                            for (let i = 1; i <= pdf.numPages; i++) {
-                                const page = await pdf.getPage(i);
-                                const content = await page.getTextContent();
-                                textoCompletoPaginas += " " + content.items.map(item => item.str).join(" ");
-                            }
-                            let textoUnificado = textoCompletoPaginas.replace(/\s+/g, ' ').trim();
-                            let regexBlocos = /(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|\b\d{10,14}\b)/g;
-                            let posicoes = [];
-                            let match;
-
-                            while ((match = regexBlocos.exec(textoUnificado)) !== null) {
-                                posicoes.push({ codigo: match[0].toUpperCase(), index: match.index });
-                            }
-
-                            for (let j = 0; j < posicoes.length; j++) {
-                                let inicio = posicoes[j].index;
-                                let fim = (j < posicoes.length - 1) ? posicoes[j + 1].index : textoUnificado.length;
-                                let pedaco = textoUnificado.substring(inicio, fim);
-
-                                let codigo = posicoes[j].codigo;
-                                let endereco = pedaco.replace(codigo, '').replace(/^[;,-\s]+|[;,-\s]+$/g, '').trim();
-
-                                if (endereco.length > 5 && !endereco.toLowerCase().includes("powered by")) {
-                                    itensExtraidos.push({
-                                        codigo: codigo,
-                                        endereco: endereco.replace(/\s+/g, ' '),
-                                        lat: null,
-                                        lon: null
-                                    });
+                            let linhasBrutas = textoUnificado.split(/(?=[A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?)/g);
+                            linhasBrutas.forEach((l, idx) => {
+                                let limpo = l.trim();
+                                if (limpo.length > 10) {
+                                    let matchCod = limpo.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2})/i);
+                                    let cod = matchCod ? matchCod[0].toUpperCase() : `VOL-${idx+1}`;
+                                    let end = limpo.replace(cod, '').trim();
+                                    itensExtraidos.push({ codigo: cod, endereco: end, lat: null, lon: null });
                                 }
-                            }
+                            });
                         }
 
                         estruturarBancoDeDados(itensExtraidos);
@@ -1143,19 +1111,9 @@
             }
         }
 
-        function normalizarTextoEndereco(end) {
-            if (!end) return "";
-            return end.toLowerCase()
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
-                .replace(/\b(rua|r\.|avenida|av\.|travessa|tv\.|alameda|al\.)\b/g, '') // Remove tipos comuns de logradouro para comparar melhor
-                .replace(/[^\w\s]/gi, '') // Remove pontuação
-                .replace(/\s+/g, ' ')
-                .trim();
-        }
-
         function contarPacotesNoMesmoEndereco(endereco) {
-            let endNormalizado = normalizarTextoEndereco(endereco);
-            return bdRotas.filter(r => normalizarTextoEndereco(r.endereco) === endNormalizado).length;
+            let endLimpo = endereco.trim().toLowerCase();
+            return bdRotas.filter(r => r.endereco.trim().toLowerCase() === endLimpo).length;
         }
 
         function renderizarLista() {
@@ -1190,9 +1148,8 @@
         function selecionarParadaEVerificarAgrupamento(idx) {
             indexAtivo = idx;
             const alvo = bdRotas[idx];
-            let alvoNormalizado = normalizarTextoEndereco(alvo.endereco);
 
-            grupoAtual = bdRotas.filter(r => normalizarTextoEndereco(r.endereco) === alvoNormalizado);
+            grupoAtual = bdRotas.filter(r => r.endereco.trim().toLowerCase() === alvo.endereco.trim().toLowerCase());
             
             if (grupoAtual.length > 1) {
                 indexAgrupadoInterno = grupoAtual.findIndex(r => r.codigo === alvo.codigo);
