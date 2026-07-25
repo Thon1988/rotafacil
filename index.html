@@ -698,13 +698,27 @@
             return true;
         }
 
+        /**
+         * Limpa a string de endereço removendo códigos BR e normalizando espaços
+         */
+        function limparTextoEndereco(texto, codigoExtraido) {
+            if (!texto) return "";
+            let end = texto;
+            if (codigoExtraido && end.includes(codigoExtraido)) {
+                end = end.replace(codigoExtraido, "");
+            }
+            return end.replace(/\s+/g, " ").trim();
+        }
+
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if (input.files.length === 0) return;
             const arquivo = input.files[0];
             const nome = arquivo.name.toLowerCase();
 
-            document.getElementById('status-geocoding-topo').innerText = "Lendo arquivo e colunas explícitas...";
+            document.getElementById('status-geocoding-topo').innerText = "Lendo arquivo e agrupando por local...";
+
+            let itensBrutos = [];
 
             if (nome.endsWith('.xlsx') || nome.endsWith('.xls')) {
                 const leitor = new FileReader();
@@ -712,16 +726,11 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    
-                    // Converte planilha para Objetos JSON mapeando cabeçalhos
                     const jsonObjetos = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-                    
-                    let itensProcessados = [];
 
                     jsonObjetos.forEach((row, idx) => {
                         let keys = Object.keys(row);
                         
-                        // Mapeamento preciso por nome da coluna (Headers)
                         let latKey = keys.find(k => /latitude|^lat$/i.test(k.trim()));
                         let lonKey = keys.find(k => /longitude|^lon$|^lng$/i.test(k.trim()));
                         let codKey = keys.find(k => /código|codigo|rastreio|spx|tracking|pacote|tn/i.test(k.trim()));
@@ -732,10 +741,8 @@
 
                         let lat = latKey ? parseFloat(row[latKey]) : null;
                         let lon = lonKey ? parseFloat(row[lonKey]) : null;
-
                         let codigo = codKey && row[codKey] ? String(row[codKey]).trim().toUpperCase() : '';
                         
-                        // Montagem do endereço completo caso venha fragmentado
                         let partesEndereco = [];
                         if (endKey && row[endKey]) partesEndereco.push(String(row[endKey]).trim());
                         if (bairroKey && row[bairroKey]) partesEndereco.push(String(row[bairroKey]).trim());
@@ -744,20 +751,21 @@
 
                         let enderecoTexto = partesEndereco.join(', ');
 
-                        // Se o cabeçalho não foi encontrado, fallback para busca na linha bruta
                         if (!enderecoTexto) {
                             let linhaTexto = Object.values(row).join(' ');
                             if (validarLinhaValida(linhaTexto)) {
                                 const matchCod = linhaTexto.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
                                 codigo = matchCod ? matchCod[0].toUpperCase() : `VOL-${String(idx + 1).padStart(3, '0')}`;
-                                enderecoTexto = matchCod ? linhaTexto.replace(matchCod[0], '').trim() : linhaTexto.trim();
+                                enderecoTexto = limparTextoEndereco(linhaTexto, matchCod ? matchCod[0] : null);
                             }
+                        } else {
+                            enderecoTexto = limparTextoEndereco(enderecoTexto, codigo);
                         }
 
                         if (!codigo) codigo = `VOL-${String(idx + 1).padStart(3, '0')}`;
 
                         if (enderecoTexto.length > 2 || (!isNaN(lat) && !isNaN(lon))) {
-                            itensProcessados.push({
+                            itensBrutos.push({
                                 codigo: codigo,
                                 endereco: enderecoTexto || "Localização Exata via Coordenadas",
                                 lat: (!isNaN(lat) && lat !== 0) ? lat : null,
@@ -766,7 +774,7 @@
                         }
                     });
 
-                    estruturarBancoDeDados(itensProcessados);
+                    estruturarEAgruparBancoDeDados(itensBrutos);
                 };
                 leitor.readAsArrayBuffer(arquivo);
             } else if (nome.endsWith('.pdf')) {
@@ -791,19 +799,19 @@
                             chavesY.forEach(y => {
                                 let textoLinha = linhasPorY[y].join(" ").trim();
                                 if (validarLinhaValida(textoLinha)) {
-                                    linhasExtraidas.push({ texto: textoLinha });
+                                    linhasExtraidas.push(textoLinha);
                                 }
                             });
                         }
 
-                        let itens = linhasExtraidas.map((l, idx) => {
-                            const match = l.texto.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
+                        itensBrutos = linhasExtraidas.map((texto, idx) => {
+                            const match = texto.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
                             let cod = match ? match[0].toUpperCase() : `VOL-${String(idx + 1).padStart(3, '0')}`;
-                            let end = match ? l.texto.replace(match[0], '').trim() : l.texto.trim();
+                            let end = limparTextoEndereco(texto, match ? match[0] : null);
                             return { codigo: cod, endereco: end, lat: null, lon: null };
                         });
 
-                        estruturarBancoDeDados(itens);
+                        estruturarEAgruparBancoDeDados(itensBrutos);
                     } catch (err) {
                         alert("Erro ao extrair o PDF.");
                     }
@@ -813,42 +821,66 @@
                 const leitor = new FileReader();
                 leitor.onload = (e) => {
                     let linhas = e.target.result.split(/\r?\n/).filter(validarLinhaValida);
-                    let itens = linhas.map((linha, idx) => {
+                    itensBrutos = linhas.map((linha, idx) => {
                         const match = linha.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
                         let cod = match ? match[0].toUpperCase() : `VOL-${String(idx + 1).padStart(3, '0')}`;
-                        let end = match ? linha.replace(match[0], '').trim() : linha.trim();
+                        let end = limparTextoEndereco(linha, match ? match[0] : null);
                         return { codigo: cod, endereco: end, lat: null, lon: null };
                     });
-                    estruturarBancoDeDados(itens);
+                    estruturarEAgruparBancoDeDados(itensBrutos);
                 };
                 leitor.readAsText(arquivo);
             }
         }
 
-        async function estruturarBancoDeDados(listaItens) {
+        /**
+         * Processa a lista sequencialmente. Se a linha N possuir exatamente
+         * os mesmos dados da linha N-1, elas são unificadas como uma mesma PARADA.
+         */
+        async function estruturarEAgruparBancoDeDados(listaItens) {
             bdRotas = [];
+            let paradaAtual = null;
 
             for (let i = 0; i < listaItens.length; i++) {
                 let item = listaItens[i];
-                let lat = item.lat;
-                let lon = item.lon;
+                let endClean = item.endereco.trim().toUpperCase();
 
-                // Se não veio Latitude/Longitude explícita na planilha, faz geocodificação
-                if (!lat || !lon) {
-                    let coords = await buscarGeocodingBackend(item.endereco);
-                    lat = coords.lat;
-                    lon = coords.lon;
+                // Identificador único de endereço/local
+                let locationKey = (item.lat && item.lon) 
+                    ? `${item.lat},${item.lon}` 
+                    : endClean;
+
+                // Se a linha atual tiver a mesma chave da linha anterior -> junta na mesma parada
+                if (paradaAtual && paradaAtual.locationKey === locationKey) {
+                    if (item.codigo && !paradaAtual.codigos.includes(item.codigo)) {
+                        paradaAtual.codigos.push(item.codigo);
+                    }
+                    paradaAtual.totalPacotes += 1;
+                } else {
+                    // É uma nova parada sequencial!
+                    let lat = item.lat;
+                    let lon = item.lon;
+
+                    if (!lat || !lon) {
+                        let coords = await buscarGeocodingBackend(item.endereco);
+                        lat = coords.lat;
+                        lon = coords.lon;
+                    }
+
+                    paradaAtual = {
+                        id: bdRotas.length + 1,
+                        locationKey: locationKey,
+                        codigo: item.codigo,
+                        codigos: [item.codigo],
+                        endereco: item.endereco,
+                        status: 'pendente',
+                        timestamp: null,
+                        lat: lat,
+                        lon: lon,
+                        totalPacotes: 1
+                    };
+                    bdRotas.push(paradaAtual);
                 }
-
-                bdRotas.push({
-                    id: i + 1,
-                    codigo: item.codigo,
-                    endereco: item.endereco,
-                    status: 'pendente',
-                    timestamp: null,
-                    lat: lat,
-                    lon: lon
-                });
             }
 
             if (bdRotas.length > 0) {
@@ -856,7 +888,7 @@
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
-                document.getElementById('status-geocoding-topo').innerText = `Mapeamento concluído: ${bdRotas.length} paradas no mapa!`;
+                document.getElementById('status-geocoding-topo').innerText = `Mapeamento concluído: ${bdRotas.length} paradas únicas no mapa!`;
                 iniciarOtimizacaoComEtapas(false);
             } else {
                 alert("Nenhuma parada válida foi identificada.");
@@ -871,11 +903,15 @@
                 const card = document.createElement('div');
                 card.className = 'card-parada';
                
+                const infoPacotes = e.totalPacotes > 1 
+                    ? `<span style="color:var(--cor-laranja); font-weight:bold;"> (${e.totalPacotes} pacotes)</span>` 
+                    : '';
+
                 card.innerHTML = `
                     <div class="handle-drag">☰</div>
                     <div class="badge-numero-parada" style="background:${e.status==='entregue'?'var(--cor-verde)':(e.status==='falhou'?'var(--cor-vermelho)':'var(--cor-laranja)')}">${idx + 1}</div>
                     <div class="parada-info" onclick="selecionarParadaEVerificarAgrupamento(${idx})">
-                        <div class="parada-codigo">${e.codigo}</div>
+                        <div class="parada-codigo">${e.codigo} ${infoPacotes}</div>
                         <div class="parada-rua">${e.endereco}</div>
                     </div>
                     <div class="parada-acoes">
@@ -891,10 +927,12 @@
             indexAtivo = idx;
             const alvo = bdRotas[idx];
 
-            grupoAtual = bdRotas.filter(r => r.endereco.trim().toLowerCase() === alvo.endereco.trim().toLowerCase());
-            
-            if (grupoAtual.length > 1) {
-                indexAgrupadoInterno = grupoAtual.findIndex(r => r.codigo === alvo.codigo);
+            if (alvo.codigos && alvo.codigos.length > 1) {
+                grupoAtual = alvo.codigos.map(c => ({
+                    codigo: c,
+                    endereco: alvo.endereco
+                }));
+                indexAgrupadoInterno = 0;
                 exibirWidgetAgrupado();
             } else {
                 document.getElementById('widget-agrupado').style.display = 'none';
@@ -919,9 +957,6 @@
             indexAgrupadoInterno += direcao;
             if (indexAgrupadoInterno < 0) indexAgrupadoInterno = grupoAtual.length - 1;
             if (indexAgrupadoInterno >= grupoAtual.length) indexAgrupadoInterno = 0;
-            
-            const item = grupoAtual[indexAgrupadoInterno];
-            indexAtivo = bdRotas.findIndex(r => r.codigo === item.codigo);
             exibirWidgetAgrupado();
         }
 
@@ -1102,9 +1137,10 @@
 
         function exportarRelatorioCSV() {
             if (bdRotas.length === 0) return alert("Sem rota para exportar.");
-            let csv = "\uFEFFOrdem,Codigo_Rastreio,Endereco,Latitude,Longitude,Status\n";
+            let csv = "\uFEFFOrdem,Codigos_Pacotes,Endereco,Latitude,Longitude,Status\n";
             bdRotas.forEach((p, idx) => {
-                csv += `"${idx + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.lat}","${p.lon}","${p.status}"\n`;
+                let cods = p.codigos ? p.codigos.join(" | ") : p.codigo;
+                csv += `"${idx + 1}","${cods}","${p.endereco.replace(/"/g, '""')}","${p.lat}","${p.lon}","${p.status}"\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
@@ -1126,7 +1162,8 @@
             let y = 35;
             bdRotas.forEach((p, idx) => {
                 if (y > 280) { doc.addPage(); y = 20; }
-                doc.text(`${idx + 1}. [${p.codigo}] ${p.endereco.substring(0, 65)}`, 14, y);
+                let cods = p.codigos ? p.codigos.join(", ") : p.codigo;
+                doc.text(`${idx + 1}. [${cods}] ${p.endereco.substring(0, 60)}`, 14, y);
                 y += 7;
             });
 
@@ -1261,7 +1298,10 @@
                 { fps: 15, qrbox: { width: 280, height: 150 } },
                 (textoLido) => {
                     const token = textoLido.trim().toUpperCase();
-                    const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
+                    const idx = bdRotas.findIndex(i => {
+                        if (i.codigos) return i.codigos.some(c => c.includes(token) || token.includes(c));
+                        return i.codigo.includes(token) || token.includes(i.codigo);
+                    });
                     if (idx !== -1) {
                         selecionarParadaEVerificarAgrupamento(idx);
                         fecharScanner();
@@ -1280,7 +1320,11 @@
         function inserirCodigoManual() {
             let cod = prompt("Digite o código de rastreio:");
             if (cod) {
-                let idx = bdRotas.findIndex(r => r.codigo.includes(cod.toUpperCase()));
+                let token = cod.trim().toUpperCase();
+                let idx = bdRotas.findIndex(r => {
+                    if (r.codigos) return r.codigos.some(c => c.includes(token));
+                    return r.codigo.includes(token);
+                });
                 if (idx !== -1) selecionarParadaEVerificarAgrupamento(idx);
                 else alert("Código não encontrado na rota.");
             }
