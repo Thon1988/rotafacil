@@ -82,7 +82,7 @@
             transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
             display: flex;
             flex-direction: column;
-            padding: 16px 12px;
+            padding: 20px 16px;
             overflow-y: auto;
             box-shadow: 5px 0 25px rgba(0,0,0,0.3);
             border-right: 1px solid var(--border-color);
@@ -92,26 +92,17 @@
             transform: translateX(0);
         }
 
-        .menu-titulo-container {
-            font-size: 18px;
-            font-weight: 800;
-            color: var(--cor-laranja);
-            padding: 8px 10px 12px 10px;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 8px;
-        }
-
         .menu-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            border-radius: 10px;
+            gap: 14px;
+            padding: 13px 14px;
+            border-radius: 12px;
             color: var(--texto-principal);
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
             transition: background 0.2s;
         }
 
@@ -120,7 +111,7 @@
         }
 
         .menu-item svg {
-            width: 20px; height: 20px; stroke: var(--cor-laranja); fill: none; stroke-width: 2; flex-shrink: 0;
+            width: 22px; height: 22px; stroke: var(--cor-laranja); fill: none; stroke-width: 2; flex-shrink: 0;
         }
 
         .menu-item.perigo {
@@ -133,7 +124,7 @@
         .divisor-menu {
             height: 1px;
             background: var(--border-color);
-            margin: 6px 4px;
+            margin: 8px 0;
         }
 
         /* MAPA */
@@ -443,14 +434,14 @@
             overflow-y: auto;
         }
 
-        .input-dark, .select-dark {
+        .input-dark {
             width: 100%;
             padding: 12px;
             background: var(--bg-input);
             border: 1px solid var(--border-color);
             color: var(--texto-principal);
             border-radius: 8px;
-            margin: 6px 0 16px 0;
+            margin: 10px 0 20px 0;
             font-size: 14px;
         }
 
@@ -480,6 +471,137 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* ESTILOS DO SCANNER PROFISSIONAL */
+        #modalScanner {
+            background: #000000;
+            padding: 0;
+            justify-content: space-between;
+        }
+
+        .scanner-header {
+            width: 100%;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        .scanner-header-badge {
+            background: var(--cor-laranja);
+            color: white;
+            font-weight: 800;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .scanner-btn-close {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .scanner-viewport-container {
+            position: relative;
+            width: 100%;
+            max-width: 450px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #reader {
+            width: 100% !important;
+            border: none !important;
+        }
+
+        #reader video {
+            width: 100% !important;
+            object-fit: cover;
+        }
+
+        .scanner-instruction {
+            color: #ffffff;
+            font-size: 14px;
+            text-align: center;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+
+        .scanner-stats-bar {
+            width: 100%;
+            max-width: 450px;
+            padding: 15px 20px 30px 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .scanner-stat-card {
+            flex: 1;
+            background: #12161f;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .scanner-stat-card:active {
+            background: #1e2636;
+        }
+
+        .scanner-stat-card.active {
+            border-color: var(--cor-laranja);
+        }
+
+        .scanner-stat-num {
+            font-size: 22px;
+            font-weight: 900;
+            color: white;
+        }
+
+        .scanner-stat-card.active .scanner-stat-num {
+            color: var(--cor-laranja);
+        }
+
+        .scanner-stat-label {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 2px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        #scanner-bip-toast {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--cor-verde);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 100;
+            text-align: center;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
@@ -487,34 +609,23 @@
     <!-- OVERLAY E MENU LATERAL -->
     <div id="menu-lateral-overlay" onclick="fecharMenuLateral()"></div>
     <div id="menu-lateral">
-        <div class="menu-titulo-container">Rota+Rápida</div>
+        <div style="font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--cor-laranja);">Rota+Rápida</div>
 
         <div class="menu-item" onclick="alternarTema()">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-            Alternar Tema
+            Alternar Tema (Claro/Escuro)
         </div>
 
         <div class="menu-item" onclick="alternarGPSPreferido()">
             <svg viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-            GPS: <span id="label-gps-preferido" style="margin-left: 4px; color: var(--cor-laranja);">Google Maps</span>
+            GPS: <span id="label-gps-preferido" style="margin-left: 5px; color: var(--cor-laranja);">Google Maps</span>
         </div>
 
         <div class="divisor-menu"></div>
 
-        <!-- SCANNER DE CÂMERA RETORNADO -->
-        <div class="menu-item" onclick="abrirScannerCamera(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            Escanear com Câmera
-        </div>
-
-        <div class="menu-item" onclick="abrirSeletorPDF(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            Carregar PDF
-        </div>
-
-        <div class="menu-item" onclick="abrirSeletorArquivo(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Importar (CSV/Excel)
+        <div class="menu-item" onclick="abrirScanner(); fecharMenuLateral();">
+            <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2-2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
+            Numerar Pacotes
         </div>
 
         <div class="menu-item" onclick="inserirCodigoManual(); fecharMenuLateral();">
@@ -541,12 +652,6 @@
 
         <div class="divisor-menu"></div>
 
-        <!-- OPÇÃO ALTERADA PARA "Numerar Pacotes" -->
-        <div class="menu-item" onclick="numerarPacotesMenu(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-            Numerar Pacotes
-        </div>
-
         <div class="menu-item" onclick="abrirResumo(); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             Ver Resumo
@@ -562,11 +667,6 @@
             Gerar PDF da Rota
         </div>
 
-        <div class="menu-item" onclick="abrirConfiguracoesRota(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            Configurar Rota
-        </div>
-
         <div class="divisor-menu"></div>
 
         <div class="menu-item" onclick="novaRota(); fecharMenuLateral();">
@@ -580,13 +680,14 @@
         </div>
     </div>
 
-    <!-- MAPA (Ícone de folha removido do canto superior direito) -->
+    <!-- MAPA -->
     <div id="mapa-container">
         <div class="top-bar-overlay">
             <button class="btn-round-top" onclick="abrirMenuLateral()">☰</button>
             <div class="banner-status-topo">
                 📍 <span id="status-geocoding-topo">Aguardando importação de rota...</span>
             </div>
+            <button class="btn-round-top" style="background: var(--cor-laranja); color: white;" onclick="abrirScanner()">📷</button>
         </div>
         <div id="mapa"></div>
     </div>
@@ -621,9 +722,8 @@
         <div class="sheet-actions-row">
             <button class="btn-sheet-action destaque" onclick="iniciarOtimizacaoComEtapas(false)">⚡ Roteirizar</button>
             <button class="btn-sheet-action" onclick="iniciarOtimizacaoComEtapas(true)">🔀 Reotimizar</button>
-            <button class="btn-sheet-action" onclick="abrirSeletorArquivo()">📄 Importar</button>
-            <input type="file" id="arquivoPlanilha" accept=".xlsx, .xls, .csv" style="display:none;" onchange="processarArquivoPlanilhaFisico()">
-            <input type="file" id="arquivoPDF" accept=".pdf" style="display:none;" onchange="processarArquivoPDFFisico()">
+            <button class="btn-sheet-action" onclick="abrirScanner()">📦 Numerar Pacotes</button>
+            <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="display:none;" onchange="processarArquivoFisico()">
         </div>
 
         <div id="lista-paradas"></div>
@@ -647,71 +747,6 @@
         </div>
     </div>
 
-    <!-- MODAL SCANNER DE CÂMERA -->
-    <div id="modalScanner" class="modal-overlay">
-        <div class="modal-body" style="text-align: center;">
-            <h3 style="margin-top:0; color:var(--cor-laranja);">Escanear Código de Barras</h3>
-            <div id="reader" style="width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 15px;"></div>
-            <p id="statusScannerTxt" style="font-size: 13px; color: var(--texto-secundario);">Aponte a câmera para o código de barras/QR do pacote.</p>
-            <button class="btn-sheet-action" style="width:100%;" onclick="fecharScannerCamera()">Fechar Scanner</button>
-        </div>
-    </div>
-
-    <!-- MODAL CONFIGURAR ROTA (ATUALIZADO CONFORME SOLICITADO) -->
-    <div id="modalConfigRota" class="modal-overlay">
-        <div class="modal-body">
-            <h3 style="margin-top:0; color:var(--cor-laranja);">Configurar Rota</h3>
-            
-            <label style="font-size:12px; color:var(--texto-secundario); font-weight:700;">Ponto de Saída:</label>
-            <select id="configPontoSaida" class="select-dark">
-                <option value="gps">Minha localização atual (GPS)</option>
-                <option value="manual">Endereço manual</option>
-                <option value="primeira">Começar pela primeira parada</option>
-            </select>
-
-            <div id="divConfigEndManual" style="display:none; margin-bottom:12px;">
-                <label style="font-size:12px; color:var(--texto-secundario);">Endereço de Partida Manual:</label>
-                <input type="text" id="configEndManualInput" class="input-dark" placeholder="Ex: Rua Exemplo, 123 - São Paulo">
-            </div>
-
-            <label style="font-size:12px; color:var(--texto-secundario); font-weight:700;">Volta ao Início:</label>
-            <select id="configVoltaInicio" class="select-dark">
-                <option value="nao">Não retornar (Finalizar na última parada)</option>
-                <option value="sim">Voltar ao ponto de saída no final</option>
-            </select>
-
-            <label style="font-size:12px; color:var(--texto-secundario); font-weight:700;">Tempo por Parada:</label>
-            <select id="configTempoParada" class="select-dark" onchange="atualizarEstimativaConfig()">
-                <option value="1">1 minuto</option>
-                <option value="2">2 minutos</option>
-                <option value="3" selected>3 minutos</option>
-                <option value="4">4 minutos</option>
-                <option value="5">5 minutos</option>
-                <option value="6">6 minutos</option>
-                <option value="7">7 minutos</option>
-            </select>
-
-            <label style="font-size:12px; color:var(--texto-secundario); font-weight:700;">Velocidade Média:</label>
-            <select id="configVelocidade" class="select-dark" onchange="atualizarEstimativaConfig()">
-                <option value="20">20 km/h</option>
-                <option value="30">30 km/h</option>
-                <option value="40" selected>40 km/h</option>
-                <option value="50">50 km/h</option>
-                <option value="60">60 km/h</option>
-            </select>
-
-            <div style="background:var(--bg-input); padding:10px; border-radius:8px; margin-bottom:16px; text-align:center;">
-                <span style="font-size:12px; color:var(--texto-secundario);">Estimativa de Produtividade:</span><br>
-                <strong id="configEstimativaProd" style="color:var(--cor-laranja); font-size:15px;">~15 pacotes/hora</strong>
-            </div>
-
-            <div style="display:flex; gap:10px;">
-                <button class="btn-sheet-action" onclick="fecharConfiguracoesRota()">Cancelar</button>
-                <button class="btn-sheet-action destaque" onclick="salvarConfiguracoesRota()">Salvar Configurações</button>
-            </div>
-        </div>
-    </div>
-
     <!-- MODAL RESUMO -->
     <div id="modalResumo" class="modal-overlay">
         <div class="modal-body">
@@ -722,6 +757,47 @@
             <div id="conteudoResumo"></div>
 
             <button class="btn-sheet-action destaque" style="width:100%; margin-top:15px;" onclick="fecharModalResumo()">Fechar</button>
+        </div>
+    </div>
+
+    <!-- MODAL SCANNER REFORMULADO -->
+    <div id="modalScanner" class="modal-overlay">
+        <div class="scanner-header">
+            <button class="scanner-btn-close" onclick="fecharScanner()">✕</button>
+            <div class="scanner-header-badge" id="scanner-topo-badge">📦 0 de 0</div>
+            <div style="width: 36px;"></div>
+        </div>
+
+        <div class="scanner-viewport-container">
+            <div id="scanner-bip-toast">Parada #1 (1x)</div>
+            <div id="reader"></div>
+            <div class="scanner-instruction">Aponte para o código de barras do pacote</div>
+        </div>
+
+        <div class="scanner-stats-bar" style="flex-direction: column; gap: 8px;">
+            <div style="display: flex; gap: 10px; width: 100%;">
+                <div class="scanner-stat-card">
+                    <div class="scanner-stat-num" id="scanner-stat-bipados">0</div>
+                    <div class="scanner-stat-label">Bipados</div>
+                </div>
+                <div class="scanner-stat-card active">
+                    <div class="scanner-stat-num" id="scanner-stat-faltam">0</div>
+                    <div class="scanner-stat-label">Faltam</div>
+                </div>
+                <div class="scanner-stat-card">
+                    <div class="scanner-stat-num" id="scanner-stat-total">0</div>
+                    <div class="scanner-stat-label">Total Pacotes</div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; width: 100%;">
+                <div class="scanner-stat-card" onclick="abrirSeletorArquivo()" style="background: var(--cor-laranja); border-color: var(--cor-laranja);">
+                    <div class="scanner-stat-num" style="color: white; font-size: 16px;">📄 Abrir PDF / Arquivo</div>
+                </div>
+                <div class="scanner-stat-card" onclick="inserirCodigoManual()">
+                    <div class="scanner-stat-num">✏️</div>
+                    <div class="scanner-stat-label">Digitar Código</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -742,22 +818,16 @@
         let historicoDias = JSON.parse(localStorage.getItem('rota_rapida_historico')) || [];
         let gpsPreferido = localStorage.getItem('rota_rapida_gps') || 'maps';
         let temaAtual = localStorage.getItem('rota_rapida_tema') || 'dark';
-        let configRotaPrefs = JSON.parse(localStorage.getItem('rota_rapida_config_prefs')) || {
-            pontoSaida: 'gps',
-            endManual: '',
-            voltaInicio: 'nao',
-            tempoParada: '3',
-            velocidade: '40'
-        };
 
+        let html5QrcodeScanner = null;
         let indexAtivo = 0;
         let editIndexTarget = null;
         let sortableInstance = null;
         let map, layerMarkers = [], mapPolyline = null;
-        let html5QrCode = null;
 
         let grupoAtual = [];
         let indexAgrupadoInterno = 0;
+        let listaBipados = new Set();
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
@@ -838,114 +908,6 @@
 
         function recolherBottomSheet() { document.getElementById('bottom-sheet').classList.add('recolhido'); }
         function abrirSeletorArquivo() { document.getElementById('arquivoPlanilha').click(); }
-        function abrirSeletorPDF() { document.getElementById('arquivoPDF').click(); }
-
-        // GERENCIAMENTO DA CÂMERA SCANNER
-        function abrirScannerCamera() {
-            document.getElementById('modalScanner').style.display = 'flex';
-            html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 150 } },
-                async (decodedText) => {
-                    fecharScannerCamera();
-                    await processarCodigoEscaneado(decodedText);
-                },
-                (errorMessage) => {}
-            ).catch(err => {
-                document.getElementById('statusScannerTxt').innerText = "Erro ao acessar a câmera. Permissão negada ou indisponível.";
-            });
-        }
-
-        function fecharScannerCamera() {
-            if (html5QrCode) {
-                html5QrCode.stop().then(() => {
-                    html5QrCode.clear();
-                    document.getElementById('modalScanner').style.display = 'none';
-                }).catch(() => {
-                    document.getElementById('modalScanner').style.display = 'none';
-                });
-            } else {
-                document.getElementById('modalScanner').style.display = 'none';
-            }
-        }
-
-        async function processarCodigoEscaneado(codigo) {
-            let token = codigo.toUpperCase().trim();
-            let idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
-            if (idx !== -1) {
-                selecionarParadaEVerificarAgrupamento(idx);
-            } else {
-                let endManual = prompt(`Pacote ${token} não encontrado na rota. Digite o endereço para adicioná-lo:`);
-                if (endManual) {
-                    let coords = await buscarGeocodingBackend(endManual);
-                    bdRotas.push({
-                        id: bdRotas.length + 1,
-                        codigo: token,
-                        endereco: endManual,
-                        status: 'pendente',
-                        timestamp: null,
-                        lat: coords.lat,
-                        lon: coords.lon
-                    });
-                    salvarBD();
-                    renderizarLista();
-                    atualizarContador();
-                    plotarNoMapa();
-                    selecionarParadaEVerificarAgrupamento(bdRotas.length - 1);
-                }
-            }
-        }
-
-        // CONFIGURAR ROTA MODAL
-        function abrirConfiguracoesRota() {
-            document.getElementById('configPontoSaida').value = configRotaPrefs.pontoSaida;
-            document.getElementById('configEndManualInput').value = configRotaPrefs.endManual;
-            document.getElementById('configVoltaInicio').value = configRotaPrefs.voltaInicio;
-            document.getElementById('configTempoParada').value = configRotaPrefs.tempoParada;
-            document.getElementById('configVelocidade').value = configRotaPrefs.velocidade;
-            
-            let pontoVal = configRotaPrefs.pontoSaida;
-            document.getElementById('divConfigEndManual').style.display = (pontoVal === 'manual') ? 'block' : 'none';
-            
-            document.getElementById('configPontoSaida').onchange = (e) => {
-                document.getElementById('divConfigEndManual').style.display = (e.target.value === 'manual') ? 'block' : 'none';
-            };
-
-            atualizarEstimativaConfig();
-            document.getElementById('modalConfigRota').style.display = 'flex';
-        }
-
-        function fecharConfiguracoesRota() {
-            document.getElementById('modalConfigRota').style.display = 'none';
-        }
-
-        function atualizarEstimativaConfig() {
-            let t = parseInt(document.getElementById('configTempoParada').value) || 3;
-            // Cálculo estimado de pacotes por hora com base no tempo por parada
-            let pacotesHora = Math.round(60 / (t + 1));
-            document.getElementById('configEstimativaProd').innerText = `~${pacotesHora} pacotes/hora`;
-        }
-
-        function salvarConfiguracoesRota() {
-            configRotaPrefs = {
-                pontoSaida: document.getElementById('configPontoSaida').value,
-                endManual: document.getElementById('configEndManualInput').value,
-                voltaInicio: document.getElementById('configVoltaInicio').value,
-                tempoParada: document.getElementById('configTempoParada').value,
-                velocidade: document.getElementById('configVelocidade').value
-            };
-            localStorage.setItem('rota_rapida_config_prefs', JSON.stringify(configRotaPrefs));
-            fecharConfiguracoesRota();
-            alert("Configurações de rota salvas com sucesso!");
-        }
-
-        // NUMERAR PACOTES (MENU)
-        function numerarPacotesMenu() {
-            if (bdRotas.length === 0) return alert("Nenhuma parada carregada para numerar.");
-            renderizarLista();
-            alert(`Total de ${bdRotas.length} paradas numeradas com sucesso.`);
-        }
 
         async function buscarGeocodingBackend(endereco) {
             try {
@@ -967,15 +929,15 @@
             };
         }
 
-        async function processarArquivoPlanilhaFisico() {
+        async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if (input.files.length === 0) return;
             const arquivo = input.files[0];
             const nome = arquivo.name.toLowerCase();
 
-            document.getElementById('status-geocoding-topo').innerText = "Lendo colunas e importando pontos do Excel/CSV...";
+            document.getElementById('status-geocoding-topo').innerText = "Lendo colunas e organizando rotas...";
 
-            if (nome.endsWith('.xlsx') || nome.endsWith('.xls') || nome.endsWith('.csv')) {
+            if (nome.endsWith('.xlsx') || nome.endsWith('.xls')) {
                 const leitor = new FileReader();
                 leitor.onload = function(e) {
                     const data = new Uint8Array(e.target.result);
@@ -1022,95 +984,100 @@
                     estruturarBancoDeDados(itensProcessados);
                 };
                 leitor.readAsArrayBuffer(arquivo);
-            }
-        }
+            } else if (nome.endsWith('.pdf')) {
+                const leitor = new FileReader();
+                leitor.onload = async function() {
+                    try {
+                        const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+                        let textoCompletoPaginas = "";
 
-        async function processarArquivoPDFFisico() {
-            const input = document.getElementById('arquivoPDF');
-            if (input.files.length === 0) return;
-            const arquivo = input.files[0];
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const content = await page.getTextContent();
+                            
+                            let items = content.items.map(item => ({
+                                str: item.str,
+                                y: Math.round(item.transform[5])
+                            }));
 
-            document.getElementById('status-geocoding-topo').innerText = "Carregando PDF do circuito e extraindo ordem...";
+                            let linhasPorY = {};
+                            items.forEach(item => {
+                                let chaveY = Object.keys(linhasPorY).find(y => Math.abs(parseFloat(y) - item.y) < 5);
+                                if (!chaveY) {
+                                    chaveY = item.y;
+                                    linhasPorY[chaveY] = [];
+                                }
+                                linhasPorY[chaveY].push(item.str);
+                            });
 
-            const leitor = new FileReader();
-            leitor.onload = async function() {
-                try {
-                    const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                    let textoCompletoPaginas = "";
-
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        
-                        let items = content.items.map(item => ({
-                            str: item.str,
-                            y: Math.round(item.transform[5])
-                        }));
-
-                        let linhasPorY = {};
-                        items.forEach(item => {
-                            let chaveY = Object.keys(linhasPorY).find(y => Math.abs(parseFloat(y) - item.y) < 5);
-                            if (!chaveY) {
-                                chaveY = item.y;
-                                linhasPorY[chaveY] = [];
-                            }
-                            linhasPorY[chaveY].push(item.str);
-                        });
-
-                        let chavesY = Object.keys(linhasPorY).sort((a,b) => b - a);
-                        chavesY.forEach(y => {
-                            textoCompletoPaginas += " " + linhasPorY[y].join(" ");
-                        });
-                    }
-
-                    let textoUnificado = textoCompletoPaginas.replace(/\s+/g, ' ').trim();
-                    let regexBlocos = /(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|\b\d{10,14}\b)/g;
-                    let posicoes = [];
-                    let match;
-
-                    while ((match = regexBlocos.exec(textoUnificado)) !== null) {
-                        posicoes.push({ codigo: match[0].toUpperCase(), index: match.index });
-                    }
-
-                    let itensExtraidos = [];
-                    for (let j = 0; j < posicoes.length; j++) {
-                        let inicio = posicoes[j].index;
-                        let fim = (j < posicoes.length - 1) ? posicoes[j + 1].index : textoUnificado.length;
-                        let pedaco = textoUnificado.substring(inicio, fim);
-
-                        let codigo = posicoes[j].codigo;
-                        let endereco = pedaco.replace(codigo, '').replace(/^[;,-\s]+|[;,-\s]+$/g, '').trim();
-
-                        if (endereco.length > 5 && !endereco.toLowerCase().includes("powered by")) {
-                            itensExtraidos.push({
-                                codigo: codigo,
-                                endereco: endereco.replace(/\s+/g, ' '),
-                                lat: null,
-                                lon: null
+                            let chavesY = Object.keys(linhasPorY).sort((a,b) => b - a);
+                            chavesY.forEach(y => {
+                                textoCompletoPaginas += " " + linhasPorY[y].join(" ");
                             });
                         }
-                    }
 
-                    if (itensExtraidos.length === 0) {
-                        let linhasBrutas = textoUnificado.split(/(?=[A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?)/g);
-                        linhasBrutas.forEach((l, idx) => {
-                            let limpo = l.trim();
-                            if (limpo.length > 10) {
-                                let matchCod = limpo.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2})/i);
-                                let cod = matchCod ? matchCod[0].toUpperCase() : `VOL-${idx+1}`;
-                                let end = limpo.replace(cod, '').trim();
-                                itensExtraidos.push({ codigo: cod, endereco: end, lat: null, lon: null });
+                        let textoUnificado = textoCompletoPaginas.replace(/\s+/g, ' ').trim();
+                        let regexBlocos = /(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|\b\d{10,14}\b)/g;
+                        let posicoes = [];
+                        let match;
+
+                        while ((match = regexBlocos.exec(textoUnificado)) !== null) {
+                            posicoes.push({ codigo: match[0].toUpperCase(), index: match.index });
+                        }
+
+                        let itensExtraidos = [];
+                        for (let j = 0; j < posicoes.length; j++) {
+                            let inicio = posicoes[j].index;
+                            let fim = (j < posicoes.length - 1) ? posicoes[j + 1].index : textoUnificado.length;
+                            let pedaco = textoUnificado.substring(inicio, fim);
+
+                            let codigo = posicoes[j].codigo;
+                            let endereco = pedaco.replace(codigo, '').replace(/^[;,-\s]+|[;,-\s]+$/g, '').trim();
+
+                            if (endereco.length > 5 && !endereco.toLowerCase().includes("powered by")) {
+                                itensExtraidos.push({
+                                    codigo: codigo,
+                                    endereco: endereco.replace(/\s+/g, ' '),
+                                    lat: null,
+                                    lon: null
+                                });
                             }
-                        });
-                    }
+                        }
 
-                    estruturarBancoDeDados(itensExtraidos);
-                } catch (err) {
-                    alert("Erro ao extrair o PDF do circuito.");
-                    console.error(err);
-                }
-            };
-            leitor.readAsArrayBuffer(arquivo);
+                        if (itensExtraidos.length === 0) {
+                            let linhasBrutas = textoUnificado.split(/(?=[A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?)/g);
+                            linhasBrutas.forEach((l, idx) => {
+                                let limpo = l.trim();
+                                if (limpo.length > 10) {
+                                    let matchCod = limpo.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2})/i);
+                                    let cod = matchCod ? matchCod[0].toUpperCase() : `VOL-${idx+1}`;
+                                    let end = limpo.replace(cod, '').trim();
+                                    itensExtraidos.push({ codigo: cod, endereco: end, lat: null, lon: null });
+                                }
+                            });
+                        }
+
+                        estruturarBancoDeDados(itensExtraidos);
+                    } catch (err) {
+                        alert("Erro ao extrair o PDF.");
+                        console.error(err);
+                    }
+                };
+                leitor.readAsArrayBuffer(arquivo);
+            } else {
+                const leitor = new FileReader();
+                leitor.onload = (e) => {
+                    let linhas = e.target.result.split(/\r?\n/).filter(l => l.trim().length > 3);
+                    let itens = linhas.map((linha, idx) => {
+                        const match = linha.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
+                        let cod = match ? match[0].toUpperCase() : `VOL-${String(idx + 1).padStart(3, '0')}`;
+                        let end = match ? linha.replace(match[0], '').trim() : linha.trim();
+                        return { codigo: cod, endereco: end, lat: null, lon: null };
+                    });
+                    estruturarBancoDeDados(itens);
+                };
+                leitor.readAsText(arquivo);
+            }
         }
 
         async function estruturarBancoDeDados(listaItens) {
@@ -1143,7 +1110,7 @@
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
-                document.getElementById('status-geocoding-topo').innerText = `Circuito carregado: ${bdRotas.length} pacotes organizados!`;
+                document.getElementById('status-geocoding-topo').innerText = `Mapeamento concluído: ${bdRotas.length} pacotes carregados!`;
             } else {
                 alert("Nenhuma parada válida foi identificada.");
             }
@@ -1301,10 +1268,6 @@
                         otimizado.push(ultimaOriginal);
                     }
 
-                    if (configRotaPrefs.voltaInicio === 'sim' && otimizado.length > 0) {
-                        otimizado.push(otimizado[0]);
-                    }
-
                     bdRotas = otimizado;
                     salvarBD();
                     renderizarLista();
@@ -1357,10 +1320,6 @@
                 }
             }
 
-            if (configRotaPrefs.voltaInicio === 'sim' && otimizado.length > 0) {
-                otimizado.push(otimizado[0]);
-            }
-
             bdRotas = otimizado;
             salvarBD();
             renderizarLista();
@@ -1387,9 +1346,7 @@
             for (let i = 0; i < bdRotas.length - 1; i++) {
                 kmTotal += calcularDistanciaKM(bdRotas[i].lat, bdRotas[i].lon, bdRotas[i+1].lat, bdRotas[i+1].lon);
             }
-            let tParadaMin = parseInt(configRotaPrefs.tempoParada) || 3;
-            let velMedia = parseInt(configRotaPrefs.velocidade) || 40;
-            let tempoMinutos = Math.round((kmTotal / velMedia) * 60 + (bdRotas.length * tParadaMin));
+            let tempoMinutos = Math.round((kmTotal / 25) * 60 + (bdRotas.length * 3));
             return { km: kmTotal.toFixed(1), tempo: tempoMinutos };
         }
 
@@ -1490,6 +1447,7 @@
 
         function novaRota() {
             bdRotas = [];
+            listaBipados.clear();
             salvarBD();
             renderizarLista();
             atualizarContador();
@@ -1560,16 +1518,72 @@
             localStorage.setItem('rota_rapida_db_oficial', JSON.stringify(bdRotas));
         }
 
-        function inserirCodigoManual() {
-            let cod = prompt("Digite o código de rastreio para buscar na rota:");
-            if (cod) {
-                let token = cod.toUpperCase();
-                let idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
-                if (idx !== -1) {
-                    selecionarParadaEVerificarAgrupamento(idx);
-                } else {
-                    alert(`Código "${token}" não encontrado na rota atual.`);
+        /* SCANNER ATUALIZADO */
+        function atualizarEstatisticasScanner() {
+            const total = bdRotas.length;
+            const bipados = listaBipados.size;
+            const faltam = total - bipados;
+
+            document.getElementById('scanner-topo-badge').innerText = `📦 ${bipados} de ${total}`;
+            document.getElementById('scanner-stat-bipados').innerText = bipados;
+            document.getElementById('scanner-stat-faltam').innerText = faltam;
+            document.getElementById('scanner-stat-total').innerText = total;
+        }
+
+        function abrirScanner() {
+            document.getElementById('modalScanner').style.display = 'flex';
+            atualizarEstatisticasScanner();
+
+            if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
+            
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 15, qrbox: { width: 280, height: 180 } },
+                (textoLido) => {
+                    processarBipagem(textoLido.trim().toUpperCase());
                 }
+            ).catch(err => {
+                console.warn("Camera start warning/error: ", err);
+            });
+        }
+
+        function processarBipagem(token) {
+            const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
+            
+            if (idx !== -1) {
+                const parada = bdRotas[idx];
+                listaBipados.add(parada.codigo);
+                atualizarEstatisticasScanner();
+
+                const qtdNoLocal = contarPacotesNoMesmoEndereco(parada.endereco);
+                exibirToastScanner(`Parada #${idx + 1} (${qtdNoLocal}x Pacote${qtdNoLocal > 1 ? 's' : ''})`);
+                
+                selecionarParadaEVerificarAgrupamento(idx);
+            } else {
+                alert(`Código "${token}" não encontrado na rota atual.`);
+            }
+        }
+
+        function exibirToastScanner(mensagem) {
+            const toast = document.getElementById('scanner-bip-toast');
+            toast.innerText = mensagem;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 2000);
+        }
+
+        function fecharScanner() {
+            document.getElementById('modalScanner').style.display = 'none';
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => html5QrcodeScanner = null).catch(() => {});
+            }
+        }
+
+        function inserirCodigoManual() {
+            let cod = prompt("Digite o código de rastreio:");
+            if (cod) {
+                processarBipagem(cod.toUpperCase());
             }
         }
     </script>
