@@ -61,7 +61,7 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        /* DRAWER / MENU LATERAL CORRIGIDO */
+        /* DRAWER / MENU LATERAL */
         #menu-lateral-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -443,14 +443,14 @@
             overflow-y: auto;
         }
 
-        .input-dark {
+        .input-dark, .select-dark {
             width: 100%;
             padding: 12px;
             background: var(--bg-input);
             border: 1px solid var(--border-color);
             color: var(--texto-principal);
             border-radius: 8px;
-            margin: 10px 0 20px 0;
+            margin: 6px 0 16px 0;
             font-size: 14px;
         }
 
@@ -484,7 +484,7 @@
 </head>
 <body>
 
-    <!-- OVERLAY E MENU LATERAL CORRIGIDO -->
+    <!-- OVERLAY E MENU LATERAL -->
     <div id="menu-lateral-overlay" onclick="fecharMenuLateral()"></div>
     <div id="menu-lateral">
         <div class="menu-titulo-container">Rota+Rápida</div>
@@ -500,6 +500,12 @@
         </div>
 
         <div class="divisor-menu"></div>
+
+        <!-- SCANNER DE CÂMERA RETORNADO -->
+        <div class="menu-item" onclick="abrirScannerCamera(); fecharMenuLateral();">
+            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Escanear com Câmera
+        </div>
 
         <div class="menu-item" onclick="abrirSeletorPDF(); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -535,6 +541,12 @@
 
         <div class="divisor-menu"></div>
 
+        <!-- OPÇÃO ALTERADA PARA "Numerar Pacotes" -->
+        <div class="menu-item" onclick="numerarPacotesMenu(); fecharMenuLateral();">
+            <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            Numerar Pacotes
+        </div>
+
         <div class="menu-item" onclick="abrirResumo(); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             Ver Resumo
@@ -551,7 +563,7 @@
         </div>
 
         <div class="menu-item" onclick="abrirConfiguracoesRota(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             Configurar Rota
         </div>
 
@@ -568,14 +580,13 @@
         </div>
     </div>
 
-    <!-- MAPA -->
+    <!-- MAPA (Ícone de folha removido do canto superior direito) -->
     <div id="mapa-container">
         <div class="top-bar-overlay">
             <button class="btn-round-top" onclick="abrirMenuLateral()">☰</button>
             <div class="banner-status-topo">
                 📍 <span id="status-geocoding-topo">Aguardando importação de rota...</span>
             </div>
-            <button class="btn-round-top" style="background: var(--cor-laranja); color: white;" onclick="abrirSeletorPDF()">📄</button>
         </div>
         <div id="mapa"></div>
     </div>
@@ -636,6 +647,71 @@
         </div>
     </div>
 
+    <!-- MODAL SCANNER DE CÂMERA -->
+    <div id="modalScanner" class="modal-overlay">
+        <div class="modal-body" style="text-align: center;">
+            <h3 style="margin-top:0; color:var(--cor-laranja);">Escanear Código de Barras</h3>
+            <div id="reader" style="width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 15px;"></div>
+            <p id="statusScannerTxt" style="font-size: 13px; color: var(--texto-secundario);">Aponte a câmera para o código de barras/QR do pacote.</p>
+            <button class="btn-sheet-action" style="width:100%;" onclick="fecharScannerCamera()">Fechar Scanner</button>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIGURAR ROTA (ATUALIZADO CONFORME SOLICITADO) -->
+    <div id="modalConfigRota" class="modal-overlay">
+        <div class="modal-body">
+            <h3 style="margin-top:0; color:var(--cor-laranja);">Configurar Rota</h3>
+            
+            <label style="font-size:12px; color:var(--texto-secundario); font-weight:700;">Ponto de Saída:</label>
+            <select id="configPontoSaida" class="select-dark">
+                <option value="gps">Minha localização atual (GPS)</option>
+                <option value="manual">Endereço manual</option>
+                <option value="primeira">Começar pela primeira parada</option>
+            </select>
+
+            <div id="divConfigEndManual" style="display:none; margin-bottom:12px;">
+                <label style="font-size:12px; color:var(--texto-secundario);">Endereço de Partida Manual:</label>
+                <input type="text" id="configEndManualInput" class="input-dark" placeholder="Ex: Rua Exemplo, 123 - São Paulo">
+            </div>
+
+            <label style="font-size:12px; color:var(--texto-secundario); font-weight:700;">Volta ao Início:</label>
+            <select id="configVoltaInicio" class="select-dark">
+                <option value="nao">Não retornar (Finalizar na última parada)</option>
+                <option value="sim">Voltar ao ponto de saída no final</option>
+            </select>
+
+            <label style="font-size:12px; color:var(--texto-secundario); font-weight:700;">Tempo por Parada:</label>
+            <select id="configTempoParada" class="select-dark" onchange="atualizarEstimativaConfig()">
+                <option value="1">1 minuto</option>
+                <option value="2">2 minutos</option>
+                <option value="3" selected>3 minutos</option>
+                <option value="4">4 minutos</option>
+                <option value="5">5 minutos</option>
+                <option value="6">6 minutos</option>
+                <option value="7">7 minutos</option>
+            </select>
+
+            <label style="font-size:12px; color:var(--texto-secundario); font-weight:700;">Velocidade Média:</label>
+            <select id="configVelocidade" class="select-dark" onchange="atualizarEstimativaConfig()">
+                <option value="20">20 km/h</option>
+                <option value="30">30 km/h</option>
+                <option value="40" selected>40 km/h</option>
+                <option value="50">50 km/h</option>
+                <option value="60">60 km/h</option>
+            </select>
+
+            <div style="background:var(--bg-input); padding:10px; border-radius:8px; margin-bottom:16px; text-align:center;">
+                <span style="font-size:12px; color:var(--texto-secundario);">Estimativa de Produtividade:</span><br>
+                <strong id="configEstimativaProd" style="color:var(--cor-laranja); font-size:15px;">~15 pacotes/hora</strong>
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <button class="btn-sheet-action" onclick="fecharConfiguracoesRota()">Cancelar</button>
+                <button class="btn-sheet-action destaque" onclick="salvarConfiguracoesRota()">Salvar Configurações</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL RESUMO -->
     <div id="modalResumo" class="modal-overlay">
         <div class="modal-body">
@@ -666,11 +742,19 @@
         let historicoDias = JSON.parse(localStorage.getItem('rota_rapida_historico')) || [];
         let gpsPreferido = localStorage.getItem('rota_rapida_gps') || 'maps';
         let temaAtual = localStorage.getItem('rota_rapida_tema') || 'dark';
+        let configRotaPrefs = JSON.parse(localStorage.getItem('rota_rapida_config_prefs')) || {
+            pontoSaida: 'gps',
+            endManual: '',
+            voltaInicio: 'nao',
+            tempoParada: '3',
+            velocidade: '40'
+        };
 
         let indexAtivo = 0;
         let editIndexTarget = null;
         let sortableInstance = null;
         let map, layerMarkers = [], mapPolyline = null;
+        let html5QrCode = null;
 
         let grupoAtual = [];
         let indexAgrupadoInterno = 0;
@@ -755,7 +839,113 @@
         function recolherBottomSheet() { document.getElementById('bottom-sheet').classList.add('recolhido'); }
         function abrirSeletorArquivo() { document.getElementById('arquivoPlanilha').click(); }
         function abrirSeletorPDF() { document.getElementById('arquivoPDF').click(); }
-        function abrirConfiguracoesRota() { alert("Configurações da rota: Opções avançadas de roteirização prontas para uso."); }
+
+        // GERENCIAMENTO DA CÂMERA SCANNER
+        function abrirScannerCamera() {
+            document.getElementById('modalScanner').style.display = 'flex';
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 150 } },
+                async (decodedText) => {
+                    fecharScannerCamera();
+                    await processarCodigoEscaneado(decodedText);
+                },
+                (errorMessage) => {}
+            ).catch(err => {
+                document.getElementById('statusScannerTxt').innerText = "Erro ao acessar a câmera. Permissão negada ou indisponível.";
+            });
+        }
+
+        function fecharScannerCamera() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    document.getElementById('modalScanner').style.display = 'none';
+                }).catch(() => {
+                    document.getElementById('modalScanner').style.display = 'none';
+                });
+            } else {
+                document.getElementById('modalScanner').style.display = 'none';
+            }
+        }
+
+        async function processarCodigoEscaneado(codigo) {
+            let token = codigo.toUpperCase().trim();
+            let idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
+            if (idx !== -1) {
+                selecionarParadaEVerificarAgrupamento(idx);
+            } else {
+                let endManual = prompt(`Pacote ${token} não encontrado na rota. Digite o endereço para adicioná-lo:`);
+                if (endManual) {
+                    let coords = await buscarGeocodingBackend(endManual);
+                    bdRotas.push({
+                        id: bdRotas.length + 1,
+                        codigo: token,
+                        endereco: endManual,
+                        status: 'pendente',
+                        timestamp: null,
+                        lat: coords.lat,
+                        lon: coords.lon
+                    });
+                    salvarBD();
+                    renderizarLista();
+                    atualizarContador();
+                    plotarNoMapa();
+                    selecionarParadaEVerificarAgrupamento(bdRotas.length - 1);
+                }
+            }
+        }
+
+        // CONFIGURAR ROTA MODAL
+        function abrirConfiguracoesRota() {
+            document.getElementById('configPontoSaida').value = configRotaPrefs.pontoSaida;
+            document.getElementById('configEndManualInput').value = configRotaPrefs.endManual;
+            document.getElementById('configVoltaInicio').value = configRotaPrefs.voltaInicio;
+            document.getElementById('configTempoParada').value = configRotaPrefs.tempoParada;
+            document.getElementById('configVelocidade').value = configRotaPrefs.velocidade;
+            
+            let pontoVal = configRotaPrefs.pontoSaida;
+            document.getElementById('divConfigEndManual').style.display = (pontoVal === 'manual') ? 'block' : 'none';
+            
+            document.getElementById('configPontoSaida').onchange = (e) => {
+                document.getElementById('divConfigEndManual').style.display = (e.target.value === 'manual') ? 'block' : 'none';
+            };
+
+            atualizarEstimativaConfig();
+            document.getElementById('modalConfigRota').style.display = 'flex';
+        }
+
+        function fecharConfiguracoesRota() {
+            document.getElementById('modalConfigRota').style.display = 'none';
+        }
+
+        function atualizarEstimativaConfig() {
+            let t = parseInt(document.getElementById('configTempoParada').value) || 3;
+            // Cálculo estimado de pacotes por hora com base no tempo por parada
+            let pacotesHora = Math.round(60 / (t + 1));
+            document.getElementById('configEstimativaProd').innerText = `~${pacotesHora} pacotes/hora`;
+        }
+
+        function salvarConfiguracoesRota() {
+            configRotaPrefs = {
+                pontoSaida: document.getElementById('configPontoSaida').value,
+                endManual: document.getElementById('configEndManualInput').value,
+                voltaInicio: document.getElementById('configVoltaInicio').value,
+                tempoParada: document.getElementById('configTempoParada').value,
+                velocidade: document.getElementById('configVelocidade').value
+            };
+            localStorage.setItem('rota_rapida_config_prefs', JSON.stringify(configRotaPrefs));
+            fecharConfiguracoesRota();
+            alert("Configurações de rota salvas com sucesso!");
+        }
+
+        // NUMERAR PACOTES (MENU)
+        function numerarPacotesMenu() {
+            if (bdRotas.length === 0) return alert("Nenhuma parada carregada para numerar.");
+            renderizarLista();
+            alert(`Total de ${bdRotas.length} paradas numeradas com sucesso.`);
+        }
 
         async function buscarGeocodingBackend(endereco) {
             try {
@@ -1111,6 +1301,10 @@
                         otimizado.push(ultimaOriginal);
                     }
 
+                    if (configRotaPrefs.voltaInicio === 'sim' && otimizado.length > 0) {
+                        otimizado.push(otimizado[0]);
+                    }
+
                     bdRotas = otimizado;
                     salvarBD();
                     renderizarLista();
@@ -1163,6 +1357,10 @@
                 }
             }
 
+            if (configRotaPrefs.voltaInicio === 'sim' && otimizado.length > 0) {
+                otimizado.push(otimizado[0]);
+            }
+
             bdRotas = otimizado;
             salvarBD();
             renderizarLista();
@@ -1189,7 +1387,9 @@
             for (let i = 0; i < bdRotas.length - 1; i++) {
                 kmTotal += calcularDistanciaKM(bdRotas[i].lat, bdRotas[i].lon, bdRotas[i+1].lat, bdRotas[i+1].lon);
             }
-            let tempoMinutos = Math.round((kmTotal / 25) * 60 + (bdRotas.length * 3));
+            let tParadaMin = parseInt(configRotaPrefs.tempoParada) || 3;
+            let velMedia = parseInt(configRotaPrefs.velocidade) || 40;
+            let tempoMinutos = Math.round((kmTotal / velMedia) * 60 + (bdRotas.length * tParadaMin));
             return { km: kmTotal.toFixed(1), tempo: tempoMinutos };
         }
 
