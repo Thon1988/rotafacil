@@ -890,7 +890,6 @@
 
         async function buscarGeocodingBackend(endereco) {
             try {
-                // Consulta Nominatim OpenStreetMap gratuita e precisa para endereços reais
                 let queryEnc = encodeURIComponent(endereco);
                 let response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${queryEnc}&limit=1`, {
                     headers: { 'User-Agent': 'RotaRapidaApp/1.0' }
@@ -969,8 +968,7 @@
                 leitor.onload = async function() {
                     try {
                         const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                        let itensExtraidos = [];
-                        let paradaAtual = null;
+                        let textoCompletoPaginas = "";
 
                         for (let i = 1; i <= pdf.numPages; i++) {
                             const page = await pdf.getPage(i);
@@ -978,7 +976,6 @@
                             
                             let items = content.items.map(item => ({
                                 str: item.str,
-                                x: item.transform[4],
                                 y: Math.round(item.transform[5])
                             }));
 
@@ -989,75 +986,63 @@
                                     chaveY = item.y;
                                     linhasPorY[chaveY] = [];
                                 }
-                                linhasPorY[chaveY].push(item);
+                                linhasPorY[chaveY].push(item.str);
                             });
 
                             let chavesY = Object.keys(linhasPorY).sort((a,b) => b - a);
-                            
                             chavesY.forEach(y => {
-                                let linhaItens = linhasPorY[y].sort((a, b) => a.x - b.x);
-                                
-                                // Correção de espaçamento e união correta dos caracteres acentuados gerados pelo PDF.js
-                                let textoCompletoLinha = "";
-                                let ultimoX = -1;
-                                linhaItens.forEach(i => {
-                                    if (ultimoX !== -1 && (i.x - ultimoX) > 12) {
-                                        textoCompletoLinha += " ";
-                                    }
-                                    textoCompletoLinha += i.str;
-                                    ultimoX = i.x + (i.str.length * 6);
+                                textoCompletoPaginas += " " + linhasPorY[y].join(" ");
+                            });
+                        }
+
+                        // Limpeza geral de espaços múltiplos
+                        let textoUnificado = textoCompletoPaginas.replace(/\s+/g, ' ').trim();
+
+                        // O PDF agrupa as entregas. Procuramos por códigos BR ou códigos reais de rastreio/etiqueta
+                        // Exemplo: BR263830386097X seguido pelo endereço ou separado por blocos
+                        let regexBlocos = /(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|\b\d{10,14}\b)/g;
+                        let posicoes = [];
+                        let match;
+
+                        while ((match = regexBlocos.exec(textoUnificado)) !== null) {
+                            posicoes.push({ codigo: match[0].toUpperCase(), index: match.index });
+                        }
+
+                        let itensExtraidos = [];
+                        for (let j = 0; j < posicoes.length; j++) {
+                            let inicio = posicoes[j].index;
+                            let fim = (j < posicoes.length - 1) ? posicoes[j + 1].index : textoUnificado.length;
+                            let pedaco = textoUnificado.substring(inicio, fim);
+
+                            let codigo = posicoes[j].codigo;
+                            let endereco = pedaco.replace(codigo, '').replace(/^[;,-\s]+|[;,-\s]+$/g, '').trim();
+
+                            // Ignorar resíduos muito curtos ou cabeçalhos
+                            if (endereco.length > 5 && !endereco.toLowerCase().includes("powered by")) {
+                                itensExtraidos.push({
+                                    codigo: codigo,
+                                    endereco: endereco.replace(/\s+/g, ' '),
+                                    lat: null,
+                                    lon: null
                                 });
+                            }
+                        }
 
-                                textoCompletoLinha = textoCompletoLinha.replace(/\s+/g, ' ').trim();
-                                let textoLower = textoCompletoLinha.toLowerCase();
-
-                                if (textoLower.includes("address") || 
-                                    textoLower.includes("powered by spoke") || 
-                                    textoLower.includes("tempo total") ||
-                                    textoLower.includes("distância total") ||
-                                    textoLower.includes("destino") ||
-                                    textoLower.includes("estimated arrival")) {
-                                    return;
-                                }
-
-                                let codigoExtraido = null;
-                                let matchNotas = textoCompletoLinha.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
-                                if (matchNotas) {
-                                    codigoExtraido = matchNotas[0].toUpperCase();
-                                }
-
-                                if (codigoExtraido) {
-                                    if (paradaAtual && paradaAtual.endereco.length > 3) {
-                                        itensExtraidos.push(paradaAtual);
-                                    }
-                                    
-                                    let enderecoLimpo = textoCompletoLinha.replace(codigoExtraido, '').replace(/^[;,-\s]+|[;,-\s]+$/g, '').trim();
-                                    paradaAtual = {
-                                        codigo: codigoExtraido,
-                                        endereco: enderecoLimpo,
-                                        lat: null,
-                                        lon: null
-                                    };
-                                } else {
-                                    if (paradaAtual && textoCompletoLinha.length > 1 && !/^[\d]+$/.test(textoCompletoLinha)) {
-                                        paradaAtual.endereco += " " + textoCompletoLinha;
-                                    }
+                        // Se o PDF veio em um formato sem códigos BR explícitos na mesma linha, criamos uma varredura por blocos de endereço completos
+                        if (itensExtraidos.length === 0) {
+                            let linhasBrutas = textoUnificado.split(/(?=[A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?)/g);
+                            linhasBrutas.forEach((l, idx) => {
+                                let limpo = l.trim();
+                                if (limpo.length > 10) {
+                                    let matchCod = limpo.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2})/i);
+                                    let cod = matchCod ? matchCod[0].toUpperCase() : `VOL-${idx+1}`;
+                                    let end = limpo.replace(cod, '').trim();
+                                    itensExtraidos.push({ codigo: cod, endereco: end, lat: null, lon: null });
                                 }
                             });
                         }
-                        
-                        if (paradaAtual && paradaAtual.endereco.length > 3) {
-                            itensExtraidos.push(paradaAtual);
-                        }
 
-                        let itens = itensExtraidos.map((item) => ({
-                            codigo: item.codigo,
-                            endereco: item.endereco.replace(/\s+/g, ' ').trim(),
-                            lat: null,
-                            lon: null
-                        }));
-
-                        estruturarBancoDeDados(itens);
+                        estruturarBancoDeDados(itensExtraidos);
                     } catch (err) {
                         alert("Erro ao extrair o PDF.");
                         console.error(err);
@@ -1587,3 +1572,4 @@
     </script>
 </body>
 </html>
+
