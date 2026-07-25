@@ -160,30 +160,6 @@
             font-size: 18px;
         }
 
-        .banner-status-topo {
-            flex: 1;
-            background: var(--cor-laranja);
-            color: white;
-            border-radius: 25px;
-            padding: 10px 16px;
-            font-size: 13px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            cursor: pointer;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            transition: background 0.2s;
-        }
-
-        .banner-status-topo:active {
-            background: var(--cor-laranja-hover);
-        }
-
         /* PAINEL INFERIOR (BOTTOM SHEET) */
         #bottom-sheet {
             position: absolute;
@@ -845,9 +821,6 @@
     <div id="mapa-container">
         <div class="top-bar-overlay">
             <button class="btn-round-top" onclick="abrirMenuLateral()">☰</button>
-            <div class="banner-status-topo" onclick="abrirConfigRota()">
-                ⚙️ <span id="status-geocoding-topo">Configurar Rota</span>
-            </div>
         </div>
         <div id="mapa"></div>
     </div>
@@ -1255,8 +1228,6 @@
             const arquivo = input.files[0];
             const nome = arquivo.name.toLowerCase();
 
-            document.getElementById('status-geocoding-topo').innerText = "Lendo colunas...";
-
             if (nome.endsWith('.xlsx') || nome.endsWith('.xls')) {
                 const leitor = new FileReader();
                 leitor.onload = function(e) {
@@ -1430,7 +1401,6 @@
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
-                document.getElementById('status-geocoding-topo').innerText = `Configurar Rota (${bdRotas.length} pacotes)`;
             } else {
                 alert("Nenhuma parada válida foi identificada.");
             }
@@ -1599,7 +1569,6 @@
 
                     let minTotal = Math.round(data.trips[0].duration / 60);
                     let kmTotal = (data.trips[0].distance / 1000).toFixed(1);
-                    document.getElementById('status-geocoding-topo').innerText = `Configurar Rota • ${kmTotal} KM • ~${minTotal} min`;
                 } else {
                     fallbackTSPLocal(fixarExtremos);
                 }
@@ -1648,9 +1617,6 @@
             if (mapPolyline) map.removeLayer(mapPolyline);
             let latlngs = bdRotas.map(r => [r.lat, r.lon]);
             mapPolyline = L.polyline(latlngs, { color: '#ff5722', weight: 3 }).addTo(map);
-
-            let stats = calcularKMeTempoTotal();
-            document.getElementById('status-geocoding-topo').innerText = `Configurar Rota • ${stats.km} KM`;
         }
 
         function calcularDistanciaKM(lat1, lon1, lat2, lon2) {
@@ -1773,7 +1739,6 @@
             atualizarContador();
             plotarNoMapa();
             if (mapPolyline) map.removeLayer(mapPolyline);
-            document.getElementById('status-geocoding-topo').innerText = "Configurar Rota";
             document.getElementById('widget-agrupado').style.display = 'none';
         }
 
@@ -1889,3 +1854,4 @@
     </script>
 </body>
 </html>
+
