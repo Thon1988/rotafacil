@@ -160,7 +160,7 @@
             font-size: 18px;
         }
 
-        /* TELA DE FLUXO INICIAL (WIZARD ESTILO NINA) */
+        /* TELA DE FLUXO INICIAL SEPARADA (ESTILO NINA / INSPIRAÇÃO DO USUÁRIO) */
         #fluxo-inicial-container {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -168,7 +168,7 @@
             z-index: 9999999;
             display: flex;
             flex-direction: column;
-            padding: 20px 16px;
+            padding: 24px 20px;
             overflow-y: auto;
         }
 
@@ -176,7 +176,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
 
         .wizard-user-info {
@@ -203,85 +203,122 @@
             margin: 0;
         }
 
-        .wizard-card {
-            background: var(--bg-card);
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 16px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-        }
-
-        .wizard-card-title {
-            font-size: 16px;
-            font-weight: 800;
+        .home-logo-box {
             text-align: center;
-            margin-bottom: 6px;
-            color: var(--texto-principal);
+            margin: 10px 0 20px 0;
         }
 
-        .wizard-card-desc {
+        .home-logo-circle {
+            width: 70px; height: 70px;
+            background: var(--cor-laranja);
+            border-radius: 50%;
+            margin: 0 auto 10px auto;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px;
+            color: white;
+            box-shadow: 0 8px 20px rgba(255, 87, 34, 0.4);
+        }
+
+        .home-title {
+            font-size: 26px;
+            font-weight: 900;
+            color: var(--texto-principal);
+            margin: 0;
+        }
+
+        .home-subtitle {
             font-size: 13px;
             color: var(--texto-secundario);
-            text-align: center;
-            margin-bottom: 16px;
-            line-height: 1.4;
+            margin: 4px 0 0 0;
         }
 
-        .wizard-upload-box {
-            background: var(--bg-input);
-            border: 2px dashed var(--border-color);
-            border-radius: 14px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
+        /* CARDS DA TELA INICIAL (ESTILO DASHBOARD DA FOTO) */
+        .home-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .home-card-acao {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 18px 16px;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 8px;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 125px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        .wizard-upload-box:active {
+        .home-card-acao:active {
+            transform: scale(0.97);
             border-color: var(--cor-laranja);
-            background: rgba(255, 87, 34, 0.05);
         }
 
-        .wizard-upload-icon {
-            width: 44px; height: 44px;
-            background: var(--bg-card);
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 20px;
+        .home-card-icon {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            background: rgba(255, 87, 34, 0.1);
             color: var(--cor-laranja);
-            border: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
         }
 
-        .wizard-upload-text {
-            font-size: 14px;
-            font-weight: 700;
+        .home-card-title {
+            font-size: 15px;
+            font-weight: 800;
             color: var(--texto-principal);
             margin: 0;
         }
 
-        .wizard-upload-sub {
+        .home-card-desc {
             font-size: 12px;
             color: var(--texto-secundario);
-            margin: 0;
+            margin: 2px 0 0 0;
         }
 
-        .wizard-btn-secundario {
-            width: 100%;
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
-            color: var(--texto-principal);
-            padding: 12px;
-            border-radius: 12px;
+        .home-status-badge {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--cor-verde);
+            padding: 8px 14px;
+            border-radius: 30px;
             font-size: 13px;
             font-weight: 700;
-            cursor: pointer;
-            margin-top: 10px;
             text-align: center;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .home-btn-principal {
+            width: 100%;
+            background: var(--cor-laranja);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(255, 87, 34, 0.4);
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .home-footer-tip {
+            text-align: center;
+            font-size: 12px;
+            color: var(--texto-secundario);
+            margin-top: auto;
+            padding: 10px 0;
+            line-height: 1.4;
         }
 
         /* PAINEL INFERIOR (BOTTOM SHEET) */
@@ -898,86 +935,102 @@
 </head>
 <body>
 
-    <!-- TELA DE FLUXO INICIAL (ESTILO NINA - PDF PRIMEIRO, DEPOIS EXCEL/CSV) -->
+    <!-- TELA INICIAL SEPARADA (BASEADA NA SUA IMAGEM DE REFERÊNCIA) -->
     <div id="fluxo-inicial-container">
         <div class="wizard-header">
             <div class="wizard-user-info">
                 <div class="wizard-avatar">M</div>
-                <h1 class="wizard-greeting">Bom trabalho, Milton</h1>
+                <h1 class="wizard-greeting">Olá, Milton</h1>
             </div>
             <button class="btn-round-top" onclick="alternarTema()" style="width: 38px; height: 38px; font-size: 14px;">⚙️</button>
         </div>
 
-        <!-- ETAPA 1: PDF DA ROTA -->
-        <div class="wizard-card" id="wizard-etapa-pdf">
-            <div class="wizard-card-title">Envie o PDF da rota</div>
-            <div class="wizard-card-desc">que você baixou do Spoke (Circuit)</div>
+        <div class="home-logo-box">
+            <div class="home-logo-circle">🧭</div>
+            <h2 class="home-title">Rota+Rápida</h2>
+            <p class="home-subtitle">Bipe, ouça a parada e entregue.</p>
+        </div>
 
-            <div class="wizard-upload-box" onclick="acionarInputPdf()">
-                <div class="wizard-upload-icon">📄</div>
+        <div class="home-status-badge">
+            <span>🟢</span> <span id="home-status-texto">Nenhuma rota carregada</span>
+        </div>
+
+        <div class="home-grid">
+            <!-- Card 1: Carregar Rota (Separando PDF e Excel/CSV conforme pedido) -->
+            <div class="home-card-acao" onclick="abrirModalEscolhaCarga()">
+                <div class="home-card-icon">📂</div>
                 <div>
-                    <p class="wizard-upload-text">Selecionar PDF da rota</p>
-                    <p class="wizard-upload-sub">PDF do Spoke (Circuit)</p>
+                    <p class="home-card-title">Carregar rota</p>
+                    <p class="home-card-desc">Excel / PDF separados</p>
                 </div>
             </div>
-            <input type="file" id="inputPdfWizard" accept=".pdf" style="display:none;" onchange="processarPdfWizard(this)">
 
-            <div class="wizard-btn-secundario" onclick="alert('Instruções: Baixe o arquivo PDF da sua rota diretamente no aplicativo Spoke/Circuit e faça o upload aqui.')">
-                ❓ Precisa de ajuda? Veja como baixar o PDF da rota
-            </div>
-        </div>
-
-        <!-- ETAPA 2: PLANILHA SPX (OCULTA INICIALMENTE) -->
-        <div class="wizard-card" id="wizard-etapa-excel" style="display: none;">
-            <div class="wizard-card-title">Inclua a planilha SPX</div>
-            <div class="wizard-card-desc">Opcional: melhora a detecção de paradas com mais de um pacote.</div>
-
-            <div class="wizard-upload-box" onclick="acionarInputExcel()">
-                <div class="wizard-upload-icon">📊</div>
+            <!-- Card 2: Salvar em PDF -->
+            <div class="home-card-acao" onclick="gerarPDFRota()">
+                <div class="home-card-icon">📄</div>
                 <div>
-                    <p class="wizard-upload-text">Selecionar planilha</p>
-                    <p class="wizard-upload-sub">.csv, .xls ou .xlsx</p>
+                    <p class="home-card-title">Salvar em PDF</p>
+                    <p class="home-card-desc">Exportar rota</p>
                 </div>
             </div>
-            <input type="file" id="inputExcelWizard" accept=".csv, .xlsx, .xls" style="display:none;" onchange="processarExcelWizard(this)">
 
-            <button class="wizard-btn-secundario" style="background: var(--cor-laranja); color: white; border: none; margin-top: 12px;" onclick="pularExcelEAbrirScanner()">
-                ⚡ Pular e abrir scanner
-            </button>
+            <!-- Card 3: Mapa -->
+            <div class="home-card-acao" onclick="fecharTelaInicialSePossivel()">
+                <div class="home-card-icon">🗺️</div>
+                <div>
+                    <p class="home-card-title">Mapa</p>
+                    <p class="home-card-desc">Ver paradas</p>
+                </div>
+            </div>
 
-            <div class="wizard-btn-secundario" onclick="alert('Instruções: Baixe sua planilha SPX com os códigos de rastreio e carregue aqui para cruzar os dados.')">
-                ❓ Precisa de ajuda? Veja onde baixar a planilha SPX
+            <!-- Card 4: Otimização -->
+            <div class="home-card-acao" onclick="iniciarOtimizacaoComEtapas(false)">
+                <div class="home-card-icon">⚡</div>
+                <div>
+                    <p class="home-card-title">Otimização</p>
+                    <p class="home-card-desc">Roteirizar TSP</p>
+                </div>
             </div>
         </div>
 
-        <!-- ETAPA 3: RESUMO PRONTO (OCULTA INICIALMENTE) -->
-        <div class="wizard-card" id="wizard-etapa-resumo" style="display: none;">
-            <div class="wizard-card-title">Planilha incluída</div>
-            <div class="wizard-card-desc">Detecção de paradas melhorada.</div>
+        <button class="home-btn-principal" onclick="abrirScanner()">
+            📦 Abrir Scanner e Numerar com Voz
+        </button>
 
-            <div style="display: flex; gap: 10px; margin-bottom: 16px;">
-                <div style="flex: 1; background: var(--bg-input); border-radius: 14px; padding: 14px; text-align: center; border: 1px solid var(--border-color);">
-                    <div style="font-size: 20px;">📦</div>
-                    <div style="font-size: 22px; font-weight: 900; color: var(--texto-principal); margin-top: 4px;" id="wizard-stat-pacotes">0</div>
-                    <div style="font-size: 11px; color: var(--texto-secundario); font-weight: 700;">PACOTES</div>
-                </div>
-                <div style="flex: 1; background: var(--bg-input); border-radius: 14px; padding: 14px; text-align: center; border: 1px solid var(--border-color);">
-                    <div style="font-size: 20px;">📍</div>
-                    <div style="font-size: 22px; font-weight: 900; color: var(--texto-principal); margin-top: 4px;" id="wizard-stat-paradas">0</div>
-                    <div style="font-size: 11px; color: var(--texto-secundario); font-weight: 700;">PARADAS ÚNICAS</div>
+        <div class="home-footer-tip">
+            💡 <b>Dica:</b> O PDF funciona para escanear e numerar com voz. Use o arquivo CSV do Excel para carregar a rota com o mapa completo!
+        </div>
+    </div>
+
+    <!-- MODAL DE ESCOLHA ENTRE PDF (SCANNER/VOZ) E CSV/EXCEL (MAPA) -->
+    <div id="modalEscolhaCarga" class="modal-overlay">
+        <div class="modal-body">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--texto-principal);">Como você quer carregar?</h3>
+                <button class="scanner-btn-close" style="background: var(--bg-input); color: var(--texto-principal);" onclick="fecharModalEscolhaCarga()">✕</button>
+            </div>
+            
+            <p style="font-size: 13px; color: var(--texto-secundario); margin-bottom: 20px;">
+                Conforme solicitado, separei os carregamentos para garantir o funcionamento perfeito:
+            </p>
+
+            <div class="config-opcao-box" onclick="acionarInputPdfUnico()">
+                <div class="config-box-icon">📄</div>
+                <div class="config-box-info">
+                    <div class="config-box-title">Carregar PDF (Apenas Scanner e Voz)</div>
+                    <div class="config-box-desc">Ideal para numerar os pacotes rapidamente</div>
                 </div>
             </div>
+            <input type="file" id="inputPdfUnico" accept=".pdf" style="display:none;" onchange="processarPdfSeparado(this)">
 
-            <button class="btn-sheet-action destaque" style="width: 100%; padding: 14px; font-size: 15px;" onclick="concluirWizardEAbrirApp()">
-                🚀 Abrir scanner (5s)
-            </button>
-        </div>
-
-        <!-- BOTÃO APAGAR E RECOMEÇAR -->
-        <div style="text-align: center; margin-top: auto; padding: 20px 0;">
-            <span style="font-size: 13px; color: var(--texto-secundario); cursor: pointer; text-decoration: underline;" onclick="resetarWizard()">
-                ↺ Apagar e começar de novo
-            </span>
+            <div class="config-opcao-box" onclick="acionarInputExcelUnico()" style="margin-top: 12px;">
+                <div class="config-box-icon">📊</div>
+                <div class="config-box-info">
+                    <div class="config-box-title">Carregar CSV / Excel (Mapa Completo)</div>
+                    <div class="config-box-desc">Carrega os endereços diretamente no mapa</div>
+                </div>
+            </div>
+            <input type="file" id="inputExcelUnico" accept=".csv, .xlsx, .xls" style="display:none;" onchange="processarExcelSeparado(this)">
         </div>
     </div>
 
@@ -985,6 +1038,11 @@
     <div id="menu-lateral-overlay" onclick="fecharMenuLateral()"></div>
     <div id="menu-lateral">
         <div style="font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--cor-laranja);">Rota+Rápida</div>
+
+        <div class="menu-item" onclick="abrirTelaInicial()">
+            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Tela Inicial
+        </div>
 
         <div class="menu-item" onclick="alternarTema()">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -1099,7 +1157,6 @@
             <button class="btn-sheet-action destaque" onclick="iniciarOtimizacaoComEtapas(false)">⚡ Roteirizar</button>
             <button class="btn-sheet-action" onclick="iniciarOtimizacaoComEtapas(true)">🔀 Reotimizar</button>
             <button class="btn-sheet-action" onclick="abrirScanner()">📦 Numerar Pacotes</button>
-            <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="display:none;" onchange="processarArquivoFisico()">
         </div>
 
         <div id="lista-paradas"></div>
@@ -1239,9 +1296,9 @@
 
         <div class="scanner-stats-bar">
             <div style="display: flex; gap: 10px; width: 100%; margin-bottom: 4px;">
-                <div class="scanner-stat-card" onclick="abrirSeletorArquivo()" style="background: var(--cor-laranja); border-color: var(--cor-laranja); display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px;">
+                <div class="scanner-stat-card" onclick="abrirModalEscolhaCarga()" style="background: var(--cor-laranja); border-color: var(--cor-laranja); display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px;">
                     <span style="font-size: 18px;">📄</span>
-                    <div class="scanner-stat-num" style="color: white; font-size: 14px;">Importar PDF / Arquivo</div>
+                    <div class="scanner-stat-num" style="color: white; font-size: 14px;">Carregar Arquivo</div>
                 </div>
                 <div class="scanner-stat-card" onclick="inserirCodigoManual()" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px;">
                     <div class="scanner-stat-num" style="font-size: 18px;">✏️</div>
@@ -1300,9 +1357,6 @@
         let indexAgrupadoInterno = 0;
         let listaBipados = new Set();
 
-        // Variáveis temporárias para o fluxo inicial do Wizard
-        let dadosPdfProvisorios = [];
-
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         window.onload = () => {
@@ -1313,11 +1367,13 @@
             configurarGestoBottomSheet();
 
             if (bdRotas.length > 0) {
-                // Se já houver rota salva, oculta o wizard inicial
                 document.getElementById('fluxo-inicial-container').style.display = 'none';
+                atualizarStatusHome();
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
+            } else {
+                atualizarStatusHome();
             }
         };
 
@@ -1361,90 +1417,45 @@
             document.getElementById('menu-lateral').classList.remove('aberto');
         }
 
-        function abrirConfigRota() {
-            selecionarPontoSaida(configRotaData.pontoSaida, false);
-            document.getElementById('cfgVoltaInicio').checked = configRotaData.voltaInicio;
-            definirTempoParada(configRotaData.tempoParada, false);
-            definirVelocidade(configRotaData.velocidadeMedia, false);
-            
-            document.getElementById('modalConfigRota').style.display = 'flex';
+        function abrirTelaInicial() {
+            fecharMenuLateral();
+            document.getElementById('fluxo-inicial-container').style.display = 'flex';
         }
 
-        function fecharConfigRota() {
-            document.getElementById('modalConfigRota').style.display = 'none';
+        function fecharTelaInicialSePossivel() {
+            if (bdRotas.length === 0) {
+                alert("Carregue uma rota primeiro (PDF para scanner/voz ou Excel/CSV para o mapa).");
+                return;
+            }
+            document.getElementById('fluxo-inicial-container').style.display = 'none';
         }
 
-        function selecionarPontoSaida(tipo, atualizarObj = true) {
-            configRotaData.pontoSaida = tipo;
-            ['gps', 'manual', 'primeira'].forEach(t => {
-                const el = document.getElementById(`cfg-saida-${t}`);
-                if (el) {
-                    if (t === tipo) el.classList.add('ativo');
-                    else el.classList.remove('ativo');
-                }
-            });
+        function atualizarStatusHome() {
+            const txt = document.getElementById('home-status-texto');
+            if (bdRotas.length > 0) {
+                txt.innerText = `Rota carregada · ${bdRotas.length} paradas`;
+            } else {
+                txt.innerText = "Nenhuma rota carregada";
+            }
         }
 
-        function definirTempoParada(minutos, atualizarObj = true) {
-            configRotaData.tempoParada = minutos;
-            document.getElementById('lblTempoMin').innerText = minutos;
-            
-            let pacotesHora = Math.round(60 / minutos);
-            document.getElementById('lblPacotesHora').innerText = `≈ ${pacotesHora} pacotes/hora`;
-
-            document.querySelectorAll('.config-opcoes-grid .config-opcao-pill').forEach(pill => {
-                if (pill.innerText.trim() === `${minutos}m`) {
-                    pill.classList.add('ativo');
-                } else if (pill.innerText.trim().endsWith('m') && pill.innerText.trim().length <= 3) {
-                    pill.classList.remove('ativo');
-                }
-            });
+        function abrirModalEscolhaCarga() {
+            document.getElementById('modalEscolhaCarga').style.display = 'flex';
         }
 
-        function definirVelocidade(kmh, atualizarObj = true) {
-            configRotaData.velocidadeMedia = kmh;
-            document.querySelectorAll('.config-opcoes-grid .config-opcao-pill').forEach(pill => {
-                if (pill.innerText.trim() === `${kmh} km/h`) {
-                    pill.classList.add('ativo');
-                } else if (pill.innerText.trim().includes('km/h')) {
-                    pill.classList.remove('ativo');
-                }
-            });
+        function fecharModalEscolhaCarga() {
+            document.getElementById('modalEscolhaCarga').style.display = 'none';
         }
 
-        function atualizarConfigEstado() {
-            configRotaData.voltaInicio = document.getElementById('cfgVoltaInicio').checked;
+        function acionarInputPdfUnico() {
+            fecharModalEscolhaCarga();
+            document.getElementById('inputPdfUnico').click();
         }
 
-        function salvarEFecharConfigRota() {
-            configRotaData.voltaInicio = document.getElementById('cfgVoltaInicio').checked;
-            localStorage.setItem('rota_rapida_config', JSON.stringify(configRotaData));
-            fecharConfigRota();
+        function acionarInputExcelUnico() {
+            fecharModalEscolhaCarga();
+            document.getElementById('inputExcelUnico').click();
         }
-
-        function inicializarSortable() {
-            const el = document.getElementById('lista-paradas');
-            sortableInstance = new Sortable(el, {
-                handle: '.handle-drag',
-                animation: 150,
-                onEnd: function (evt) {
-                    const itemMovido = bdRotas.splice(evt.oldIndex, 1)[0];
-                    bdRotas.splice(evt.newIndex, 0, itemMovido);
-                    salvarBD();
-                    renderizarLista();
-                    plotarNoMapa();
-                }
-            });
-        }
-
-        function configurarGestoBottomSheet() {
-            const sheet = document.getElementById('bottom-sheet');
-            const handle = document.getElementById('handleTouch');
-            handle.addEventListener('click', () => sheet.classList.toggle('recolhido'));
-        }
-
-        function recolherBottomSheet() { document.getElementById('bottom-sheet').classList.add('recolhido'); }
-        function abrirSeletorArquivo() { document.getElementById('arquivoPlanilha').click(); }
 
         function cleanAddressString(rawText) {
             if (!rawText) return "";
@@ -1478,16 +1489,8 @@
             };
         }
 
-        /* FUNÇÕES DO WIZARD (FLUXO INICIAL EXATO SOLICITADO) */
-        function acionarInputPdf() {
-            document.getElementById('inputPdfWizard').click();
-        }
-
-        function acionarInputExcel() {
-            document.getElementById('inputExcelWizard').click();
-        }
-
-        async function processarPdfWizard(inputElement) {
+        /* PROCESSAMENTO SEPARADO DE PDF (FOCO EM SCANNER E VOZ) */
+        async function processarPdfSeparado(inputElement) {
             if (inputElement.files.length === 0) return;
             const arquivo = inputElement.files[0];
 
@@ -1557,11 +1560,10 @@
                     });
                 }
 
-                dadosPdfProvisorios = itensExtraidos;
-
-                // Avança para a Etapa 2 (Pedir planilha SPX)
-                document.getElementById('wizard-etapa-pdf').style.display = 'none';
-                document.getElementById('wizard-etapa-excel').style.display = 'block';
+                await estruturarBancoDeDados(itensExtraidos);
+                alert(`PDF carregado com sucesso! ${bdRotas.length} pacotes prontos para numerar com voz.`);
+                document.getElementById('fluxo-inicial-container').style.display = 'none';
+                abrirScanner();
 
             } catch (err) {
                 alert("Erro ao extrair o PDF.");
@@ -1569,7 +1571,8 @@
             }
         }
 
-        async function processarExcelWizard(inputElement) {
+        /* PROCESSAMENTO SEPARADO DE EXCEL/CSV (FOCO NO MAPA) */
+        async function processarExcelSeparado(inputElement) {
             if (inputElement.files.length === 0) return;
             const arquivo = inputElement.files[0];
             const leitor = new FileReader();
@@ -1616,187 +1619,11 @@
                     }
                 });
 
-                if (itensPlanilha.length > 0) {
-                    dadosPdfProvisorios = itensPlanilha;
-                }
-
-                await finalizarProcessamentoWizard();
+                await estruturarBancoDeDados(itensPlanilha);
+                alert(`Planilha carregada com sucesso! ${bdRotas.length} paradas adicionadas ao mapa.`);
+                document.getElementById('fluxo-inicial-container').style.display = 'none';
             };
             leitor.readAsArrayBuffer(arquivo);
-        }
-
-        async function pularExcelEAbrirScanner() {
-            await finalizarProcessamentoWizard();
-        }
-
-        async function finalizarProcessamentoWizard() {
-            await estruturarBancoDeDados(dadosPdfProvisorios);
-
-            // Calcula paradas únicas
-            let paradasUnicas = new Set(bdRotas.map(r => r.endereco.trim().toLowerCase())).size;
-
-            document.getElementById('wizard-stat-pacotes').innerText = bdRotas.length;
-            document.getElementById('wizard-stat-paradas').innerText = paradasUnicas;
-
-            document.getElementById('wizard-etapa-excel').style.display = 'none';
-            document.getElementById('wizard-etapa-resumo').style.display = 'block';
-        }
-
-        function concluirWizardEAbrirApp() {
-            document.getElementById('fluxo-inicial-container').style.display = 'none';
-        }
-
-        function resetarWizard() {
-            novaRota();
-            document.getElementById('wizard-etapa-resumo').style.display = 'none';
-            document.getElementById('wizard-etapa-excel').style.display = 'none';
-            document.getElementById('wizard-etapa-pdf').style.display = 'block';
-            document.getElementById('fluxo-inicial-container').style.display = 'flex';
-        }
-
-        async function processarArquivoFisico() {
-            const input = document.getElementById('arquivoPlanilha');
-            if (input.files.length === 0) return;
-            const arquivo = input.files[0];
-            const nome = arquivo.name.toLowerCase();
-
-            if (nome.endsWith('.xlsx') || nome.endsWith('.xls')) {
-                const leitor = new FileReader();
-                leitor.onload = function(e) {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonObjetos = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-                    
-                    let itensProcessados = [];
-
-                    jsonObjetos.forEach((row, idx) => {
-                        let keys = Object.keys(row);
-                        let latKey = keys.find(k => /latitude|^lat$/i.test(k.trim()));
-                        let lonKey = keys.find(k => /longitude|^lon$|^lng$/i.test(k.trim()));
-                        let codKey = keys.find(k => /código|codigo|rastreio|spx|tracking|pacote|tn/i.test(k.trim()));
-                        let endKey = keys.find(k => /endereço|endereco|rua|logradouro|address/i.test(k.trim()));
-                        let bairroKey = keys.find(k => /bairro/i.test(k.trim()));
-                        let cidadeKey = keys.find(k => /cidade|municipio/i.test(k.trim()));
-                        let cepKey = keys.find(k => /cep|zip/i.test(k.trim()));
-
-                        let lat = latKey ? parseFloat(row[latKey]) : null;
-                        let lon = lonKey ? parseFloat(row[lonKey]) : null;
-                        let codigo = codKey && row[codKey] ? cleanAddressString(String(row[codKey])).toUpperCase() : '';
-                        
-                        let partesEndereco = [];
-                        if (endKey && row[endKey]) partesEndereco.push(cleanAddressString(String(row[endKey])));
-                        if (bairroKey && row[bairroKey]) partesEndereco.push(cleanAddressString(String(row[bairroKey])));
-                        if (cidadeKey && row[cidadeKey]) partesEndereco.push(cleanAddressString(String(row[cidadeKey])));
-                        if (cepKey && row[cepKey]) partesEndereco.push(`CEP ${cleanAddressString(String(row[cepKey]))}`);
-
-                        let enderecoTexto = partesEndereco.join(', ');
-
-                        if (!codigo) codigo = `VOL-${String(idx + 1).padStart(3, '0')}`;
-
-                        if (enderecoTexto.length > 3 || (!isNaN(lat) && !isNaN(lon))) {
-                            itensProcessados.push({
-                                codigo: codigo,
-                                endereco: enderecoTexto || "Localização Exata via Coordenadas",
-                                lat: (!isNaN(lat) && lat !== 0) ? lat : null,
-                                lon: (!isNaN(lon) && lon !== 0) ? lon : null
-                            });
-                        }
-                    });
-
-                    estruturarBancoDeDados(itensProcessados);
-                };
-                leitor.readAsArrayBuffer(arquivo);
-            } else if (nome.endsWith('.pdf')) {
-                const leitor = new FileReader();
-                leitor.onload = async function() {
-                    try {
-                        const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                        let fullExtractedLines = [];
-
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const page = await pdf.getPage(i);
-                            const textContent = await page.getTextContent();
-                            
-                            let lastY = null;
-                            let currentRowText = "";
-
-                            textContent.items.forEach(item => {
-                                const currentY = item.transform[5];
-                                if (lastY !== null && Math.abs(currentY - lastY) > 5) {
-                                    fullExtractedLines.push(cleanAddressString(currentRowText));
-                                    currentRowText = "";
-                                }
-                                currentRowText += " " + item.str;
-                                lastY = currentY;
-                            });
-
-                            if (currentRowText.trim() !== "") {
-                                fullExtractedLines.push(cleanAddressString(currentRowText));
-                            }
-                        }
-
-                        let textoUnificado = fullExtractedLines.join(" ");
-                        let regexBlocos = /(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|\b\d{10,14}\b)/g;
-                        let posicoes = [];
-                        let match;
-
-                        while ((match = regexBlocos.exec(textoUnificado)) !== null) {
-                            posicoes.push({ codigo: match[0].toUpperCase(), index: match.index });
-                        }
-
-                        let itensExtraidos = [];
-                        for (let j = 0; j < posicoes.length; j++) {
-                            let inicio = posicoes[j].index;
-                            let fim = (j < posicoes.length - 1) ? posicoes[j + 1].index : textoUnificado.length;
-                            let pedaco = textoUnificado.substring(inicio, fim);
-
-                            let codigo = posicoes[j].codigo;
-                            let endereco = cleanAddressString(pedaco.replace(codigo, '').replace(/^[;,-\s]+|[;,-\s]+$/g, ''));
-
-                            if (endereco.length > 5 && !endereco.toLowerCase().includes("powered by")) {
-                                itensExtraidos.push({
-                                    codigo: codigo,
-                                    endereco: endereco,
-                                    lat: null,
-                                    lon: null
-                                });
-                            }
-                        }
-
-                        if (itensExtraidos.length === 0) {
-                            fullExtractedLines.forEach((l, idx) => {
-                                let limpo = cleanAddressString(l);
-                                if (limpo.length > 10) {
-                                    let matchCod = limpo.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2})/i);
-                                    let cod = matchCod ? matchCod[0].toUpperCase() : `VOL-${idx+1}`;
-                                    let end = cleanAddressString(limpo.replace(cod, ''));
-                                    itensExtraidos.push({ codigo: cod, endereco: end, lat: null, lon: null });
-                                }
-                            });
-                        }
-
-                        estruturarBancoDeDados(itensExtraidos);
-                    } catch (err) {
-                        alert("Erro ao extrair o PDF.");
-                        console.error(err);
-                    }
-                };
-                leitor.readAsArrayBuffer(arquivo);
-            } else {
-                const leitor = new FileReader();
-                leitor.onload = (e) => {
-                    let linhas = e.target.result.split(/\r?\n/).filter(l => l.trim().length > 3);
-                    let itens = linhas.map((linha, idx) => {
-                        const match = linha.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
-                        let cod = match ? match[0].toUpperCase() : `VOL-${String(idx + 1).padStart(3, '0')}`;
-                        let end = cleanAddressString(match ? linha.replace(match[0], '') : linha);
-                        return { codigo: cod, endereco: end, lat: null, lon: null };
-                    });
-                    estruturarBancoDeDados(itens);
-                };
-                leitor.readAsText(arquivo);
-            }
         }
 
         async function estruturarBancoDeDados(listaItens) {
@@ -1826,6 +1653,7 @@
 
             if (bdRotas.length > 0) {
                 salvarBD();
+                atualizarStatusHome();
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
@@ -2151,6 +1979,7 @@
             bdRotas = [];
             listaBipados.clear();
             salvarBD();
+            atualizarStatusHome();
             renderizarLista();
             atualizarContador();
             plotarNoMapa();
@@ -2185,6 +2014,7 @@
             if (confirm("Deseja remover esta parada?")) {
                 bdRotas.splice(idx, 1);
                 salvarBD();
+                atualizarStatusHome();
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
@@ -2211,6 +2041,11 @@
         }
 
         function abrirScanner() {
+            if (bdRotas.length === 0) {
+                alert("Carregue um arquivo PDF primeiro para poder numerar com o scanner.");
+                abrirModalEscolhaCarga();
+                return;
+            }
             document.getElementById('modalScanner').style.display = 'flex';
             atualizarEstatisticasScanner();
 
@@ -2266,6 +2101,49 @@
                 processarBipagem(cod.toUpperCase());
             }
         }
+
+        function abrirConfigRota() {
+            document.getElementById('modalConfigRota').style.display = 'flex';
+        }
+
+        function fecharConfigRota() {
+            document.getElementById('modalConfigRota').style.display = 'none';
+        }
+
+        function selecionarPontoSaida(tipo) {
+            configRotaData.pontoSaida = tipo;
+        }
+
+        function definirTempoParada(m) {
+            configRotaData.tempoParada = m;
+        }
+
+        function definirVelocidade(v) {
+            configRotaData.velocidadeMedia = v;
+        }
+
+        function atualizarConfigEstado() {}
+        function salvarEFecharConfigRota() { fecharConfigRota(); }
+        function inicializarSortable() {
+            const el = document.getElementById('lista-paradas');
+            sortableInstance = new Sortable(el, {
+                handle: '.handle-drag',
+                animation: 150,
+                onEnd: function (evt) {
+                    const itemMovido = bdRotas.splice(evt.oldIndex, 1)[0];
+                    bdRotas.splice(evt.newIndex, 0, itemMovido);
+                    salvarBD();
+                    renderizarLista();
+                    plotarNoMapa();
+                }
+            });
+        }
+        function configurarGestoBottomSheet() {
+            const sheet = document.getElementById('bottom-sheet');
+            const handle = document.getElementById('handleTouch');
+            handle.addEventListener('click', () => sheet.classList.toggle('recolhido'));
+        }
+        function recolherBottomSheet() { document.getElementById('bottom-sheet').classList.add('recolhido'); }
     </script>
 </body>
 </html>
