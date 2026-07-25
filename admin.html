@@ -107,8 +107,8 @@
         };
 
         function autenticarAdminMaster() {
-            const u = document.getElementById('admin-user').value;
-            const p = document.getElementById('admin-pass').value;
+            const u = document.getElementById('admin-user').value.trim();
+            const p = document.getElementById('admin-pass').value.trim();
 
             if (u === 'admin' && p === SENHA_ADMIN) {
                 document.getElementById('login-admin').style.display = 'none';
@@ -137,7 +137,6 @@
         }
 
         function renderizarPainelAdmin() {
-            // Atualiza bases em tempo de execução
             bdContasUsuarios = JSON.parse(localStorage.getItem('appegg_contas_usuarios')) || {};
             bdAdminPedidos = JSON.parse(localStorage.getItem('appegg_pedidos_admin')) || [];
 
