@@ -614,7 +614,7 @@
         <div class="divisor-menu"></div>
 
         <div class="menu-item" onclick="abrirScanner(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2-2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
             Escanear Pacotes
         </div>
 
@@ -967,22 +967,20 @@
                     try {
                         const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
                         let itensExtraidos = [];
+                        let paradaAtual = null;
 
                         for (let i = 1; i <= pdf.numPages; i++) {
                             const page = await pdf.getPage(i);
                             const content = await page.getTextContent();
                             
-                            // Coleta itens com suas posições X e Y exatas na página
                             let items = content.items.map(item => ({
                                 str: item.str,
                                 x: item.transform[4],
                                 y: Math.round(item.transform[5])
                             }));
 
-                            // Agrupa os itens por linha aproximada (Y)
                             let linhasPorY = {};
                             items.forEach(item => {
-                                // Encontra uma linha Y próxima (tolerância de 5 pixels)
                                 let chaveY = Object.keys(linhasPorY).find(y => Math.abs(parseFloat(y) - item.y) < 5);
                                 if (!chaveY) {
                                     chaveY = item.y;
@@ -996,20 +994,24 @@
                             chavesY.forEach(y => {
                                 let linhaItens = linhasPorY[y].sort((a, b) => a.x - b.x);
                                 
-                                // Divide os elementos da linha com base na coordenada X para separar colunas
-                                // Coluna Address (X menor) e Coluna Notes/Código (X maior, ex: X > 200)
-                                let itensAddress = linhaItens.filter(i => i.x < 220);
+                                // Separar colunas pelo eixo X (endereço está à esquerda, mas após a numeração)
+                                let itensAddress = linhaItens.filter(i => i.x > 30 && i.x < 220); 
                                 let itensNotes = linhaItens.filter(i => i.x >= 220);
 
                                 let textoAddress = itensAddress.map(i => i.str).join(" ").trim();
                                 let textoNotes = itensNotes.map(i => i.str).join(" ").trim();
+                                let textoCompleto = (textoAddress + " " + textoNotes).toLowerCase();
 
-                                // Ignora cabeçalhos, rodapés e títulos
-                                if (!textoAddress || textoAddress.toLowerCase().includes("address") || textoAddress.toLowerCase().includes("powered by spoke") || textoAddress.toLowerCase().includes("tempo total")) {
+                                // Ignora rodapés, cabeçalhos, tempo total e a linha "Destino"
+                                if (textoCompleto.includes("address") || 
+                                    textoCompleto.includes("powered by spoke") || 
+                                    textoCompleto.includes("tempo total") ||
+                                    textoCompleto.includes("distância total") ||
+                                    textoCompleto.includes("destino") ||
+                                    textoCompleto.includes("estimated arrival")) {
                                     return;
                                 }
 
-                                // Extrai o código rastreio de dentro do campo de notas (Notes) ou do endereço
                                 let codigoExtraido = null;
                                 let matchNotas = textoNotes.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
                                 if (matchNotas) {
@@ -1019,26 +1021,40 @@
                                     if (matchEnd) codigoExtraido = matchEnd[0].toUpperCase();
                                 }
 
-                                // Se o endereço contiver o código grudado, limpa ele
                                 if (codigoExtraido && textoAddress.includes(codigoExtraido)) {
                                     textoAddress = textoAddress.replace(codigoExtraido, '').replace(/^[;,-\s]+|[;,-\s]+$/g, '').trim();
                                 }
 
-                                // Se sobrou um endereço válido
-                                if (textoAddress.length > 3) {
-                                    itensExtraidos.push({
+                                // Se achou código, é um novo pacote!
+                                if (codigoExtraido) {
+                                    if (paradaAtual && paradaAtual.endereco.length > 3) {
+                                        itensExtraidos.push(paradaAtual);
+                                    }
+                                    
+                                    paradaAtual = {
                                         codigo: codigoExtraido,
                                         endereco: textoAddress,
                                         lat: null,
                                         lon: null
-                                    });
+                                    };
+                                } else {
+                                    // Se não tem código, mas tem texto e já abrimos uma parada, unifica as quebras de linha!
+                                    if (paradaAtual && textoAddress.length > 1 && !/^[\d]+$/.test(textoAddress)) {
+                                        paradaAtual.endereco += " " + textoAddress;
+                                    }
                                 }
                             });
                         }
+                        
+                        // Empurrar a última parada que estava sendo construída no loop
+                        if (paradaAtual && paradaAtual.endereco.length > 3) {
+                            itensExtraidos.push(paradaAtual);
+                        }
 
-                        let itens = itensExtraidos.map((item, idx) => ({
-                            codigo: item.codigo || `VOL-${String(idx + 1).padStart(3, '0')}`,
-                            endereco: item.endereco,
+                        // Limpa os endereços para ficar apenas com espaços únicos
+                        let itens = itensExtraidos.map((item) => ({
+                            codigo: item.codigo,
+                            endereco: item.endereco.replace(/\s+/g, ' ').trim(),
                             lat: null,
                             lon: null
                         }));
@@ -1046,6 +1062,7 @@
                         estruturarBancoDeDados(itens);
                     } catch (err) {
                         alert("Erro ao extrair o PDF.");
+                        console.error(err);
                     }
                 };
                 leitor.readAsArrayBuffer(arquivo);
