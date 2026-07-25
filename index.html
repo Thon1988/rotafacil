@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="dark">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -17,32 +17,16 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
    
     <style>
-        :root[data-theme="dark"] {
+        :root {
             --cor-laranja: #ff5722;
             --cor-laranja-hover: #e64a19;
             --cor-verde: #10b981;
             --cor-vermelho: #ef4444;
-            --bg-principal: #0f131a;
-            --bg-card: #1a202c;
-            --bg-input: #2d3748;
+            --bg-dark-principal: #0f131a;
+            --bg-dark-card: #1a202c;
+            --bg-dark-input: #2d3748;
             --texto-principal: #ffffff;
             --texto-secundario: #9ca3af;
-            --border-color: rgba(255,255,255,0.05);
-            --tile-filter: brightness(0.8) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
-        }
-
-        :root[data-theme="light"] {
-            --cor-laranja: #ff5722;
-            --cor-laranja-hover: #e64a19;
-            --cor-verde: #10b981;
-            --cor-vermelho: #ef4444;
-            --bg-principal: #f3f4f6;
-            --bg-card: #ffffff;
-            --bg-input: #e5e7eb;
-            --texto-principal: #1f2937;
-            --texto-secundario: #6b7280;
-            --border-color: rgba(0,0,0,0.08);
-            --tile-filter: none;
         }
 
         * {
@@ -54,14 +38,13 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: var(--bg-principal);
+            background-color: var(--bg-dark-principal);
             color: var(--texto-principal);
             overflow: hidden;
             height: 100vh;
-            transition: background-color 0.3s, color 0.3s;
         }
 
-        /* DRAWER / MENU LATERAL */
+        /* DRAWER / MENU LATERAL COMPLETO */
         #menu-lateral-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -76,7 +59,7 @@
             top: 0; left: 0; bottom: 0;
             width: 310px;
             max-width: 85%;
-            background: var(--bg-card);
+            background: #141923;
             z-index: 100000;
             transform: translateX(-100%);
             transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
@@ -84,8 +67,8 @@
             flex-direction: column;
             padding: 20px 16px;
             overflow-y: auto;
-            box-shadow: 5px 0 25px rgba(0,0,0,0.3);
-            border-right: 1px solid var(--border-color);
+            box-shadow: 5px 0 25px rgba(0,0,0,0.6);
+            border-right: 1px solid rgba(255,255,255,0.05);
         }
 
         #menu-lateral.aberto {
@@ -107,7 +90,7 @@
         }
 
         .menu-item:active {
-            background: var(--bg-input);
+            background: var(--bg-dark-card);
         }
 
         .menu-item svg {
@@ -123,21 +106,17 @@
 
         .divisor-menu {
             height: 1px;
-            background: var(--border-color);
+            background: rgba(255,255,255,0.08);
             margin: 8px 0;
         }
 
-        /* MAPA */
+        /* CONTAINER MAPA E NAVEGAÇÃO */
         #mapa-container {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             z-index: 1;
         }
         #mapa { width: 100%; height: 100%; }
-
-        .leaflet-tile-container img {
-            filter: var(--tile-filter);
-        }
 
         .top-bar-overlay {
             position: absolute;
@@ -150,12 +129,11 @@
 
         .btn-round-top {
             width: 45px; height: 45px;
-            background: var(--bg-card);
+            background: #1a202c;
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            border: 1px solid var(--border-color);
-            color: var(--texto-principal);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            border: none; color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             cursor: pointer;
             font-size: 18px;
         }
@@ -172,7 +150,7 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -183,9 +161,9 @@
             position: absolute;
             bottom: 0; left: 0; right: 0;
             height: 60vh;
-            background: var(--bg-principal);
+            background: var(--bg-dark-principal);
             border-radius: 24px 24px 0 0;
-            box-shadow: 0 -8px 30px rgba(0,0,0,0.3);
+            box-shadow: 0 -8px 30px rgba(0,0,0,0.6);
             z-index: 2000;
             display: flex;
             flex-direction: column;
@@ -210,8 +188,7 @@
 
         .handle-bar {
             width: 42px; height: 5px;
-            background: var(--texto-secundario);
-            opacity: 0.5;
+            background: #4b5563;
             border-radius: 3px;
         }
 
@@ -223,7 +200,7 @@
         }
 
         .sheet-title {
-            font-size: 20px; font-weight: 800; margin: 0; color: var(--texto-principal);
+            font-size: 20px; font-weight: 800; margin: 0;
         }
 
         .badge-restantes {
@@ -243,9 +220,9 @@
 
         .btn-sheet-action {
             flex: 1;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            color: var(--texto-principal);
+            background: var(--bg-dark-card);
+            border: 1px solid rgba(255,255,255,0.05);
+            color: white;
             padding: 10px;
             border-radius: 10px;
             font-size: 13px;
@@ -259,10 +236,9 @@
 
         .btn-sheet-action.destaque {
             background: var(--cor-laranja);
-            color: white;
         }
 
-        /* LISTA DE PARADAS */
+        /* LISTA DE PARADAS COM DRAG/DROP */
         #lista-paradas {
             flex: 1;
             overflow-y: auto;
@@ -270,14 +246,14 @@
         }
 
         .card-parada {
-            background: var(--bg-card);
+            background: var(--bg-dark-card);
             border-radius: 12px;
             padding: 12px;
             margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 12px;
-            border: 1px solid var(--border-color);
+            border: 1px solid rgba(255,255,255,0.03);
         }
 
         .handle-drag {
@@ -308,24 +284,11 @@
             font-size: 13px;
             font-weight: 700;
             margin-bottom: 2px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .tag-multi {
-            background: rgba(255, 87, 34, 0.15);
-            color: var(--cor-laranja);
-            border: 1px solid var(--cor-laranja);
-            border-radius: 6px;
-            padding: 1px 5px;
-            font-size: 10px;
-            font-weight: 800;
         }
 
         .parada-rua {
             font-size: 13px;
-            color: var(--texto-principal);
+            color: white;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -338,7 +301,7 @@
         }
 
         .btn-icon-acao {
-            background: var(--bg-input);
+            background: #27303f;
             border: none;
             color: var(--texto-secundario);
             width: 32px; height: 32px;
@@ -353,12 +316,12 @@
         .barra-fixa-inferior {
             position: absolute;
             bottom: 0; left: 0; right: 0;
-            background: var(--bg-principal);
+            background: var(--bg-dark-principal);
             padding: 12px 16px 20px 16px;
             display: flex;
             gap: 10px;
             z-index: 3000;
-            border-top: 1px solid var(--border-color);
+            border-top: 1px solid rgba(255,255,255,0.05);
         }
 
         .btn-inferior-acao {
@@ -384,12 +347,12 @@
         #widget-agrupado {
             position: absolute;
             top: 75px; left: 16px; right: 16px;
-            background: var(--bg-card);
+            background: var(--bg-dark-card);
             border-radius: 16px;
             padding: 14px;
             z-index: 1500;
             border: 1px solid var(--cor-laranja);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
             display: none;
         }
 
@@ -424,8 +387,7 @@
         }
 
         .modal-body {
-            background: var(--bg-card);
-            color: var(--texto-principal);
+            background: var(--bg-dark-card);
             padding: 20px;
             border-radius: 16px;
             width: 100%;
@@ -437,9 +399,9 @@
         .input-dark {
             width: 100%;
             padding: 12px;
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
-            color: var(--texto-principal);
+            background: var(--bg-dark-input);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
             border-radius: 8px;
             margin: 10px 0 20px 0;
             font-size: 14px;
@@ -458,169 +420,42 @@
             box-shadow: 0 3px 6px rgba(0,0,0,0.4);
         }
 
-        .spinner-otimizacao {
+        /* ESTILO DA ANIMAÇÃO DE PROCESSAMENTO DO CIRCUIT */
+        .spinner-circuit {
             width: 60px;
             height: 60px;
             border: 5px solid rgba(255, 87, 34, 0.2);
             border-top: 5px solid var(--cor-laranja);
             border-radius: 50%;
-            animation: girarCarregamento 1s linear infinite;
+            animation: spinCircuit 1s linear infinite;
         }
 
-        @keyframes girarCarregamento {
+        @keyframes spinCircuit {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
-        }
-
-        /* ESTILOS DO SCANNER PROFISSIONAL */
-        #modalScanner {
-            background: #000000;
-            padding: 0;
-            justify-content: space-between;
-        }
-
-        .scanner-header {
-            width: 100%;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            z-index: 10;
-        }
-
-        .scanner-header-badge {
-            background: var(--cor-laranja);
-            color: white;
-            font-weight: 800;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-        }
-
-        .scanner-btn-close {
-            background: rgba(255,255,255,0.2);
-            color: white;
-            border: none;
-            width: 36px; height: 36px;
-            border-radius: 50%;
-            font-size: 18px;
-            cursor: pointer;
-        }
-
-        .scanner-viewport-container {
-            position: relative;
-            width: 100%;
-            max-width: 450px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #reader {
-            width: 100% !important;
-            border: none !important;
-        }
-
-        #reader video {
-            width: 100% !important;
-            object-fit: cover;
-        }
-
-        .scanner-instruction {
-            color: #ffffff;
-            font-size: 14px;
-            text-align: center;
-            margin: 15px 0;
-            font-weight: 500;
-        }
-
-        .scanner-stats-bar {
-            width: 100%;
-            max-width: 450px;
-            padding: 15px 20px 30px 20px;
-            display: flex;
-            gap: 10px;
-            z-index: 10;
-        }
-
-        .scanner-stat-card {
-            flex: 1;
-            background: #12161f;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            padding: 12px;
-            text-align: center;
-        }
-
-        .scanner-stat-card.active {
-            border-color: var(--cor-laranja);
-        }
-
-        .scanner-stat-num {
-            font-size: 22px;
-            font-weight: 900;
-            color: white;
-        }
-
-        .scanner-stat-card.active .scanner-stat-num {
-            color: var(--cor-laranja);
-        }
-
-        .scanner-stat-label {
-            font-size: 11px;
-            color: #9ca3af;
-            margin-top: 2px;
-            font-weight: 600;
-        }
-
-        #scanner-bip-toast {
-            position: absolute;
-            top: 20%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--cor-verde);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-weight: 800;
-            font-size: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            display: none;
-            z-index: 100;
-            text-align: center;
-            white-space: nowrap;
         }
     </style>
 </head>
 <body>
 
-    <!-- OVERLAY E MENU LATERAL -->
+    <!-- OVERLAY E MENU LATERAL COMPLETO -->
     <div id="menu-lateral-overlay" onclick="fecharMenuLateral()"></div>
     <div id="menu-lateral">
         <div style="font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--cor-laranja);">Rota+Rápida</div>
 
-        <div class="menu-item" onclick="alternarTema()">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-            Alternar Tema (Claro/Escuro)
-        </div>
-
-        <div class="menu-item" onclick="alternarGPSPreferido()">
-            <svg viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-            GPS: <span id="label-gps-preferido" style="margin-left: 5px; color: var(--cor-laranja);">Google Maps</span>
-        </div>
-
-        <div class="divisor-menu"></div>
-
         <div class="menu-item" onclick="abrirScanner(); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
-            Escanear Pacotes
+            Abrir Scanner
         </div>
 
         <div class="menu-item" onclick="inserirCodigoManual(); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Inserir Código Manual
+        </div>
+
+        <div class="menu-item" onclick="alert('Configurações de saída e ritmo atualizadas!'); fecharMenuLateral();">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Configurar Rota (saída, ritmo)
         </div>
 
         <div class="divisor-menu"></div>
@@ -670,14 +505,14 @@
         </div>
     </div>
 
-    <!-- MAPA -->
+    <!-- MAPA E NAVEGAÇÃO SUPERIOR -->
     <div id="mapa-container">
         <div class="top-bar-overlay">
             <button class="btn-round-top" onclick="abrirMenuLateral()">☰</button>
             <div class="banner-status-topo">
                 📍 <span id="status-geocoding-topo">Aguardando importação de rota...</span>
             </div>
-            <button class="btn-round-top" style="background: var(--cor-laranja); color: white;" onclick="abrirScanner()">📷</button>
+            <button class="btn-round-top" style="background: var(--cor-laranja);" onclick="abrirScanner()">📷</button>
         </div>
         <div id="mapa"></div>
     </div>
@@ -686,14 +521,14 @@
     <div id="widget-agrupado">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <span style="font-size:12px; color:var(--cor-laranja); font-weight:700;">MÚLTIPLOS PACOTES NESTE LOCAL</span>
-            <span style="font-size: 12px; color: var(--texto-secundario);" id="agrupado-index-txt">Pacote 1 de 2</span>
+            <span style="font-size: 12px; color: #aaa;" id="agrupado-index-txt">Pacote 1 de 2</span>
         </div>
-        <div style="font-weight: bold; font-size: 15px; color: var(--texto-principal);" id="agrupado-rua">---</div>
+        <div style="font-weight: bold; font-size: 15px; color: white;" id="agrupado-rua">---</div>
         <div style="font-size: 13px; color: var(--cor-laranja);" id="agrupado-codigo">---</div>
         
         <div class="carrossel-controles">
             <button class="btn-carrossel" onclick="navegarAgrupado(-1)">◄ Anterior</button>
-            <span style="flex:1; text-align:center; font-size:12px; color:var(--texto-secundario);">Deslize para trocar</span>
+            <span style="flex:1; text-align:center; font-size:12px; color:#aaa;">Deslize para trocar</span>
             <button class="btn-carrossel" onclick="navegarAgrupado(1)">Próximo ►</button>
         </div>
     </div>
@@ -737,7 +572,7 @@
         </div>
     </div>
 
-    <!-- MODAL RESUMO -->
+    <!-- MODAL RESUMO DOS DIAS -->
     <div id="modalResumo" class="modal-overlay">
         <div class="modal-body">
             <h3 style="margin-top:0; color:var(--cor-laranja);">Resumo dos Dias de Trabalho</h3>
@@ -750,43 +585,19 @@
         </div>
     </div>
 
-    <!-- MODAL SCANNER REFORMULADO -->
+    <!-- MODAL SCANNER -->
     <div id="modalScanner" class="modal-overlay">
-        <div class="scanner-header">
-            <button class="scanner-btn-close" onclick="fecharScanner()">✕</button>
-            <div class="scanner-header-badge" id="scanner-topo-badge">📦 0 de 0</div>
-            <div style="width: 36px;"></div>
-        </div>
-
-        <div class="scanner-viewport-container">
-            <div id="scanner-bip-toast">Parada #1 (1x)</div>
-            <div id="reader"></div>
-            <div class="scanner-instruction">Aponte para o código de barras do pacote</div>
-        </div>
-
-        <div class="scanner-stats-bar">
-            <div class="scanner-stat-card">
-                <div class="scanner-stat-num" id="scanner-stat-bipados">0</div>
-                <div class="scanner-stat-label">Bipados</div>
-            </div>
-            <div class="scanner-stat-card active">
-                <div class="scanner-stat-num" id="scanner-stat-faltam">0</div>
-                <div class="scanner-stat-label">Faltam</div>
-            </div>
-            <div class="scanner-stat-card">
-                <div class="scanner-stat-num" id="scanner-stat-total">0</div>
-                <div class="scanner-stat-label">Total</div>
-            </div>
-        </div>
+        <button onclick="fecharScanner()" style="padding: 12px; margin-bottom: 20px; background: var(--cor-vermelho); color: white; border: none; border-radius: 8px; font-size: 16px; width: 100%; max-width: 400px; font-weight: bold;">✕ Fechar Scanner</button>
+        <div id="reader" style="width: 100%; max-width: 400px; background: #000; border-radius: 12px; overflow: hidden;"></div>
     </div>
 
-    <!-- MODAL OTIMIZAÇÃO POR ETAPAS -->
+    <!-- MODAL OTIMIZAÇÃO POR ETAPAS (FLUXO CIRCUIT) -->
     <div id="modalOtimizacaoEtapas" class="modal-overlay">
-        <div class="modal-body" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <div class="spinner-otimizacao" style="margin-bottom: 20px;"></div>
-            <h3 style="margin: 0 0 10px 0; color: var(--texto-principal);">Otimizando sua rota</h3>
+        <div class="modal-body text-center" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div class="spinner-circuit" style="margin-bottom: 20px;"></div>
+            <h3 style="margin: 0 0 10px 0; color: white;">Otimizando sua rota</h3>
             <p id="textoStatusEtapa" style="color: var(--cor-laranja); font-weight: bold; font-size: 14px; margin-bottom: 20px;">Analisando suas paradas...</p>
-            <div style="width: 100%; background: var(--bg-input); height: 8px; border-radius: 4px; overflow: hidden;">
+            <div style="width: 100%; background: var(--bg-dark-input); height: 8px; border-radius: 4px; overflow: hidden;">
                 <div id="barraProgressoEtapa" style="width: 0%; background: var(--cor-laranja); height: 100%; transition: width 0.4s ease;"></div>
             </div>
         </div>
@@ -795,9 +606,6 @@
     <script>
         let bdRotas = JSON.parse(localStorage.getItem('rota_rapida_db_oficial')) || [];
         let historicoDias = JSON.parse(localStorage.getItem('rota_rapida_historico')) || [];
-        let gpsPreferido = localStorage.getItem('rota_rapida_gps') || 'maps';
-        let temaAtual = localStorage.getItem('rota_rapida_tema') || 'dark';
-
         let html5QrcodeScanner = null;
         let indexAtivo = 0;
         let editIndexTarget = null;
@@ -806,13 +614,10 @@
 
         let grupoAtual = [];
         let indexAgrupadoInterno = 0;
-        let listaBipados = new Set();
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         window.onload = () => {
-            aplicarTema(temaAtual);
-            atualizarLabelGPS();
             inicializarMapa();
             inicializarSortable();
             configurarGestoBottomSheet();
@@ -823,26 +628,6 @@
                 plotarNoMapa();
             }
         };
-
-        function alternarTema() {
-            temaAtual = temaAtual === 'dark' ? 'light' : 'dark';
-            localStorage.setItem('rota_rapida_tema', temaAtual);
-            aplicarTema(temaAtual);
-        }
-
-        function aplicarTema(tema) {
-            document.documentElement.setAttribute('data-theme', tema);
-        }
-
-        function alternarGPSPreferido() {
-            gpsPreferido = gpsPreferido === 'maps' ? 'waze' : 'maps';
-            localStorage.setItem('rota_rapida_gps', gpsPreferido);
-            atualizarLabelGPS();
-        }
-
-        function atualizarLabelGPS() {
-            document.getElementById('label-gps-preferido').innerText = gpsPreferido === 'maps' ? 'Google Maps' : 'Waze';
-        }
 
         function inicializarMapa() {
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
@@ -906,31 +691,10 @@
             };
         }
 
-        function limparTextoCabecalhoRodape(texto) {
-            return texto
-                .replace(/Powered by Spoke/gi, '')
-                .replace(/\b(sex|sáb|dom|seg|ter|qua|qui)\.\s*\d{1,2}\s*de\s*[a-z]+\.?/gi, '')
-                .replace(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/g, '')
-                .replace(/Página\s*\d+\s*(de\s*\d+)?/gi, '')
-                .replace(/Relatório\s*de\s*entregas?/gi, '')
-                .replace(/Address Notes/gi, '')
-                .replace(/\s+/g, ' ')
-                .trim();
-        }
-
         function validarLinhaValida(linha) {
-            if (!linha || linha.length < 5) return false;
-            let l = linha.toLowerCase().trim();
-            
-            if (l.includes("address notes") || 
-                l.includes("endereço") || 
-                l.includes("código de rastreio") || 
-                l.includes("relatório de entrega") || 
-                l.includes("total de pacotes") ||
-                l.includes("powered by spoke") ||
-                /^(sex|sáb|dom|seg|ter|qua|qui)\.\s*\d{1,2}/.test(l)) {
-                return false;
-            }
+            if (!linha || linha.length < 6) return false;
+            let l = linha.toLowerCase();
+            if (l.includes("address notes") || l.includes("endereço") || l.includes("código de rastreio") || l.includes("relatório de entrega") || l.includes("total de pacotes")) return false;
             return true;
         }
 
@@ -940,7 +704,7 @@
             const arquivo = input.files[0];
             const nome = arquivo.name.toLowerCase();
 
-            document.getElementById('status-geocoding-topo').innerText = "Lendo e organizando sequencialmente...";
+            document.getElementById('status-geocoding-topo').innerText = "Lendo arquivo e colunas explícitas...";
 
             if (nome.endsWith('.xlsx') || nome.endsWith('.xls')) {
                 const leitor = new FileReader();
@@ -948,12 +712,16 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    
+                    // Converte planilha para Objetos JSON mapeando cabeçalhos
                     const jsonObjetos = XLSX.utils.sheet_to_json(sheet, { defval: "" });
                     
                     let itensProcessados = [];
 
                     jsonObjetos.forEach((row, idx) => {
                         let keys = Object.keys(row);
+                        
+                        // Mapeamento preciso por nome da coluna (Headers)
                         let latKey = keys.find(k => /latitude|^lat$/i.test(k.trim()));
                         let lonKey = keys.find(k => /longitude|^lon$|^lng$/i.test(k.trim()));
                         let codKey = keys.find(k => /código|codigo|rastreio|spx|tracking|pacote|tn/i.test(k.trim()));
@@ -964,8 +732,10 @@
 
                         let lat = latKey ? parseFloat(row[latKey]) : null;
                         let lon = lonKey ? parseFloat(row[lonKey]) : null;
+
                         let codigo = codKey && row[codKey] ? String(row[codKey]).trim().toUpperCase() : '';
                         
+                        // Montagem do endereço completo caso venha fragmentado
                         let partesEndereco = [];
                         if (endKey && row[endKey]) partesEndereco.push(String(row[endKey]).trim());
                         if (bairroKey && row[bairroKey]) partesEndereco.push(String(row[bairroKey]).trim());
@@ -974,9 +744,9 @@
 
                         let enderecoTexto = partesEndereco.join(', ');
 
+                        // Se o cabeçalho não foi encontrado, fallback para busca na linha bruta
                         if (!enderecoTexto) {
                             let linhaTexto = Object.values(row).join(' ');
-                            linhaTexto = limparTextoCabecalhoRodape(linhaTexto);
                             if (validarLinhaValida(linhaTexto)) {
                                 const matchCod = linhaTexto.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
                                 codigo = matchCod ? matchCod[0].toUpperCase() : `VOL-${String(idx + 1).padStart(3, '0')}`;
@@ -984,11 +754,9 @@
                             }
                         }
 
-                        enderecoTexto = limparTextoCabecalhoRodape(enderecoTexto);
-
                         if (!codigo) codigo = `VOL-${String(idx + 1).padStart(3, '0')}`;
 
-                        if (enderecoTexto.length > 3 || (!isNaN(lat) && !isNaN(lon))) {
+                        if (enderecoTexto.length > 2 || (!isNaN(lat) && !isNaN(lon))) {
                             itensProcessados.push({
                                 codigo: codigo,
                                 endereco: enderecoTexto || "Localização Exata via Coordenadas",
@@ -1006,7 +774,7 @@
                 leitor.onload = async function() {
                     try {
                         const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                        let itensExtraidos = [];
+                        let linhasExtraidas = [];
 
                         for (let i = 1; i <= pdf.numPages; i++) {
                             const page = await pdf.getPage(i);
@@ -1022,33 +790,18 @@
                             let chavesY = Object.keys(linhasPorY).sort((a,b) => b - a);
                             chavesY.forEach(y => {
                                 let textoLinha = linhasPorY[y].join(" ").trim();
-                                textoLinha = limparTextoCabecalhoRodape(textoLinha);
-
                                 if (validarLinhaValida(textoLinha)) {
-                                    const match = textoLinha.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
-                                    let cod = match ? match[0].toUpperCase() : null;
-                                    let end = match ? textoLinha.replace(match[0], '').trim() : textoLinha.trim();
-
-                                    end = limparTextoCabecalhoRodape(end);
-
-                                    if (end.length > 3) {
-                                        itensExtraidos.push({
-                                            codigo: cod,
-                                            endereco: end,
-                                            lat: null,
-                                            lon: null
-                                        });
-                                    }
+                                    linhasExtraidas.push({ texto: textoLinha });
                                 }
                             });
                         }
 
-                        let itens = itensExtraidos.map((item, idx) => ({
-                            codigo: item.codigo || `VOL-${String(idx + 1).padStart(3, '0')}`,
-                            endereco: item.endereco,
-                            lat: null,
-                            lon: null
-                        }));
+                        let itens = linhasExtraidas.map((l, idx) => {
+                            const match = l.texto.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
+                            let cod = match ? match[0].toUpperCase() : `VOL-${String(idx + 1).padStart(3, '0')}`;
+                            let end = match ? l.texto.replace(match[0], '').trim() : l.texto.trim();
+                            return { codigo: cod, endereco: end, lat: null, lon: null };
+                        });
 
                         estruturarBancoDeDados(itens);
                     } catch (err) {
@@ -1061,10 +814,9 @@
                 leitor.onload = (e) => {
                     let linhas = e.target.result.split(/\r?\n/).filter(validarLinhaValida);
                     let itens = linhas.map((linha, idx) => {
-                        let textoLimpo = limparTextoCabecalhoRodape(linha);
-                        const match = textoLimpo.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
+                        const match = linha.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
                         let cod = match ? match[0].toUpperCase() : `VOL-${String(idx + 1).padStart(3, '0')}`;
-                        let end = match ? textoLimpo.replace(match[0], '').trim() : textoLimpo.trim();
+                        let end = match ? linha.replace(match[0], '').trim() : linha.trim();
                         return { codigo: cod, endereco: end, lat: null, lon: null };
                     });
                     estruturarBancoDeDados(itens);
@@ -1081,6 +833,7 @@
                 let lat = item.lat;
                 let lon = item.lon;
 
+                // Se não veio Latitude/Longitude explícita na planilha, faz geocodificação
                 if (!lat || !lon) {
                     let coords = await buscarGeocodingBackend(item.endereco);
                     lat = coords.lat;
@@ -1103,15 +856,11 @@
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
-                document.getElementById('status-geocoding-topo').innerText = `Mapeamento concluído: ${bdRotas.length} pacotes carregados!`;
+                document.getElementById('status-geocoding-topo').innerText = `Mapeamento concluído: ${bdRotas.length} paradas no mapa!`;
+                iniciarOtimizacaoComEtapas(false);
             } else {
                 alert("Nenhuma parada válida foi identificada.");
             }
-        }
-
-        function contarPacotesNoMesmoEndereco(endereco) {
-            let endLimpo = endereco.trim().toLowerCase();
-            return bdRotas.filter(r => r.endereco.trim().toLowerCase() === endLimpo).length;
         }
 
         function renderizarLista() {
@@ -1119,8 +868,6 @@
             container.innerHTML = '';
            
             bdRotas.forEach((e, idx) => {
-                const qtdNoLocal = contarPacotesNoMesmoEndereco(e.endereco);
-
                 const card = document.createElement('div');
                 card.className = 'card-parada';
                
@@ -1128,10 +875,7 @@
                     <div class="handle-drag">☰</div>
                     <div class="badge-numero-parada" style="background:${e.status==='entregue'?'var(--cor-verde)':(e.status==='falhou'?'var(--cor-vermelho)':'var(--cor-laranja)')}">${idx + 1}</div>
                     <div class="parada-info" onclick="selecionarParadaEVerificarAgrupamento(${idx})">
-                        <div class="parada-codigo">
-                            ${e.codigo}
-                            ${qtdNoLocal > 1 ? `<span class="tag-multi">${qtdNoLocal}x Pacotes</span>` : ''}
-                        </div>
+                        <div class="parada-codigo">${e.codigo}</div>
                         <div class="parada-rua">${e.endereco}</div>
                     </div>
                     <div class="parada-acoes">
@@ -1209,6 +953,7 @@
             }
         }
 
+        /* FLUXO DE OTIMIZAÇÃO POR ETAPAS (ESTILO CIRCUIT) */
         function iniciarOtimizacaoComEtapas(fixarExtremos = false) {
             if (bdRotas.length < 2) return alert("Paradas insuficientes para otimizar.");
 
@@ -1220,10 +965,10 @@
             barra.style.width = '0%';
 
             const etapas = [
-                { text: "Analisando suas paradas...", pct: "25%", delay: 600 },
-                { text: "Encontrando a melhor ordem...", pct: "50%", delay: 700 },
-                { text: "Considerando a melhor rota...", pct: "75%", delay: 600 },
-                { text: "Finalizando otimização...", pct: "100%", delay: 500 }
+                { text: "Analisando suas paradas...", pct: "25%", delay: 700 },
+                { text: "Encontrando a melhor ordem...", pct: "50%", delay: 900 },
+                { text: "Considerando o trânsito...", pct: "75%", delay: 800 },
+                { text: "Criando sua rota...", pct: "100%", delay: 600 }
             ];
 
             let step = 0;
@@ -1244,6 +989,7 @@
             proximaEtapa();
         }
 
+        /* ALGORITMO OSRM TRIP API + ROTA TRAÇADA NA RUA */
         async function executarOtimizacaoOSRM(fixarExtremos = false) {
             let coordsStr = bdRotas.map(r => `${r.lon},${r.lat}`).join(';');
             let url = `https://router.project-osrm.org/trip/v1/driving/${coordsStr}?source=first&overview=full&geometries=geojson`;
@@ -1277,10 +1023,12 @@
                     fallbackTSPLocal(fixarExtremos);
                 }
             } catch (e) {
+                console.warn("Falha no OSRM, aplicando fallback local:", e);
                 fallbackTSPLocal(fixarExtremos);
             }
         }
 
+        /* FALLBACK LOCAL (NEAREST NEIGHBOR) */
         function fallbackTSPLocal(fixarExtremos = false) {
             let rascunho = [...bdRotas];
             let otimizado = [];
@@ -1406,8 +1154,8 @@
             let html = '';
             registros.forEach(r => {
                 html += `
-                    <div style="background:var(--bg-input); padding:12px; border-radius:10px; margin-top:10px;">
-                        <div style="font-weight:bold; color:var(--texto-principal);">Encerrado às ${r.horario}</div>
+                    <div style="background:var(--bg-dark-input); padding:12px; border-radius:10px; margin-top:10px;">
+                        <div style="font-weight:bold; color:white;">Encerrado às ${r.horario}</div>
                         <div style="font-size:13px; color:var(--texto-secundario); margin-top:4px;">
                             ✓ Entregues: <b style="color:var(--cor-verde);">${r.entregues}</b> | ✕ Falhas: <b style="color:var(--cor-vermelho);">${r.falhas}</b>
                         </div>
@@ -1440,7 +1188,6 @@
 
         function novaRota() {
             bdRotas = [];
-            listaBipados.clear();
             salvarBD();
             renderizarLista();
             atualizarContador();
@@ -1495,12 +1242,7 @@
 
         function navegarApp() {
             if (bdRotas.length === 0) return;
-            const end = encodeURIComponent(bdRotas[indexAtivo].endereco);
-            if (gpsPreferido === 'waze') {
-                window.open(`https://waze.com/ul?q=${end}&navigate=yes`, '_blank');
-            } else {
-                window.open(`https://www.google.com/maps/search/?api=1&query=${end}`, '_blank');
-            }
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bdRotas[indexAtivo].endereco)}`, '_blank');
         }
 
         function atualizarContador() {
@@ -1511,57 +1253,21 @@
             localStorage.setItem('rota_rapida_db_oficial', JSON.stringify(bdRotas));
         }
 
-        /* SCANNER ATUALIZADO */
-        function atualizarEstatisticasScanner() {
-            const total = bdRotas.length;
-            const bipados = listaBipados.size;
-            const faltam = total - bipados;
-
-            document.getElementById('scanner-topo-badge').innerText = `📦 ${bipados} de ${total}`;
-            document.getElementById('scanner-stat-bipados').innerText = bipados;
-            document.getElementById('scanner-stat-faltam').innerText = faltam;
-            document.getElementById('scanner-stat-total').innerText = total;
-        }
-
         function abrirScanner() {
-            if (bdRotas.length === 0) return alert("Carregue uma rota primeiro para utilizar o scanner.");
-            
             document.getElementById('modalScanner').style.display = 'flex';
-            atualizarEstatisticasScanner();
-
             if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
-            
             html5QrcodeScanner.start(
                 { facingMode: "environment" },
-                { fps: 15, qrbox: { width: 280, height: 180 } },
+                { fps: 15, qrbox: { width: 280, height: 150 } },
                 (textoLido) => {
-                    processarBipagem(textoLido.trim().toUpperCase());
+                    const token = textoLido.trim().toUpperCase();
+                    const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
+                    if (idx !== -1) {
+                        selecionarParadaEVerificarAgrupamento(idx);
+                        fecharScanner();
+                    }
                 }
             );
-        }
-
-        function processarBipagem(token) {
-            const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
-            
-            if (idx !== -1) {
-                const parada = bdRotas[idx];
-                listaBipados.add(parada.codigo);
-                atualizarEstatisticasScanner();
-
-                const qtdNoLocal = contarPacotesNoMesmoEndereco(parada.endereco);
-                exibirToastScanner(`Parada #${idx + 1} (${qtdNoLocal}x Pacote${qtdNoLocal > 1 ? 's' : ''})`);
-                
-                selecionarParadaEVerificarAgrupamento(idx);
-            }
-        }
-
-        function exibirToastScanner(mensagem) {
-            const toast = document.getElementById('scanner-bip-toast');
-            toast.innerText = mensagem;
-            toast.style.display = 'block';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 2000);
         }
 
         function fecharScanner() {
@@ -1574,10 +1280,11 @@
         function inserirCodigoManual() {
             let cod = prompt("Digite o código de rastreio:");
             if (cod) {
-                processarBipagem(cod.toUpperCase());
+                let idx = bdRotas.findIndex(r => r.codigo.includes(cod.toUpperCase()));
+                if (idx !== -1) selecionarParadaEVerificarAgrupamento(idx);
+                else alert("Código não encontrado na rota.");
             }
         }
     </script>
 </body>
 </html>
-
