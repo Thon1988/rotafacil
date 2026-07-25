@@ -498,13 +498,16 @@
             font-size: 14px;
         }
 
-        .scanner-btn-close {
+        .scanner-btn-top-action {
             background: rgba(255,255,255,0.2);
             color: white;
             border: none;
-            width: 36px; height: 36px;
+            width: 40px; height: 40px;
             border-radius: 50%;
             font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
         }
 
@@ -688,7 +691,6 @@
             <div class="banner-status-topo">
                 📍 <span id="status-geocoding-topo">Aguardando importação de rota...</span>
             </div>
-            <button class="btn-round-top" style="background: var(--cor-laranja); color: white;" onclick="abrirScanner()">📷</button>
         </div>
         <div id="mapa"></div>
     </div>
@@ -761,12 +763,16 @@
         </div>
     </div>
 
-    <!-- MODAL SCANNER REFORMULADO -->
+    <!-- MODAL SCANNER REFORMULADO COM BOTÕES NOS CANTOS SUPERIORES -->
     <div id="modalScanner" class="modal-overlay">
         <div class="scanner-header">
-            <button class="scanner-btn-close" onclick="fecharScanner()">✕</button>
+            <!-- Botão + para Importar no Canto Superior Esquerdo -->
+            <button class="scanner-btn-top-action" onclick="abrirSeletorArquivo()" title="Importar PDF/Arquivo">+</button>
+            
             <div class="scanner-header-badge" id="scanner-topo-badge">📦 0 de 0</div>
-            <div style="width: 36px;"></div>
+            
+            <!-- Botão Lápis no Canto Superior Direito -->
+            <button class="scanner-btn-top-action" onclick="inserirCodigoManual()" title="Digitar Código Manual">✎</button>
         </div>
 
         <div class="scanner-viewport-container">
@@ -775,30 +781,18 @@
             <div class="scanner-instruction">Aponte para o código de barras do pacote</div>
         </div>
 
-        <div class="scanner-stats-bar" style="flex-direction: column; gap: 8px;">
-            <div style="display: flex; gap: 10px; width: 100%;">
-                <div class="scanner-stat-card">
-                    <div class="scanner-stat-num" id="scanner-stat-bipados">0</div>
-                    <div class="scanner-stat-label">Bipados</div>
-                </div>
-                <div class="scanner-stat-card active">
-                    <div class="scanner-stat-num" id="scanner-stat-faltam">0</div>
-                    <div class="scanner-stat-label">Faltam</div>
-                </div>
-                <div class="scanner-stat-card">
-                    <div class="scanner-stat-num" id="scanner-stat-total">0</div>
-                    <div class="scanner-stat-label">Total Pacotes</div>
-                </div>
+        <div class="scanner-stats-bar">
+            <div class="scanner-stat-card">
+                <div class="scanner-stat-num" id="scanner-stat-bipados">0</div>
+                <div class="scanner-stat-label">Bipados</div>
             </div>
-            <div style="display: flex; gap: 10px; width: 100%;">
-                <div class="scanner-stat-card" onclick="abrirSeletorArquivo()" style="background: var(--cor-laranja); border-color: var(--cor-laranja); display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <span style="font-size: 18px;">📄</span>
-                    <div class="scanner-stat-num" style="color: white; font-size: 15px;">Importar PDF / Arquivo</div>
-                </div>
-                <div class="scanner-stat-card" onclick="inserirCodigoManual()">
-                    <div class="scanner-stat-num">✏️</div>
-                    <div class="scanner-stat-label">Digitar Código</div>
-                </div>
+            <div class="scanner-stat-card active">
+                <div class="scanner-stat-num" id="scanner-stat-faltam">0</div>
+                <div class="scanner-stat-label">Faltam</div>
+            </div>
+            <div class="scanner-stat-card">
+                <div class="scanner-stat-num" id="scanner-stat-total">0</div>
+                <div class="scanner-stat-label">Total Pacotes</div>
             </div>
         </div>
     </div>
@@ -1591,4 +1585,3 @@
     </script>
 </body>
 </html>
-
