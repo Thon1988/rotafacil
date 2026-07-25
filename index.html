@@ -995,11 +995,7 @@
                             });
                         }
 
-                        // Limpeza geral de espaços múltiplos
                         let textoUnificado = textoCompletoPaginas.replace(/\s+/g, ' ').trim();
-
-                        // O PDF agrupa as entregas. Procuramos por códigos BR ou códigos reais de rastreio/etiqueta
-                        // Exemplo: BR263830386097X seguido pelo endereço ou separado por blocos
                         let regexBlocos = /(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|\b\d{10,14}\b)/g;
                         let posicoes = [];
                         let match;
@@ -1017,7 +1013,6 @@
                             let codigo = posicoes[j].codigo;
                             let endereco = pedaco.replace(codigo, '').replace(/^[;,-\s]+|[;,-\s]+$/g, '').trim();
 
-                            // Ignorar resíduos muito curtos ou cabeçalhos
                             if (endereco.length > 5 && !endereco.toLowerCase().includes("powered by")) {
                                 itensExtraidos.push({
                                     codigo: codigo,
@@ -1028,7 +1023,6 @@
                             }
                         }
 
-                        // Se o PDF veio em um formato sem códigos BR explícitos na mesma linha, criamos uma varredura por blocos de endereço completos
                         if (itensExtraidos.length === 0) {
                             let linhasBrutas = textoUnificado.split(/(?=[A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?)/g);
                             linhasBrutas.forEach((l, idx) => {
@@ -1572,4 +1566,3 @@
     </script>
 </body>
 </html>
-
