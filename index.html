@@ -625,6 +625,11 @@
             GPS: <span id="label-gps-preferido" style="margin-left: 5px; color: var(--cor-laranja);">Google Maps</span>
         </div>
 
+        <div class="menu-item" onclick="abrirConfigurarRota(); fecharMenuLateral();">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Configurar Rota
+        </div>
+
         <div class="divisor-menu"></div>
 
         <div class="menu-item" onclick="abrirScanner(); fecharMenuLateral();">
@@ -750,6 +755,33 @@
         </div>
     </div>
 
+    <!-- MODAL CONFIGURAR ROTA -->
+    <div id="modalConfigurarRota" class="modal-overlay">
+        <div class="modal-body">
+            <h3 style="margin-top:0; color:var(--cor-laranja);">Configurar Rota</h3>
+            
+            <label style="font-size:12px; color:var(--texto-secundario);">Ponto de Partida / Início:</label>
+            <select id="configPontoPartida" class="input-dark">
+                <option value="gps">Localização Atual (GPS)</option>
+                <option value="primeira">Primeira Parada da Lista</option>
+            </select>
+
+            <label style="font-size:12px; color:var(--texto-secundario);">Retornar à Base ao Finalizar?</label>
+            <select id="configRetornoBase" class="input-dark">
+                <option value="nao">Não</option>
+                <option value="sim">Sim</option>
+            </select>
+
+            <label style="font-size:12px; color:var(--texto-secundario);">Tempo Médio por Parada (minutos):</label>
+            <input type="number" id="configTempoParada" class="input-dark" value="3" min="1" max="30">
+
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn-sheet-action" onclick="fecharConfigurarRota()">Cancelar</button>
+                <button class="btn-sheet-action destaque" onclick="salvarConfigurarRota()">Salvar Configurações</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL RESUMO -->
     <div id="modalResumo" class="modal-overlay">
         <div class="modal-body">
@@ -771,8 +803,8 @@
             
             <div class="scanner-header-badge" id="scanner-topo-badge">📦 0 de 0</div>
             
-            <!-- Botão Lápis no Canto Superior Direito -->
-            <button class="scanner-btn-top-action" onclick="inserirCodigoManual()" title="Digitar Código Manual">✎</button>
+            <!-- Botão ✕ de Fechar no Canto Superior Direito -->
+            <button class="scanner-btn-top-action" onclick="fecharScanner()" title="Fechar Scanner">✕</button>
         </div>
 
         <div class="scanner-viewport-container">
@@ -782,17 +814,17 @@
         </div>
 
         <div class="scanner-stats-bar">
-            <div class="scanner-stat-card">
-                <div class="scanner-stat-num" id="scanner-stat-bipados">0</div>
-                <div class="scanner-stat-label">Bipados</div>
+            <div class="scanner-stat-card" onclick="inserirCodigoManual()">
+                <div class="scanner-stat-num">✎</div>
+                <div class="scanner-stat-label">Digitar Código</div>
             </div>
             <div class="scanner-stat-card active">
                 <div class="scanner-stat-num" id="scanner-stat-faltam">0</div>
                 <div class="scanner-stat-label">Faltam</div>
             </div>
             <div class="scanner-stat-card">
-                <div class="scanner-stat-num" id="scanner-stat-total">0</div>
-                <div class="scanner-stat-label">Total Pacotes</div>
+                <div class="scanner-stat-num" id="scanner-stat-bipados">0</div>
+                <div class="scanner-stat-label">Bipados</div>
             </div>
         </div>
     </div>
@@ -814,6 +846,12 @@
         let historicoDias = JSON.parse(localStorage.getItem('rota_rapida_historico')) || [];
         let gpsPreferido = localStorage.getItem('rota_rapida_gps') || 'maps';
         let temaAtual = localStorage.getItem('rota_rapida_tema') || 'dark';
+        
+        let configRota = JSON.parse(localStorage.getItem('rota_rapida_config')) || {
+            pontoPartida: 'gps',
+            retornoBase: 'nao',
+            tempoParada: 3
+        };
 
         let html5QrcodeScanner = null;
         let indexAtivo = 0;
@@ -859,6 +897,36 @@
 
         function atualizarLabelGPS() {
             document.getElementById('label-gps-preferido').innerText = gpsPreferido === 'maps' ? 'Google Maps' : 'Waze';
+        }
+
+        function abrirConfigurarRota() {
+            document.getElementById('configPontoPartida').value = configRota.pontoPartida;
+            document.getElementById('configRetornoBase').value = configRota.retornoBase;
+            document.getElementById('configTempoParada').value = configRota.tempoParada;
+            document.getElementById('modalConfigurarRota').style.display = 'flex';
+        }
+
+        function fecharConfigurarRota() {
+            document.getElementById('modalConfigurarRota').style.display = 'none';
+        }
+
+        function salvarConfigurarRota() {
+            configRota.pontoPartida = document.getElementById('configPontoPartida').value;
+            configRota.retornoBase = document.getElementById('configRetornoBase').value;
+            configRota.tempoParada = parseInt(document.getElementById('configTempoParada').value) || 3;
+            localStorage.setItem('rota_rapida_config', JSON.stringify(configRota));
+            fecharConfigurarRota();
+            alert("Configurações de rota salvas com sucesso!");
+        }
+
+        function falarTexto(texto) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                let utterance = new SpeechSynthesisUtterance(texto);
+                utterance.lang = 'pt-BR';
+                utterance.rate = 1.0;
+                window.speechSynthesis.speak(utterance);
+            }
         }
 
         function inicializarMapa() {
@@ -1273,7 +1341,7 @@
                     let routeCoords = data.trips[0].geometry.coordinates.map(c => [c[1], c[0]]);
                     mapPolyline = L.polyline(routeCoords, { color: '#ff5722', weight: 4, opacity: 0.9 }).addTo(map);
 
-                    let minTotal = Math.round(data.trips[0].duration / 60);
+                    let minTotal = Math.round(data.trips[0].duration / 60) + (bdRotas.length * configRota.tempoParada);
                     let kmTotal = (data.trips[0].distance / 1000).toFixed(1);
                     document.getElementById('status-geocoding-topo').innerText = `Rota Otimizada: ${kmTotal} KM • ~${minTotal} min`;
                 } else {
@@ -1342,7 +1410,7 @@
             for (let i = 0; i < bdRotas.length - 1; i++) {
                 kmTotal += calcularDistanciaKM(bdRotas[i].lat, bdRotas[i].lon, bdRotas[i+1].lat, bdRotas[i+1].lon);
             }
-            let tempoMinutos = Math.round((kmTotal / 25) * 60 + (bdRotas.length * 3));
+            let tempoMinutos = Math.round((kmTotal / 25) * 60 + (bdRotas.length * configRota.tempoParada));
             return { km: kmTotal.toFixed(1), tempo: tempoMinutos };
         }
 
@@ -1523,7 +1591,6 @@
             document.getElementById('scanner-topo-badge').innerText = `📦 ${bipados} de ${total}`;
             document.getElementById('scanner-stat-bipados').innerText = bipados;
             document.getElementById('scanner-stat-faltam').innerText = faltam;
-            document.getElementById('scanner-stat-total').innerText = total;
         }
 
         function abrirScanner() {
@@ -1552,7 +1619,10 @@
                 atualizarEstatisticasScanner();
 
                 const qtdNoLocal = contarPacotesNoMesmoEndereco(parada.endereco);
-                exibirToastScanner(`Parada #${idx + 1} (${qtdNoLocal}x Pacote${qtdNoLocal > 1 ? 's' : ''})`);
+                const mensagemToast = `Parada #${idx + 1} (${qtdNoLocal}x Pacote${qtdNoLocal > 1 ? 's' : ''})`;
+                
+                exibirToastScanner(mensagemToast);
+                falarTexto(`Parada ${idx + 1}, ${qtdNoLocal} pacotes`);
                 
                 selecionarParadaEVerificarAgrupamento(idx);
             } else {
