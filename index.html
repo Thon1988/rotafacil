@@ -43,7 +43,7 @@
             height: 100vh;
         }
 
-        /* TELA DE MENU INICIAL (FOTO DIREITA) */
+        /* TELA DE MENU INICIAL */
         #tela-menu-inicial {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -189,6 +189,7 @@
             border: none; color: white;
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             cursor: pointer;
+            font-size: 18px;
         }
 
         .banner-status-topo {
@@ -204,6 +205,9 @@
             justify-content: center;
             gap: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* PAINEL INFERIOR (BOTTOM SHEET) */
@@ -217,24 +221,28 @@
             z-index: 2000;
             display: flex;
             flex-direction: column;
-            transition: height 0.3s ease;
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            transform: translateY(0);
         }
 
         #bottom-sheet.recolhido {
-            height: 80px !important;
+            transform: translateY(calc(100% - 75px)) !important;
         }
 
         .sheet-handle {
             width: 100%;
-            padding: 10px 0;
+            padding: 12px 0;
             display: flex;
+            flex-direction: column;
+            align-items: center;
             justify-content: center;
             cursor: pointer;
+            touch-action: none;
         }
 
         .handle-bar {
-            width: 40px; height: 5px;
-            background: #374151;
+            width: 42px; height: 5px;
+            background: #4b5563;
             border-radius: 3px;
         }
 
@@ -306,6 +314,7 @@
             color: var(--texto-secundario);
             cursor: grab;
             font-size: 18px;
+            padding: 4px;
         }
 
         .badge-numero-parada {
@@ -391,11 +400,11 @@
         /* WIDGET DE AGRUPAMENTO DE PACOTES NO MESMO ENDEREÇO */
         #widget-agrupado {
             position: absolute;
-            bottom: 90px; left: 16px; right: 16px;
+            top: 75px; left: 16px; right: 16px;
             background: var(--bg-dark-card);
             border-radius: 16px;
             padding: 14px;
-            z-index: 2500;
+            z-index: 1500;
             border: 1px solid var(--cor-laranja);
             box-shadow: 0 8px 25px rgba(0,0,0,0.5);
             display: none;
@@ -478,7 +487,7 @@
 </head>
 <body>
 
-    <!-- TELA MENU INICIAL (CORRESPONDE À SEGUNDA FOTO) -->
+    <!-- TELA MENU INICIAL -->
     <div id="tela-menu-inicial">
         <div class="header-perfil">
             <div style="text-align: left;">
@@ -510,7 +519,7 @@
             </div>
 
             <div class="card-menu" onclick="exportarRelatorioCSV()">
-                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 2-2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 <p class="card-title">Salvar Relatório</p>
                 <p class="card-desc">Exportar rota</p>
             </div>
@@ -543,7 +552,7 @@
         <div id="mapa"></div>
     </div>
 
-    <!-- WIDGET DE PACAOTES AGRUPADOS NO MESMO ENDEREÇO -->
+    <!-- WIDGET DE PACOTES AGRUPADOS NO MESMO ENDEREÇO -->
     <div id="widget-agrupado">
         <div class="agrupado-header">
             <span class="agrupado-sub">MÚLTIPLOS PACOTES NESTE LOCAL</span>
@@ -559,9 +568,9 @@
         </div>
     </div>
 
-    <!-- PAINEL INFERIOR COM A LISTA DE PARADAS (FOTO ESQUERDA) -->
+    <!-- PAINEL INFERIOR COM A LISTA DE PARADAS -->
     <div id="bottom-sheet">
-        <div class="sheet-handle" onclick="toggleBottomSheet()">
+        <div class="sheet-handle" id="handleTouch">
             <div class="handle-bar"></div>
         </div>
 
@@ -577,7 +586,7 @@
         </div>
 
         <div id="lista-paradas">
-            <!-- As paradas renderizadas via JS entrarão aqui com Drag & Drop habilitado -->
+            <!-- As paradas renderizadas via JS entrarão aqui -->
         </div>
 
         <!-- BARRA FIXA DE AÇÕES NO RODAPÉ -->
@@ -624,7 +633,6 @@
         let mapPolyline = null;
         let editIndexTarget = null;
 
-        // Variaveis de Agrupamento
         let grupoAtual = [];
         let indexAgrupadoInterno = 0;
 
@@ -633,7 +641,8 @@
         window.onload = () => {
             inicializarMapa();
             inicializarSortable();
-           
+            configurarGestoBottomSheet();
+
             if (bdRotas.length > 0) {
                 atualizarMenuInicialUI();
                 renderizarLista();
@@ -647,6 +656,10 @@
             L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap © CartoDB'
             }).addTo(map);
+
+            map.on('click', () => {
+                recolherBottomSheet();
+            });
         }
 
         function inicializarSortable() {
@@ -664,22 +677,50 @@
             });
         }
 
+        function configurarGestoBottomSheet() {
+            const sheet = document.getElementById('bottom-sheet');
+            const handle = document.getElementById('handleTouch');
+            let startY = 0;
+            let currentY = 0;
+
+            handle.addEventListener('click', () => {
+                sheet.classList.toggle('recolhido');
+            });
+
+            handle.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+            }, {passive: true});
+
+            handle.addEventListener('touchmove', (e) => {
+                currentY = e.touches[0].clientY;
+                let diff = currentY - startY;
+                if (diff > 40) {
+                    recolherBottomSheet();
+                } else if (diff < -40) {
+                    expandirBottomSheet();
+                }
+            }, {passive: true});
+        }
+
+        function recolherBottomSheet() {
+            document.getElementById('bottom-sheet').classList.add('recolhido');
+        }
+
+        function expandirBottomSheet() {
+            document.getElementById('bottom-sheet').classList.remove('recolhido');
+        }
+
         function voltarParaMenu() {
             document.getElementById('tela-menu-inicial').style.display = 'flex';
         }
 
         function irParaMapa() {
             document.getElementById('tela-menu-inicial').style.display = 'none';
-            map.invalidateSize();
+            setTimeout(() => { map.invalidateSize(); }, 300);
         }
 
         function abrirSeletorArquivo() {
             document.getElementById('arquivoPlanilha').click();
-        }
-
-        function toggleBottomSheet() {
-            const sheet = document.getElementById('bottom-sheet');
-            sheet.classList.toggle('recolhido');
         }
 
         function atualizarMenuInicialUI() {
@@ -716,7 +757,10 @@
 
                 let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
                
-                marker.on('click', () => selecionarParadaEVerificarAgrupamento(idx));
+                marker.on('click', (ev) => {
+                    L.DomEvent.stopPropagation(ev);
+                    selecionarParadaEVerificarAgrupamento(idx);
+                });
                
                 layerMarkers.push(marker);
                 bounds.push([e.lat, e.lon]);
@@ -739,7 +783,6 @@
             indexAtivo = idx;
             const alvo = bdRotas[idx];
 
-            // Busca paradas com o mesmo endereço/coordenadas aproximadas
             grupoAtual = bdRotas.filter(r => r.endereco.trim().toLowerCase() === alvo.endereco.trim().toLowerCase());
             
             if (grupoAtual.length > 1) {
@@ -749,7 +792,7 @@
                 document.getElementById('widget-agrupado').style.display = 'none';
             }
 
-            map.flyTo([alvo.lat, alvo.lon], 15, { animate: true });
+            map.flyTo([alvo.lat, alvo.lon], 16, { animate: true });
         }
 
         function exibirWidgetAgrupado() {
@@ -779,7 +822,7 @@
             const arquivo = input.files[0];
             const nomeArquivo = arquivo.name.toLowerCase();
 
-            document.getElementById('status-geocoding-topo').innerText = "Processando arquivo de rota...";
+            document.getElementById('status-geocoding-topo').innerText = "Lendo arquivo de rota...";
 
             if (nomeArquivo.endsWith('.xlsx') || nomeArquivo.endsWith('.xls')) {
                 const leitor = new FileReader();
@@ -789,14 +832,19 @@
                     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                     const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
                    
-                    let linhasTexto = [];
-                    json.forEach(row => {
+                    let entradasBrutas = [];
+                    json.forEach((row, rowIndex) => {
                         if (row && row.length > 0) {
-                            let linhaStr = row.map(cell => cell ? String(cell).trim() : "").join(" ").trim();
-                            if (linhaStr.length > 5) linhasTexto.push(linhaStr);
+                            let celulasValidas = row.filter(c => c !== null && c !== undefined && String(c).trim() !== "").map(c => String(c).trim());
+                            if (celulasValidas.length > 0) {
+                                let linhaTexto = celulasValidas.join(" ");
+                                if (linhaTexto.length > 5 && !linhaTexto.toLowerCase().includes("endereço") && !linhaTexto.toLowerCase().includes("código")) {
+                                    entradasBrutas.push(linhaTexto);
+                                }
+                            }
                         }
                     });
-                    estruturarBancoDeDados(linhasTexto.join("\n"));
+                    estruturarBancoDeDados(entradasBrutas);
                 };
                 leitor.readAsArrayBuffer(arquivo);
 
@@ -805,23 +853,41 @@
                 leitor.onload = async function() {
                     try {
                         const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                        let textoCompleto = "";
+                        let linhasExtraidas = [];
+
                         for (let i = 1; i <= pdf.numPages; i++) {
                             const page = await pdf.getPage(i);
                             const content = await page.getTextContent();
-                            let textoPagina = content.items.map(item => item.str).join(" ");
-                            textoCompleto += textoPagina + "\n";
+                            
+                            // Agrupa por posição Y na página para não fundir linhas do PDF
+                            let linhasPorY = {};
+                            content.items.forEach(item => {
+                                let y = Math.round(item.transform[5]);
+                                if (!linhasPorY[y]) linhasPorY[y] = [];
+                                linhasPorY[y].push(item.str);
+                            });
+
+                            let chavesY = Object.keys(linhasPorY).sort((a,b) => b - a);
+                            chavesY.forEach(y => {
+                                let textoLinha = linhasPorY[y].join(" ").trim();
+                                if (textoLinha.length > 5) {
+                                    linhasExtraidas.push(textoLinha);
+                                }
+                            });
                         }
-                        estruturarBancoDeDados(textoCompleto);
+                        estruturarBancoDeDados(linhasExtraidas);
                     } catch (err) {
-                        alert("Erro ao ler arquivo PDF.");
+                        alert("Erro ao ler PDF.");
                     }
                 };
                 leitor.readAsArrayBuffer(arquivo);
 
             } else {
                 const leitor = new FileReader();
-                leitor.onload = (e) => estruturarBancoDeDados(e.target.result);
+                leitor.onload = (e) => {
+                    let linhas = e.target.result.split(/\r?\n/).filter(l => l.trim().length > 5);
+                    estruturarBancoDeDados(linhas);
+                };
                 leitor.readAsText(arquivo);
             }
         }
@@ -837,29 +903,37 @@
                     const data = await response.json();
                     return { lat: data.lat, lon: data.lon };
                 }
-            } catch (e) {
-                console.log("Serviço de geocoding offline, aplicando posição fallback.");
-            }
+            } catch (e) { }
+            
             return {
                 lat: -23.5505 + (Math.random() - 0.5) * 0.05,
                 lon: -46.6333 + (Math.random() - 0.5) * 0.05
             };
         }
 
-        async function estruturarBancoDeDados(texto) {
-            const linhas = texto.split(/\r?\n/);
+        async function estruturarBancoDeDados(linhasArray) {
             bdRotas = [];
             let idCounter = 0;
            
-            for (let i = 0; i < linhas.length; i++) {
-                let linha = linhas[i];
-                if (linha.trim().length < 5) continue;
+            for (let i = 0; i < linhasArray.length; i++) {
+                let linha = linhasArray[i].trim();
+                if (linha.length < 5) continue;
 
-                const match = linha.match(/(BR\d{11}\w?)/i);
-                if (!match) continue;
+                // Regex expandido para rastrear códigos padrões (BR, NL, SP, Pacote 13 dígitos ou Alfanumérico de rastreio)
+                const match = linha.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
+                
+                let codigo = "";
+                let endereco = "";
 
-                let codigo = match[1].toUpperCase();
-                let endereco = linha.replace(new RegExp(codigo, 'i'), '').replace(/[;\t\|]+/g, ' ').trim();
+                if (match) {
+                    codigo = match[0].toUpperCase();
+                    endereco = linha.replace(match[0], '').replace(/[;\t\|]+/g, ' ').trim();
+                } else {
+                    codigo = `VOL-${String(idCounter + 1).padStart(3, '0')}`;
+                    endereco = linha.replace(/[;\t\|]+/g, ' ').trim();
+                }
+
+                if (endereco.length < 3) continue;
 
                 let coords = await buscarGeocodingBackend(endereco);
 
@@ -876,14 +950,14 @@
 
             if(bdRotas.length > 0) {
                 salvarBD();
-                document.getElementById('status-geocoding-topo').innerText = "Rota carregada com sucesso!";
+                document.getElementById('status-geocoding-topo').innerText = `Sucesso! ${bdRotas.length} paradas importadas.`;
                 atualizarMenuInicialUI();
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
                 irParaMapa();
             } else {
-                alert("Nenhum código no padrão de rastreamento foi localizado.");
+                alert("Não foi possível identificar paradas válidas no arquivo selecionado.");
             }
         }
 
@@ -899,7 +973,7 @@
                 card.innerHTML = `
                     <div class="handle-drag">☰</div>
                     <div class="badge-numero-parada">${idx + 1}</div>
-                    <div class="parada-info" onclick="selecionarParadaEVerificarAgrupamento(${idx})">
+                    <div class="parada-info" onclick="selecionarEIrParaMapa(${idx})">
                         <div class="parada-codigo">${e.codigo}</div>
                         <div class="parada-rua">${e.endereco}</div>
                     </div>
@@ -910,6 +984,11 @@
                 `;
                 container.appendChild(card);
             });
+        }
+
+        function selecionarEIrParaMapa(idx) {
+            selecionarParadaEVerificarAgrupamento(idx);
+            recolherBottomSheet();
         }
 
         function abrirModalEdit(idx) {
@@ -927,7 +1006,6 @@
                 const novoEnd = document.getElementById('inputEditEndereco').value;
                 bdRotas[editIndexTarget].endereco = novoEnd;
                 
-                // Atualiza geocoding
                 let coords = await buscarGeocodingBackend(novoEnd);
                 bdRotas[editIndexTarget].lat = coords.lat;
                 bdRotas[editIndexTarget].lon = coords.lon;
@@ -1016,7 +1094,7 @@
                     const token = textoLido.trim().toUpperCase();
                     const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
                     if (idx !== -1) {
-                        selecionarParadaEVerificarAgrupamento(idx);
+                        selecionarEIrParaMapa(idx);
                         fecharScanner();
                     }
                 }
