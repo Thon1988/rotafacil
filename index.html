@@ -160,6 +160,130 @@
             font-size: 18px;
         }
 
+        /* TELA DE FLUXO INICIAL (WIZARD ESTILO NINA) */
+        #fluxo-inicial-container {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-principal);
+            z-index: 9999999;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 16px;
+            overflow-y: auto;
+        }
+
+        .wizard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .wizard-user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .wizard-avatar {
+            width: 42px; height: 42px;
+            border-radius: 50%;
+            background: var(--bg-input);
+            overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold;
+            color: var(--cor-laranja);
+            border: 1px solid var(--border-color);
+        }
+
+        .wizard-greeting {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--texto-principal);
+            margin: 0;
+        }
+
+        .wizard-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .wizard-card-title {
+            font-size: 16px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 6px;
+            color: var(--texto-principal);
+        }
+
+        .wizard-card-desc {
+            font-size: 13px;
+            color: var(--texto-secundario);
+            text-align: center;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .wizard-upload-box {
+            background: var(--bg-input);
+            border: 2px dashed var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .wizard-upload-box:active {
+            border-color: var(--cor-laranja);
+            background: rgba(255, 87, 34, 0.05);
+        }
+
+        .wizard-upload-icon {
+            width: 44px; height: 44px;
+            background: var(--bg-card);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            color: var(--cor-laranja);
+            border: 1px solid var(--border-color);
+        }
+
+        .wizard-upload-text {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--texto-principal);
+            margin: 0;
+        }
+
+        .wizard-upload-sub {
+            font-size: 12px;
+            color: var(--texto-secundario);
+            margin: 0;
+        }
+
+        .wizard-btn-secundario {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--texto-principal);
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+            text-align: center;
+        }
+
         /* PAINEL INFERIOR (BOTTOM SHEET) */
         #bottom-sheet {
             position: absolute;
@@ -774,6 +898,89 @@
 </head>
 <body>
 
+    <!-- TELA DE FLUXO INICIAL (ESTILO NINA - PDF PRIMEIRO, DEPOIS EXCEL/CSV) -->
+    <div id="fluxo-inicial-container">
+        <div class="wizard-header">
+            <div class="wizard-user-info">
+                <div class="wizard-avatar">M</div>
+                <h1 class="wizard-greeting">Bom trabalho, Milton</h1>
+            </div>
+            <button class="btn-round-top" onclick="alternarTema()" style="width: 38px; height: 38px; font-size: 14px;">⚙️</button>
+        </div>
+
+        <!-- ETAPA 1: PDF DA ROTA -->
+        <div class="wizard-card" id="wizard-etapa-pdf">
+            <div class="wizard-card-title">Envie o PDF da rota</div>
+            <div class="wizard-card-desc">que você baixou do Spoke (Circuit)</div>
+
+            <div class="wizard-upload-box" onclick="acionarInputPdf()">
+                <div class="wizard-upload-icon">📄</div>
+                <div>
+                    <p class="wizard-upload-text">Selecionar PDF da rota</p>
+                    <p class="wizard-upload-sub">PDF do Spoke (Circuit)</p>
+                </div>
+            </div>
+            <input type="file" id="inputPdfWizard" accept=".pdf" style="display:none;" onchange="processarPdfWizard(this)">
+
+            <div class="wizard-btn-secundario" onclick="alert('Instruções: Baixe o arquivo PDF da sua rota diretamente no aplicativo Spoke/Circuit e faça o upload aqui.')">
+                ❓ Precisa de ajuda? Veja como baixar o PDF da rota
+            </div>
+        </div>
+
+        <!-- ETAPA 2: PLANILHA SPX (OCULTA INICIALMENTE) -->
+        <div class="wizard-card" id="wizard-etapa-excel" style="display: none;">
+            <div class="wizard-card-title">Inclua a planilha SPX</div>
+            <div class="wizard-card-desc">Opcional: melhora a detecção de paradas com mais de um pacote.</div>
+
+            <div class="wizard-upload-box" onclick="acionarInputExcel()">
+                <div class="wizard-upload-icon">📊</div>
+                <div>
+                    <p class="wizard-upload-text">Selecionar planilha</p>
+                    <p class="wizard-upload-sub">.csv, .xls ou .xlsx</p>
+                </div>
+            </div>
+            <input type="file" id="inputExcelWizard" accept=".csv, .xlsx, .xls" style="display:none;" onchange="processarExcelWizard(this)">
+
+            <button class="wizard-btn-secundario" style="background: var(--cor-laranja); color: white; border: none; margin-top: 12px;" onclick="pularExcelEAbrirScanner()">
+                ⚡ Pular e abrir scanner
+            </button>
+
+            <div class="wizard-btn-secundario" onclick="alert('Instruções: Baixe sua planilha SPX com os códigos de rastreio e carregue aqui para cruzar os dados.')">
+                ❓ Precisa de ajuda? Veja onde baixar a planilha SPX
+            </div>
+        </div>
+
+        <!-- ETAPA 3: RESUMO PRONTO (OCULTA INICIALMENTE) -->
+        <div class="wizard-card" id="wizard-etapa-resumo" style="display: none;">
+            <div class="wizard-card-title">Planilha incluída</div>
+            <div class="wizard-card-desc">Detecção de paradas melhorada.</div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                <div style="flex: 1; background: var(--bg-input); border-radius: 14px; padding: 14px; text-align: center; border: 1px solid var(--border-color);">
+                    <div style="font-size: 20px;">📦</div>
+                    <div style="font-size: 22px; font-weight: 900; color: var(--texto-principal); margin-top: 4px;" id="wizard-stat-pacotes">0</div>
+                    <div style="font-size: 11px; color: var(--texto-secundario); font-weight: 700;">PACOTES</div>
+                </div>
+                <div style="flex: 1; background: var(--bg-input); border-radius: 14px; padding: 14px; text-align: center; border: 1px solid var(--border-color);">
+                    <div style="font-size: 20px;">📍</div>
+                    <div style="font-size: 22px; font-weight: 900; color: var(--texto-principal); margin-top: 4px;" id="wizard-stat-paradas">0</div>
+                    <div style="font-size: 11px; color: var(--texto-secundario); font-weight: 700;">PARADAS ÚNICAS</div>
+                </div>
+            </div>
+
+            <button class="btn-sheet-action destaque" style="width: 100%; padding: 14px; font-size: 15px;" onclick="concluirWizardEAbrirApp()">
+                🚀 Abrir scanner (5s)
+            </button>
+        </div>
+
+        <!-- BOTÃO APAGAR E RECOMEÇAR -->
+        <div style="text-align: center; margin-top: auto; padding: 20px 0;">
+            <span style="font-size: 13px; color: var(--texto-secundario); cursor: pointer; text-decoration: underline;" onclick="resetarWizard()">
+                ↺ Apagar e começar de novo
+            </span>
+        </div>
+    </div>
+
     <!-- OVERLAY E MENU LATERAL -->
     <div id="menu-lateral-overlay" onclick="fecharMenuLateral()"></div>
     <div id="menu-lateral">
@@ -1093,6 +1300,9 @@
         let indexAgrupadoInterno = 0;
         let listaBipados = new Set();
 
+        // Variáveis temporárias para o fluxo inicial do Wizard
+        let dadosPdfProvisorios = [];
+
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         window.onload = () => {
@@ -1103,6 +1313,8 @@
             configurarGestoBottomSheet();
 
             if (bdRotas.length > 0) {
+                // Se já houver rota salva, oculta o wizard inicial
+                document.getElementById('fluxo-inicial-container').style.display = 'none';
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
@@ -1264,6 +1476,182 @@
                 lat: -23.5505 + (Math.random() - 0.5) * 0.02,
                 lon: -46.6333 + (Math.random() - 0.5) * 0.02
             };
+        }
+
+        /* FUNÇÕES DO WIZARD (FLUXO INICIAL EXATO SOLICITADO) */
+        function acionarInputPdf() {
+            document.getElementById('inputPdfWizard').click();
+        }
+
+        function acionarInputExcel() {
+            document.getElementById('inputExcelWizard').click();
+        }
+
+        async function processarPdfWizard(inputElement) {
+            if (inputElement.files.length === 0) return;
+            const arquivo = inputElement.files[0];
+
+            try {
+                const pdf = await pdfjsLib.getDocument(new Uint8Array(await arquivo.arrayBuffer())).promise;
+                let fullExtractedLines = [];
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    
+                    let lastY = null;
+                    let currentRowText = "";
+
+                    textContent.items.forEach(item => {
+                        const currentY = item.transform[5];
+                        if (lastY !== null && Math.abs(currentY - lastY) > 5) {
+                            fullExtractedLines.push(cleanAddressString(currentRowText));
+                            currentRowText = "";
+                        }
+                        currentRowText += " " + item.str;
+                        lastY = currentY;
+                    });
+
+                    if (currentRowText.trim() !== "") {
+                        fullExtractedLines.push(cleanAddressString(currentRowText));
+                    }
+                }
+
+                let textoUnificado = fullExtractedLines.join(" ");
+                let regexBlocos = /(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|\b\d{10,14}\b)/g;
+                let posicoes = [];
+                let match;
+
+                while ((match = regexBlocos.exec(textoUnificado)) !== null) {
+                    posicoes.push({ codigo: match[0].toUpperCase(), index: match.index });
+                }
+
+                let itensExtraidos = [];
+                for (let j = 0; j < posicoes.length; j++) {
+                    let inicio = posicoes[j].index;
+                    let fim = (j < posicoes.length - 1) ? posicoes[j + 1].index : textoUnificado.length;
+                    let pedaco = textoUnificado.substring(inicio, fim);
+
+                    let codigo = posicoes[j].codigo;
+                    let endereco = cleanAddressString(pedaco.replace(codigo, '').replace(/^[;,-\s]+|[;,-\s]+$/g, ''));
+
+                    if (endereco.length > 5 && !endereco.toLowerCase().includes("powered by")) {
+                        itensExtraidos.push({
+                            codigo: codigo,
+                            endereco: endereco,
+                            lat: null,
+                            lon: null
+                        });
+                    }
+                }
+
+                if (itensExtraidos.length === 0) {
+                    fullExtractedLines.forEach((l, idx) => {
+                        let limpo = cleanAddressString(l);
+                        if (limpo.length > 10) {
+                            let matchCod = limpo.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2})/i);
+                            let cod = matchCod ? matchCod[0].toUpperCase() : `VOL-${idx+1}`;
+                            let end = cleanAddressString(limpo.replace(cod, ''));
+                            itensExtraidos.push({ codigo: cod, endereco: end, lat: null, lon: null });
+                        }
+                    });
+                }
+
+                dadosPdfProvisorios = itensExtraidos;
+
+                // Avança para a Etapa 2 (Pedir planilha SPX)
+                document.getElementById('wizard-etapa-pdf').style.display = 'none';
+                document.getElementById('wizard-etapa-excel').style.display = 'block';
+
+            } catch (err) {
+                alert("Erro ao extrair o PDF.");
+                console.error(err);
+            }
+        }
+
+        async function processarExcelWizard(inputElement) {
+            if (inputElement.files.length === 0) return;
+            const arquivo = inputElement.files[0];
+            const leitor = new FileReader();
+
+            leitor.onload = async function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonObjetos = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                
+                let itensPlanilha = [];
+
+                jsonObjetos.forEach((row, idx) => {
+                    let keys = Object.keys(row);
+                    let latKey = keys.find(k => /latitude|^lat$/i.test(k.trim()));
+                    let lonKey = keys.find(k => /longitude|^lon$|^lng$/i.test(k.trim()));
+                    let codKey = keys.find(k => /código|codigo|rastreio|spx|tracking|pacote|tn/i.test(k.trim()));
+                    let endKey = keys.find(k => /endereço|endereco|rua|logradouro|address/i.test(k.trim()));
+                    let bairroKey = keys.find(k => /bairro/i.test(k.trim()));
+                    let cidadeKey = keys.find(k => /cidade|municipio/i.test(k.trim()));
+                    let cepKey = keys.find(k => /cep|zip/i.test(k.trim()));
+
+                    let lat = latKey ? parseFloat(row[latKey]) : null;
+                    let lon = lonKey ? parseFloat(row[lonKey]) : null;
+                    let codigo = codKey && row[codKey] ? cleanAddressString(String(row[codKey])).toUpperCase() : '';
+                    
+                    let partesEndereco = [];
+                    if (endKey && row[endKey]) partesEndereco.push(cleanAddressString(String(row[endKey])));
+                    if (bairroKey && row[bairroKey]) partesEndereco.push(cleanAddressString(String(row[bairroKey])));
+                    if (cidadeKey && row[cidadeKey]) partesEndereco.push(cleanAddressString(String(row[cidadeKey])));
+                    if (cepKey && row[cepKey]) partesEndereco.push(`CEP ${cleanAddressString(String(row[cepKey]))}`);
+
+                    let enderecoTexto = partesEndereco.join(', ');
+
+                    if (!codigo) codigo = `VOL-${String(idx + 1).padStart(3, '0')}`;
+
+                    if (enderecoTexto.length > 3 || (!isNaN(lat) && !isNaN(lon))) {
+                        itensPlanilha.push({
+                            codigo: codigo,
+                            endereco: enderecoTexto || "Localização Exata via Coordenadas",
+                            lat: (!isNaN(lat) && lat !== 0) ? lat : null,
+                            lon: (!isNaN(lon) && lon !== 0) ? lon : null
+                        });
+                    }
+                });
+
+                if (itensPlanilha.length > 0) {
+                    dadosPdfProvisorios = itensPlanilha;
+                }
+
+                await finalizarProcessamentoWizard();
+            };
+            leitor.readAsArrayBuffer(arquivo);
+        }
+
+        async function pularExcelEAbrirScanner() {
+            await finalizarProcessamentoWizard();
+        }
+
+        async function finalizarProcessamentoWizard() {
+            await estruturarBancoDeDados(dadosPdfProvisorios);
+
+            // Calcula paradas únicas
+            let paradasUnicas = new Set(bdRotas.map(r => r.endereco.trim().toLowerCase())).size;
+
+            document.getElementById('wizard-stat-pacotes').innerText = bdRotas.length;
+            document.getElementById('wizard-stat-paradas').innerText = paradasUnicas;
+
+            document.getElementById('wizard-etapa-excel').style.display = 'none';
+            document.getElementById('wizard-etapa-resumo').style.display = 'block';
+        }
+
+        function concluirWizardEAbrirApp() {
+            document.getElementById('fluxo-inicial-container').style.display = 'none';
+        }
+
+        function resetarWizard() {
+            novaRota();
+            document.getElementById('wizard-etapa-resumo').style.display = 'none';
+            document.getElementById('wizard-etapa-excel').style.display = 'none';
+            document.getElementById('wizard-etapa-pdf').style.display = 'block';
+            document.getElementById('fluxo-inicial-container').style.display = 'flex';
         }
 
         async function processarArquivoFisico() {
