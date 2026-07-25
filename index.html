@@ -339,15 +339,16 @@
 
         .btn-icon-acao {
             background: var(--bg-input);
-            border: none;
-            color: var(--texto-secundario);
-            width: 32px; height: 32px;
+            border: 1px solid var(--border-color);
+            color: var(--texto-principal);
+            width: 34px; height: 34px;
             border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
             cursor: pointer;
+            font-size: 15px;
         }
 
-        .btn-icon-acao.delete { color: var(--cor-vermelho); }
+        .btn-icon-acao.delete { color: var(--cor-vermelho); border-color: rgba(239, 68, 68, 0.3); }
 
         /* BARRA FIXA DE AÇÕES INFERIORES */
         .barra-fixa-inferior {
@@ -790,8 +791,9 @@
                 </div>
             </div>
             <div style="display: flex; gap: 10px; width: 100%;">
-                <div class="scanner-stat-card" onclick="abrirSeletorArquivo()" style="background: var(--cor-laranja); border-color: var(--cor-laranja);">
-                    <div class="scanner-stat-num" style="color: white; font-size: 16px;">📄 Abrir PDF / Arquivo</div>
+                <div class="scanner-stat-card" onclick="abrirSeletorArquivo()" style="background: var(--cor-laranja); border-color: var(--cor-laranja); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span style="font-size: 18px;">📄</span>
+                    <div class="scanner-stat-num" style="color: white; font-size: 15px;">Importar PDF / Arquivo</div>
                 </div>
                 <div class="scanner-stat-card" onclick="inserirCodigoManual()">
                     <div class="scanner-stat-num">✏️</div>
@@ -1142,8 +1144,8 @@
                         <div class="parada-rua">${e.endereco}</div>
                     </div>
                     <div class="parada-acoes">
-                        <button class="btn-icon-acao" onclick="abrirModalEdit(${idx})">✎</button>
-                        <button class="btn-icon-acao delete" onclick="excluirParada(${idx})">🗑</button>
+                        <button class="btn-icon-acao" onclick="abrirModalEdit(${idx})" title="Editar Endereço">✎</button>
+                        <button class="btn-icon-acao delete" onclick="excluirParada(${idx})" title="Excluir Parada">🗑</button>
                     </div>
                 `;
                 container.appendChild(card);
@@ -1589,3 +1591,4 @@
     </script>
 </body>
 </html>
+
