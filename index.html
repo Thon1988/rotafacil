@@ -656,8 +656,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start; /* Alinhado acima para subir o visor */
-            padding-top: 15vh; /* Joga a caixa de enquadramento bem mais para cima */
+            justify-content: flex-start;
+            padding-top: 15vh;
         }
 
         #reader {
@@ -674,7 +674,6 @@
             object-fit: cover !important;
         }
 
-        /* Sobrescreve o QRbox da biblioteca html5-qrcode para subir e estilizar */
         #reader__dashboard {
             z-index: 10 !important;
             position: relative;
@@ -697,7 +696,7 @@
             color: #ffffff;
             font-size: 14px;
             text-align: center;
-            margin-top: 180px; /* Garante que fique logo abaixo da área de leitura superior */
+            margin-top: 180px;
             font-weight: 500;
             z-index: 10;
             position: relative;
@@ -1017,7 +1016,7 @@
         </div>
     </div>
 
-    <!-- MODAL SCANNER REFORMULADO (BOTÕES DE PDF E LÁPIS POSICIONADOS MAIS ACIMA) -->
+    <!-- MODAL SCANNER REFORMULADO -->
     <div id="modalScanner" class="modal-overlay">
         <div class="scanner-header">
             <button class="scanner-btn-close" onclick="fecharScanner()">✕</button>
@@ -1032,7 +1031,6 @@
         </div>
 
         <div class="scanner-stats-bar">
-            <!-- Botões de Importar PDF e Digitar Código Liderando Acima -->
             <div style="display: flex; gap: 10px; width: 100%; margin-bottom: 4px;">
                 <div class="scanner-stat-card" onclick="abrirSeletorArquivo()" style="background: var(--cor-laranja); border-color: var(--cor-laranja); display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px;">
                     <span style="font-size: 18px;">📄</span>
@@ -1043,7 +1041,6 @@
                     <div class="scanner-stat-label" style="font-size: 12px; color: white;">Digitar</div>
                 </div>
             </div>
-            <!-- Barras Estatísticas Logo Abaixo -->
             <div style="display: flex; gap: 10px; width: 100%;">
                 <div class="scanner-stat-card">
                     <div class="scanner-stat-num" id="scanner-stat-bipados">0</div>
@@ -1079,9 +1076,8 @@
         let gpsPreferido = localStorage.getItem('rota_rapida_gps') || 'maps';
         let temaAtual = localStorage.getItem('rota_rapida_tema') || 'dark';
 
-        // Configurações de Rota padrão
         let configRotaData = JSON.parse(localStorage.getItem('rota_rapida_config')) || {
-            pontoSaida: 'primeira', // gps, manual, primeira
+            pontoSaida: 'primeira',
             voltaInicio: false,
             tempoParada: 3,
             velocidadeMedia: 30
@@ -1238,6 +1234,19 @@
         function recolherBottomSheet() { document.getElementById('bottom-sheet').classList.add('recolhido'); }
         function abrirSeletorArquivo() { document.getElementById('arquivoPlanilha').click(); }
 
+        // Função unificada de limpeza e normalização de textos/endereços (previne quebras e espaços corrompidos em PDFs)
+        function cleanAddressString(rawText) {
+            if (!rawText) return "";
+            return rawText
+                .replace(/[\r\n]+/g, " ")
+                .replace(/\s+/g, " ")
+                .replace(/ã \no/g, "ônio")
+                .replace(/Sã o Pr ó spero/g, "São Próspero")
+                .replace(/Const â ncia/g, "Constância")
+                .replace(/Ant ô nio/g, "Antonio")
+                .trim();
+        }
+
         async function buscarGeocodingBackend(endereco) {
             try {
                 let queryEnc = encodeURIComponent(endereco);
@@ -1286,13 +1295,13 @@
 
                         let lat = latKey ? parseFloat(row[latKey]) : null;
                         let lon = lonKey ? parseFloat(row[lonKey]) : null;
-                        let codigo = codKey && row[codKey] ? String(row[codKey]).trim().toUpperCase() : '';
+                        let codigo = codKey && row[codKey] ? cleanAddressString(String(row[codKey])).toUpperCase() : '';
                         
                         let partesEndereco = [];
-                        if (endKey && row[endKey]) partesEndereco.push(String(row[endKey]).trim());
-                        if (bairroKey && row[bairroKey]) partesEndereco.push(String(row[bairroKey]).trim());
-                        if (cidadeKey && row[cidadeKey]) partesEndereco.push(String(row[cidadeKey]).trim());
-                        if (cepKey && row[cepKey]) partesEndereco.push(`CEP ${String(row[cepKey]).trim()}`);
+                        if (endKey && row[endKey]) partesEndereco.push(cleanAddressString(String(row[endKey])));
+                        if (bairroKey && row[bairroKey]) partesEndereco.push(cleanAddressString(String(row[bairroKey])));
+                        if (cidadeKey && row[cidadeKey]) partesEndereco.push(cleanAddressString(String(row[cidadeKey])));
+                        if (cepKey && row[cepKey]) partesEndereco.push(`CEP ${cleanAddressString(String(row[cepKey]))}`);
 
                         let enderecoTexto = partesEndereco.join(', ');
 
@@ -1316,34 +1325,31 @@
                 leitor.onload = async function() {
                     try {
                         const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                        let textoCompletoPaginas = "";
+                        let fullExtractedLines = [];
 
                         for (let i = 1; i <= pdf.numPages; i++) {
                             const page = await pdf.getPage(i);
-                            const content = await page.getTextContent();
+                            const textContent = await page.getTextContent();
                             
-                            let items = content.items.map(item => ({
-                                str: item.str,
-                                y: Math.round(item.transform[5])
-                            }));
+                            let lastY = null;
+                            let currentRowText = "";
 
-                            let linhasPorY = {};
-                            items.forEach(item => {
-                                let chaveY = Object.keys(linhasPorY).find(y => Math.abs(parseFloat(y) - item.y) < 5);
-                                if (!chaveY) {
-                                    chaveY = item.y;
-                                    linhasPorY[chaveY] = [];
+                            textContent.items.forEach(item => {
+                                const currentY = item.transform[5];
+                                if (lastY !== null && Math.abs(currentY - lastY) > 5) {
+                                    fullExtractedLines.push(cleanAddressString(currentRowText));
+                                    currentRowText = "";
                                 }
-                                linhasPorY[chaveY].push(item.str);
+                                currentRowText += " " + item.str;
+                                lastY = currentY;
                             });
 
-                            let chavesY = Object.keys(linhasPorY).sort((a,b) => b - a);
-                            chavesY.forEach(y => {
-                                textoCompletoPaginas += " " + linhasPorY[y].join(" ");
-                            });
+                            if (currentRowText.trim() !== "") {
+                                fullExtractedLines.push(cleanAddressString(currentRowText));
+                            }
                         }
 
-                        let textoUnificado = textoCompletoPaginas.replace(/\s+/g, ' ').trim();
+                        let textoUnificado = fullExtractedLines.join(" ");
                         let regexBlocos = /(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|\b\d{10,14}\b)/g;
                         let posicoes = [];
                         let match;
@@ -1359,12 +1365,12 @@
                             let pedaco = textoUnificado.substring(inicio, fim);
 
                             let codigo = posicoes[j].codigo;
-                            let endereco = pedaco.replace(codigo, '').replace(/^[;,-\s]+|[;,-\s]+$/g, '').trim();
+                            let endereco = cleanAddressString(pedaco.replace(codigo, '').replace(/^[;,-\s]+|[;,-\s]+$/g, ''));
 
                             if (endereco.length > 5 && !endereco.toLowerCase().includes("powered by")) {
                                 itensExtraidos.push({
                                     codigo: codigo,
-                                    endereco: endereco.replace(/\s+/g, ' '),
+                                    endereco: endereco,
                                     lat: null,
                                     lon: null
                                 });
@@ -1372,13 +1378,12 @@
                         }
 
                         if (itensExtraidos.length === 0) {
-                            let linhasBrutas = textoUnificado.split(/(?=[A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?)/g);
-                            linhasBrutas.forEach((l, idx) => {
-                                let limpo = l.trim();
+                            fullExtractedLines.forEach((l, idx) => {
+                                let limpo = cleanAddressString(l);
                                 if (limpo.length > 10) {
                                     let matchCod = limpo.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2})/i);
                                     let cod = matchCod ? matchCod[0].toUpperCase() : `VOL-${idx+1}`;
-                                    let end = limpo.replace(cod, '').trim();
+                                    let end = cleanAddressString(limpo.replace(cod, ''));
                                     itensExtraidos.push({ codigo: cod, endereco: end, lat: null, lon: null });
                                 }
                             });
@@ -1398,7 +1403,7 @@
                     let itens = linhas.map((linha, idx) => {
                         const match = linha.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
                         let cod = match ? match[0].toUpperCase() : `VOL-${String(idx + 1).padStart(3, '0')}`;
-                        let end = match ? linha.replace(match[0], '').trim() : linha.trim();
+                        let end = cleanAddressString(match ? linha.replace(match[0], '') : linha);
                         return { codigo: cod, endereco: end, lat: null, lon: null };
                     });
                     estruturarBancoDeDados(itens);
@@ -1776,7 +1781,7 @@
 
         async function salvarEdicaoEndereco() {
             if (editIndexTarget !== null) {
-                const novoEnd = document.getElementById('inputEditEndereco').value;
+                const novoEnd = cleanAddressString(document.getElementById('inputEditEndereco').value);
                 bdRotas[editIndexTarget].endereco = novoEnd;
                 let coords = await buscarGeocodingBackend(novoEnd);
                 bdRotas[editIndexTarget].lat = coords.lat;
@@ -1807,7 +1812,6 @@
             localStorage.setItem('rota_rapida_db_oficial', JSON.stringify(bdRotas));
         }
 
-        /* SCANNER ATUALIZADO */
         function atualizarEstatisticasScanner() {
             const total = bdRotas.length;
             const bipados = listaBipados.size;
