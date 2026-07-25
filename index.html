@@ -44,7 +44,7 @@
             height: 100vh;
         }
 
-        /* DRAWER / MENU LATERAL COMPLETO (IDENTICO À IMAGEM) */
+        /* DRAWER / MENU LATERAL COMPLETO */
         #menu-lateral-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -419,6 +419,21 @@
             font-size: 12px;
             box-shadow: 0 3px 6px rgba(0,0,0,0.4);
         }
+
+        /* ESTILO DA ANIMAÇÃO DE PROCESSAMENTO DO CIRCUIT */
+        .spinner-circuit {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255, 87, 34, 0.2);
+            border-top: 5px solid var(--cor-laranja);
+            border-radius: 50%;
+            animation: spinCircuit 1s linear infinite;
+        }
+
+        @keyframes spinCircuit {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -445,12 +460,12 @@
 
         <div class="divisor-menu"></div>
 
-        <div class="menu-item" onclick="executarOtimizacaoTSP(false); fecharMenuLateral();">
+        <div class="menu-item" onclick="iniciarOtimizacaoComEtapas(false); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             Roteirizar (TSP)
         </div>
 
-        <div class="menu-item" onclick="executarOtimizacaoTSP(true); fecharMenuLateral();">
+        <div class="menu-item" onclick="iniciarOtimizacaoComEtapas(true); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg>
             Reotimizar (fixar 1ª e última)
         </div>
@@ -530,8 +545,8 @@
         </div>
 
         <div class="sheet-actions-row">
-            <button class="btn-sheet-action destaque" onclick="executarOtimizacaoTSP(false)">⚡ Roteirizar</button>
-            <button class="btn-sheet-action" onclick="executarOtimizacaoTSP(true)">🔀 Reotimizar</button>
+            <button class="btn-sheet-action destaque" onclick="iniciarOtimizacaoComEtapas(false)">⚡ Roteirizar</button>
+            <button class="btn-sheet-action" onclick="iniciarOtimizacaoComEtapas(true)">🔀 Reotimizar</button>
             <button class="btn-sheet-action" onclick="abrirSeletorArquivo()">📄 Importar</button>
             <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="display:none;" onchange="processarArquivoFisico()">
         </div>
@@ -574,6 +589,18 @@
     <div id="modalScanner" class="modal-overlay">
         <button onclick="fecharScanner()" style="padding: 12px; margin-bottom: 20px; background: var(--cor-vermelho); color: white; border: none; border-radius: 8px; font-size: 16px; width: 100%; max-width: 400px; font-weight: bold;">✕ Fechar Scanner</button>
         <div id="reader" style="width: 100%; max-width: 400px; background: #000; border-radius: 12px; overflow: hidden;"></div>
+    </div>
+
+    <!-- MODAL OTIMIZAÇÃO POR ETAPAS (FLUXO CIRCUIT) -->
+    <div id="modalOtimizacaoEtapas" class="modal-overlay">
+        <div class="modal-body text-center" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div class="spinner-circuit" style="margin-bottom: 20px;"></div>
+            <h3 style="margin: 0 0 10px 0; color: white;">Otimizando sua rota</h3>
+            <p id="textoStatusEtapa" style="color: var(--cor-laranja); font-weight: bold; font-size: 14px; margin-bottom: 20px;">Analisando suas paradas...</p>
+            <div style="width: 100%; background: var(--bg-dark-input); height: 8px; border-radius: 4px; overflow: hidden;">
+                <div id="barraProgressoEtapa" style="width: 0%; background: var(--cor-laranja); height: 100%; transition: width 0.4s ease;"></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -692,7 +719,7 @@
                         if (row && row.length > 0) {
                             let celulas = row.filter(c => c !== null && c !== undefined && String(c).trim() !== "").map(c => String(c).trim());
                             let texto = celulas.join(" ");
-                            if (validarLinhaValida(texto)) linhasBrutas.push(texto);
+                            if (validarLinhaValida(texto)) linhasBrutas.push({ texto: texto, rowData: row });
                         }
                     });
                     estruturarBancoDeDados(linhasBrutas);
@@ -720,7 +747,7 @@
                             chavesY.forEach(y => {
                                 let textoLinha = linhasPorY[y].join(" ").trim();
                                 if (validarLinhaValida(textoLinha)) {
-                                    linhasExtraidas.push(textoLinha);
+                                    linhasExtraidas.push({ texto: textoLinha });
                                 }
                             });
                         }
@@ -733,7 +760,7 @@
             } else {
                 const leitor = new FileReader();
                 leitor.onload = (e) => {
-                    let linhas = e.target.result.split(/\r?\n/).filter(validarLinhaValida);
+                    let linhas = e.target.result.split(/\r?\n/).filter(validarLinhaValida).map(l => ({ texto: l }));
                     estruturarBancoDeDados(linhas);
                 };
                 leitor.readAsText(arquivo);
@@ -743,7 +770,8 @@
         async function estruturarBancoDeDados(linhasArray) {
             bdRotas = [];
             for (let i = 0; i < linhasArray.length; i++) {
-                let linha = linhasArray[i].trim();
+                let itemObj = linhasArray[i];
+                let linha = itemObj.texto.trim();
 
                 const match = linha.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
                 
@@ -752,7 +780,26 @@
 
                 if (endereco.length < 3) continue;
 
-                let coords = await buscarGeocodingBackend(endereco);
+                // Captura direta de Latitude / Longitude do arquivo (caso existam)
+                let latExtraida = null;
+                let lonExtraida = null;
+
+                if (itemObj.rowData) {
+                    itemObj.rowData.forEach(val => {
+                        let num = parseFloat(val);
+                        if (!isNaN(num)) {
+                            if (num < -1 && num > -35 && !latExtraida) latExtraida = num;
+                            else if (num < -30 && num > -75 && !lonExtraida) lonExtraida = num;
+                        }
+                    });
+                }
+
+                let coords;
+                if (latExtraida && lonExtraida) {
+                    coords = { lat: latExtraida, lon: lonExtraida };
+                } else {
+                    coords = await buscarGeocodingBackend(endereco);
+                }
 
                 bdRotas.push({
                     id: i + 1,
@@ -771,6 +818,7 @@
                 atualizarContador();
                 plotarNoMapa();
                 document.getElementById('status-geocoding-topo').innerText = `Sucesso! ${bdRotas.length} paradas importadas.`;
+                iniciarOtimizacaoComEtapas(false);
             } else {
                 alert("Nenhuma parada válida identificada.");
             }
@@ -841,11 +889,10 @@
         function plotarNoMapa() {
             layerMarkers.forEach(m => map.removeLayer(m));
             layerMarkers = [];
-            if (mapPolyline) map.removeLayer(mapPolyline);
 
             if (bdRotas.length === 0) return;
 
-            let bounds = [], latlngs = [];
+            let bounds = [];
             bdRotas.forEach((e, idx) => {
                 let cor = e.status === 'pendente' ? 'var(--cor-laranja)' : (e.status === 'entregue' ? 'var(--cor-verde)' : 'var(--cor-vermelho)');
                 let customIcon = L.divIcon({
@@ -860,27 +907,91 @@
                 
                 layerMarkers.push(marker);
                 bounds.push([e.lat, e.lon]);
-                latlngs.push([e.lat, e.lon]);
             });
 
-            if (latlngs.length > 1) {
-                mapPolyline = L.polyline(latlngs, {color: '#3b82f6', weight: 3}).addTo(map);
+            if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [40, 40] });
             }
-            map.fitBounds(bounds, { padding: [40, 40] });
         }
 
-        function inverterOrdemParadas() {
-            if (bdRotas.length < 2) return alert("Paradas insuficientes para inverter.");
-            bdRotas.reverse();
-            salvarBD();
-            renderizarLista();
-            plotarNoMapa();
-            alert("Ordem das paradas invertida!");
+        /* FLUXO DE OTIMIZAÇÃO POR ETAPAS (ESTILO CIRCUIT) */
+        function iniciarOtimizacaoComEtapas(fixarExtremos = false) {
+            if (bdRotas.length < 2) return alert("Paradas insuficientes para otimizar.");
+
+            const modal = document.getElementById('modalOtimizacaoEtapas');
+            const textoStatus = document.getElementById('textoStatusEtapa');
+            const barra = document.getElementById('barraProgressoEtapa');
+
+            modal.style.display = 'flex';
+            barra.style.width = '0%';
+
+            const etapas = [
+                { text: "Analisando suas paradas...", pct: "25%", delay: 700 },
+                { text: "Encontrando a melhor ordem...", pct: "50%", delay: 900 },
+                { text: "Considerando o trânsito...", pct: "75%", delay: 800 },
+                { text: "Criando sua rota...", pct: "100%", delay: 600 }
+            ];
+
+            let step = 0;
+            function proximaEtapa() {
+                if (step < etapas.length) {
+                    textoStatus.innerText = etapas[step].text;
+                    barra.style.width = etapas[step].pct;
+                    setTimeout(() => {
+                        step++;
+                        proximaEtapa();
+                    }, etapas[step].delay);
+                } else {
+                    modal.style.display = 'none';
+                    executarOtimizacaoOSRM(fixarExtremos);
+                }
+            }
+
+            proximaEtapa();
         }
 
-        function executarOtimizacaoTSP(fixarExtremos = false) {
-            if (bdRotas.length <= 2) return alert("Paradas insuficientes para otimizar.");
+        /* ALGORITMO OSRM TRIP API + ROTA TRAÇADA NA RUA */
+        async function executarOtimizacaoOSRM(fixarExtremos = false) {
+            let coordsStr = bdRotas.map(r => `${r.lon},${r.lat}`).join(';');
+            let url = `https://router.project-osrm.org/trip/v1/driving/${coordsStr}?source=first&overview=full&geometries=geojson`;
 
+            try {
+                let response = await fetch(url);
+                let data = await response.json();
+
+                if (data.code === 'Ok' && data.waypoint_order) {
+                    let otimizado = data.waypoint_order.map(orderIdx => bdRotas[orderIdx]);
+                    
+                    if (fixarExtremos && otimizado.length > 2) {
+                        let ultimaOriginal = bdRotas[bdRotas.length - 1];
+                        otimizado = otimizado.filter(r => r.codigo !== ultimaOriginal.codigo);
+                        otimizado.push(ultimaOriginal);
+                    }
+
+                    bdRotas = otimizado;
+                    salvarBD();
+                    renderizarLista();
+                    plotarNoMapa();
+
+                    // Desenhar caminho pelas ruas no mapa
+                    if (mapPolyline) map.removeLayer(mapPolyline);
+                    let routeCoords = data.trips[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    mapPolyline = L.polyline(routeCoords, { color: '#ff5722', weight: 4, opacity: 0.9 }).addTo(map);
+
+                    let minTotal = Math.round(data.trips[0].duration / 60);
+                    let kmTotal = (data.trips[0].distance / 1000).toFixed(1);
+                    document.getElementById('status-geocoding-topo').innerText = `Rota Otimizada: ${kmTotal} KM • ~${minTotal} min`;
+                } else {
+                    fallbackTSPLocal(fixarExtremos);
+                }
+            } catch (e) {
+                console.warn("Falha no OSRM, aplicando fallback local:", e);
+                fallbackTSPLocal(fixarExtremos);
+            }
+        }
+
+        /* FALLBACK LOCAL (NEAREST NEIGHBOR) */
+        function fallbackTSPLocal(fixarExtremos = false) {
             let rascunho = [...bdRotas];
             let otimizado = [];
 
@@ -917,8 +1028,12 @@
             renderizarLista();
             plotarNoMapa();
 
+            if (mapPolyline) map.removeLayer(mapPolyline);
+            let latlngs = bdRotas.map(r => [r.lat, r.lon]);
+            mapPolyline = L.polyline(latlngs, { color: '#ff5722', weight: 3 }).addTo(map);
+
             let stats = calcularKMeTempoTotal();
-            document.getElementById('status-geocoding-topo').innerText = `Rota Otimizada: ${stats.km} KM • ~${stats.tempo} min`;
+            document.getElementById('status-geocoding-topo').innerText = `Rota Otimizada (Local): ${stats.km} KM • ~${stats.tempo} min`;
         }
 
         function calcularDistanciaKM(lat1, lon1, lat2, lon2) {
@@ -936,6 +1051,15 @@
             }
             let tempoMinutos = Math.round((kmTotal / 25) * 60 + (bdRotas.length * 3));
             return { km: kmTotal.toFixed(1), tempo: tempoMinutos };
+        }
+
+        function inverterOrdemParadas() {
+            if (bdRotas.length < 2) return alert("Paradas insuficientes para inverter.");
+            bdRotas.reverse();
+            salvarBD();
+            renderizarLista();
+            plotarNoMapa();
+            alert("Ordem das paradas invertida!");
         }
 
         function exportarRelatorioCSV() {
@@ -1030,6 +1154,7 @@
             renderizarLista();
             atualizarContador();
             plotarNoMapa();
+            if (mapPolyline) map.removeLayer(mapPolyline);
             document.getElementById('status-geocoding-topo').innerText = "Aguardando importação de rota...";
             document.getElementById('widget-agrupado').style.display = 'none';
         }
