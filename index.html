@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -513,19 +512,42 @@
             }
         }
 
-        function estruturarBancoDeDados(texto) {
+        async function buscarGeocodingBackend(endereco) {
+            try {
+                const response = await fetch('/geocode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address: endereco })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    return { lat: data.lat, lon: data.lon };
+                }
+            } catch (e) {
+                console.log("Serviço de geocoding indisponível, usando fallback de proximidade.", e);
+            }
+            return {
+                lat: -23.5505 + (Math.random() - 0.5) * 0.05,
+                lon: -46.6333 + (Math.random() - 0.5) * 0.05
+            };
+        }
+
+        async function estruturarBancoDeDados(texto) {
             const linhas = texto.split(/\r?\n/);
             let idCounter = 0;
             bdRotas = [];
            
-            linhas.forEach((linha) => {
-                if (linha.trim().length < 5) return;
+            for (let i = 0; i < linhas.length; i++) {
+                let linha = linhas[i];
+                if (linha.trim().length < 5) continue;
 
-                const match = inline = linha.match(/(BR\d{11})/i);
-                if (!match) return;
+                const match = linha.match(/(BR\d{11})/i);
+                if (!match) continue;
 
                 let codigo = match[1].toUpperCase();
                 let endereco = linha.replace(new RegExp(codigo, 'i'), '').replace(/[;\t\|]+/g, ' ').trim();
+
+                let coords = await buscarGeocodingBackend(endereco);
 
                 bdRotas.push({
                     id: idCounter++,
@@ -533,10 +555,10 @@
                     endereco: endereco,
                     status: 'pendente',
                     timestamp: null,
-                    lat: -23.55 + (Math.random() - 0.5) * 0.15,
-                    lon: -46.63 + (Math.random() - 0.5) * 0.15
+                    lat: coords.lat,
+                    lon: coords.lon
                 });
-            });
+            }
 
             if(bdRotas.length > 0) {
                 salvarBD();
@@ -635,7 +657,7 @@
             window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`, '_blank');
         }
 
-        function ejecutarOtimizacaoTSP() {
+        function executarOtimizacaoTSP() {
             toggleMenu();
             if(bdRotas.length <= 2) return alert("Quantidade de paradas insuficiente.");
            
