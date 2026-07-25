@@ -3,360 +3,639 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rota Fácil</title>
+    <title>Rota+Rápida</title>
    
+    <!-- Bibliotecas Necessárias -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
    
+    <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
    
     <style>
         :root {
-            --cor-laranja: #ea580c;
-            --cor-verde: #16a34a;
-            --cor-vermelho: #dc2626;
-            --bg-escuro: #1c1c1e;
-            --bg-botoes: #232733;
-            --cor-azul-rota: #3b82f6;
+            --cor-laranja: #ff5722;
+            --cor-laranja-hover: #e64a19;
+            --cor-verde: #10b981;
+            --cor-vermelho: #ef4444;
+            --bg-dark-principal: #0f131a;
+            --bg-dark-card: #1a202c;
+            --bg-dark-input: #2d3748;
+            --texto-principal: #ffffff;
+            --texto-secundario: #9ca3af;
         }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f9;
+            background-color: var(--bg-dark-principal);
+            color: var(--texto-principal);
             overflow: hidden;
+            height: 100vh;
         }
 
-        #tela-setup {
-            position: absolute;
+        /* TELA DE MENU INICIAL (FOTO DIREITA) */
+        #tela-menu-inicial {
+            position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: white;
+            background: var(--bg-dark-principal);
             z-index: 99999;
-            padding: 20px;
+            padding: 24px 16px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
+            overflow-y: auto;
         }
-        .btn-upload {
+
+        .header-perfil {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .btn-logout {
+            background: #232a3b;
+            border: none;
+            color: var(--texto-secundario);
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+        }
+
+        .logo-circulo {
+            width: 90px; height: 90px;
+            background: var(--cor-laranja);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 10px 0 15px 0;
+            box-shadow: 0 4px 20px rgba(255, 87, 34, 0.4);
+        }
+
+        .logo-circulo svg {
+            width: 45px; height: 45px; fill: white;
+        }
+
+        .titulo-app {
+            font-size: 28px;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitulo-app {
+            color: var(--texto-secundario);
+            font-size: 14px;
+            margin: 6px 0 20px 0;
+        }
+
+        .badge-status-rota {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--cor-verde);
+            color: var(--cor-verde);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 25px;
+        }
+
+        .grid-menu {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+            max-width: 450px;
+            margin-bottom: 20px;
+        }
+
+        .card-menu {
+            background: var(--bg-dark-card);
+            border: 1px dashed rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 18px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            cursor: pointer;
+            text-align: left;
+            position: relative;
+        }
+
+        .card-menu svg {
+            width: 28px; height: 28px; stroke: var(--cor-laranja); fill: none; stroke-width: 2;
+        }
+
+        .card-title {
+            font-size: 15px; font-weight: 700; color: white; margin: 0;
+        }
+
+        .card-desc {
+            font-size: 12px; color: var(--texto-secundario); margin: 0;
+        }
+
+        .btn-assinatura {
+            width: 100%;
+            max-width: 450px;
             background: var(--cor-laranja);
             color: white;
             border: none;
             padding: 16px;
-            border-radius: 8px;
+            border-radius: 14px;
             font-size: 16px;
-            font-weight: bold;
-            width: 100%;
-            max-width: 400px;
+            font-weight: 700;
             cursor: pointer;
-            margin-top: 20px;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(255, 87, 34, 0.3);
         }
 
+        /* CONTAINER MAPA E NAVEGAÇÃO */
         #mapa-container {
             position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 50vh;
-            background: #e5e3df;
+            top: 0; left: 0; right: 0; bottom: 0;
             z-index: 1;
         }
-        #mapa {
-            width: 100%;
-            height: 100%;
-        }
+        #mapa { width: 100%; height: 100%; }
 
-        .marker-pin {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            border: 2px solid white;
-            color: white;
-            font-weight: bold;
-            font-size: 13px;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
-        }
-
-        .btn-menu {
+        .top-bar-overlay {
             position: absolute;
-            top: 20px; left: 20px;
-            width: 45px; height: 45px;
-            background: white;
-            border-radius: 50%;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            border: none;
-            cursor: pointer;
+            top: 15px; left: 15px; right: 15px;
             z-index: 1000;
-            color: #333;
-        }
-
-        #menu-opcoes {
-            display: none;
-            position: absolute;
-            top: 75px; left: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            z-index: 2000;
-            flex-direction: column;
-            width: 260px;
-            overflow: hidden;
-        }
-        .menu-item {
-            padding: 16px 20px;
-            font-size: 15px;
-            font-weight: bold;
-            color: #333;
-            border-bottom: 1px solid #f0f0f0;
-            cursor: pointer;
             display: flex;
+            gap: 10px;
             align-items: center;
-            gap: 12px;
-            background: none;
-            border-left: none; border-right: none; border-top: none;
-            text-align: left;
-            width: 100%;
         }
 
-        #bottom-sheet {
-            position: absolute;
-            top: 40vh;
-            bottom: 165px;
-            left: 0; right: 0;
-            background: white;
-            border-radius: 20px 20px 0 0;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
-            padding: 20px 15px;
-            overflow-y: auto;
-            z-index: 10;
-        }
-        .titulo-passo2 {
-            color: #d35400;
-            text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-            margin: 0 0 15px 0;
-        }
-
-        .item-lista {
-            border-bottom: 1px solid #eee;
-            padding: 12px 0;
+        .btn-round-top {
+            width: 45px; height: 45px;
+            background: #1a202c;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            border: none; color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             cursor: pointer;
         }
-        .item-lista.concluido { opacity: 0.5; }
-        .item-topo {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: bold;
-            font-size: 15px;
-        }
-        .parada-titulo { color: #d35400; }
-        .parada-codigo { color: #d35400; font-size: 14px; }
-        .parada-endereco {
-            color: #444;
-            font-size: 14px;
-            margin-top: 6px;
-        }
 
-        #widget-escuro {
-            position: absolute;
-            bottom: 175px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 380px;
-            background: var(--bg-escuro);
-            color: white;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-            z-index: 20;
-            display: none;
-            box-sizing: border-box;
-        }
-        .widget-controls { position: absolute; top: 5px; right: 10px; display: flex; gap: 10px; }
-        .btn-ctrl { background: none; border: none; color: #aaa; cursor: pointer; font-size: 16px; font-weight: bold; padding: 5px; }
-
-        .w-topo { display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-bottom: 8px;}
-        .w-badge { background: var(--cor-azul-rota); color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-        .w-rua { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; }
-        .w-sub { font-size: 13px; color: #888; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        #barra-acoes-inferior {
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 165px;
-            background: white;
-            padding: 10px 15px;
-            box-sizing: border-box;
-            z-index: 30;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .banner-laranja {
+        .banner-status-topo {
+            flex: 1;
             background: var(--cor-laranja);
             color: white;
-            border-radius: 8px;
-            padding: 12px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 15px;
+            border-radius: 25px;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 700;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
-        .texto-status {
-            text-align: center;
-            color: var(--cor-verde);
-            font-weight: bold;
-            font-size: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-        }
-
-        .linha-3-botoes {
-            display: flex;
-            gap: 10px;
-            width: 100%;
-        }
-        .btn-acao-dark {
-            flex: 1;
-            background: var(--bg-botoes);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 5px;
-            font-size: 12px;
-            font-weight: bold;
+        /* PAINEL INFERIOR (BOTTOM SHEET) */
+        #bottom-sheet {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 60vh;
+            background: var(--bg-dark-principal);
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -8px 30px rgba(0,0,0,0.6);
+            z-index: 2000;
             display: flex;
             flex-direction: column;
+            transition: height 0.3s ease;
+        }
+
+        #bottom-sheet.recolhido {
+            height: 80px !important;
+        }
+
+        .sheet-handle {
+            width: 100%;
+            padding: 10px 0;
+            display: flex;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .handle-bar {
+            width: 40px; height: 5px;
+            background: #374151;
+            border-radius: 3px;
+        }
+
+        .sheet-header {
+            padding: 0 16px 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sheet-title {
+            font-size: 20px; font-weight: 800; margin: 0;
+        }
+
+        .badge-restantes {
+            background: var(--cor-laranja);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .sheet-actions-row {
+            display: flex;
+            gap: 8px;
+            padding: 0 16px 12px 16px;
+        }
+
+        .btn-sheet-action {
+            flex: 1;
+            background: var(--bg-dark-card);
+            border: 1px solid rgba(255,255,255,0.05);
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
             cursor: pointer;
         }
-        .btn-acao-dark svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; }
-        .btn-acao-dark .icone-verde { stroke: var(--cor-verde); }
-        .btn-acao-dark .icone-vermelho { stroke: var(--cor-vermelho); }
 
-        #modalScanner {
+        .btn-sheet-action.destaque {
+            background: var(--cor-laranja);
+        }
+
+        /* LISTA DE PARADAS COM DRAG/DROP */
+        #lista-paradas {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 16px 100px 16px;
+        }
+
+        .card-parada {
+            background: var(--bg-dark-card);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .handle-drag {
+            color: var(--texto-secundario);
+            cursor: grab;
+            font-size: 18px;
+        }
+
+        .badge-numero-parada {
+            width: 32px; height: 32px;
+            background: var(--cor-laranja);
+            color: white;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .parada-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .parada-codigo {
+            color: var(--cor-laranja);
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .parada-rua {
+            font-size: 13px;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin: 0;
+        }
+
+        .parada-acoes {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-icon-acao {
+            background: #27303f;
+            border: none;
+            color: var(--texto-secundario);
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+        }
+
+        .btn-icon-acao.delete { color: var(--cor-vermelho); }
+
+        /* BARRA FIXA DE AÇÕES INFERIORES */
+        .barra-fixa-inferior {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: var(--bg-dark-principal);
+            padding: 12px 16px 20px 16px;
+            display: flex;
+            gap: 10px;
+            z-index: 3000;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .btn-inferior-acao {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            font-size: 14px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            color: white;
+        }
+
+        .btn-inferior-navegar { background: #1e293b; }
+        .btn-inferior-falhou { background: var(--cor-vermelho); }
+        .btn-inferior-entregue { background: var(--cor-verde); }
+
+        /* WIDGET DE AGRUPAMENTO DE PACOTES NO MESMO ENDEREÇO */
+        #widget-agrupado {
+            position: absolute;
+            bottom: 90px; left: 16px; right: 16px;
+            background: var(--bg-dark-card);
+            border-radius: 16px;
+            padding: 14px;
+            z-index: 2500;
+            border: 1px solid var(--cor-laranja);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            display: none;
+        }
+
+        .agrupado-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .agrupado-sub {
+            font-size: 12px; color: var(--cor-laranja); font-weight: 700;
+        }
+
+        .carrossel-controles {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-carrossel {
+            background: var(--cor-laranja);
+            border: none;
+            color: white;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* MODAIS */
+        #modalScanner, #modalEdit {
             display: none;
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.95);
+            background: rgba(0,0,0,0.9);
             z-index: 999999;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 20px;
         }
+
+        .modal-body {
+            background: var(--bg-dark-card);
+            padding: 20px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .input-dark {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-dark-input);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 8px;
+            margin: 10px 0 20px 0;
+            font-size: 14px;
+        }
+
+        /* PINS PERSONALIZADOS */
+        .marker-pin-custom {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            border: 2px solid white;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+        }
     </style>
 </head>
 <body>
 
-    <div id="tela-setup">
-        <h1 style="color: #ea580c;">📦 Rota Fácil</h1>
-        <p style="color: #666; text-align: center;">Carregue sua lista de entregas (PDF, Excel, CSV ou TXT).</p>
-       
-        <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="width: 100%; max-width: 400px; padding: 15px; border: 2px dashed #ea580c; border-radius: 8px; margin-top: 20px; background: #fff5f0;">
-       
-        <button class="btn-upload" onclick="processarArquivoFisico()">Processar Rota Ativa</button>
+    <!-- TELA MENU INICIAL (CORRESPONDE À SEGUNDA FOTO) -->
+    <div id="tela-menu-inicial">
+        <div class="header-perfil">
+            <div style="text-align: left;">
+                <span style="font-size: 12px; color: var(--texto-secundario);">Olá,</span>
+                <div style="font-size: 18px; font-weight: bold;">Motorista</div>
+            </div>
+            <button class="btn-logout">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+        </div>
+
+        <div class="logo-circulo">
+            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+
+        <h1 class="titulo-app">Rota+Rápida</h1>
+        <p class="subtitulo-app">Bipe, ouça a parada e entregue.</p>
+
+        <div class="badge-status-rota" id="badge-status-menu">
+            <span id="dot-status">●</span> <span id="texto-status-menu">Nenhuma rota carregada</span>
+        </div>
+
+        <div class="grid-menu">
+            <div class="card-menu" onclick="abrirSeletorArquivo()">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <p class="card-title">Carregar rota</p>
+                <p class="card-desc">Excel / PDF / TXT</p>
+                <input type="file" id="arquivoPlanilha" accept=".pdf, .txt, .csv, .xlsx, .xls" style="display:none;" onchange="processarArquivoFisico()">
+            </div>
+
+            <div class="card-menu" onclick="exportarRelatorioCSV()">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <p class="card-title">Salvar Relatório</p>
+                <p class="card-desc">Exportar rota</p>
+            </div>
+
+            <div class="card-menu" onclick="irParaMapa()">
+                <svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 15 22 23 18 23 2 15 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="15" y1="6" x2="15" y2="22"/></svg>
+                <p class="card-title">Mapa</p>
+                <p class="card-desc">Ver paradas</p>
+            </div>
+
+            <div class="card-menu" onclick="executarOtimizacaoTSP()">
+                <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <p class="card-title">Otimização</p>
+                <p class="card-desc">Roteirizar TSP</p>
+            </div>
+        </div>
+
+        <button class="btn-assinatura">Ativar Versão Premium</button>
     </div>
 
+    <!-- MAPA E NAVEGAÇÃO SUPERIOR -->
     <div id="mapa-container">
+        <div class="top-bar-overlay">
+            <button class="btn-round-top" onclick="voltarParaMenu()">☰</button>
+            <div class="banner-status-topo">
+                📍 <span id="status-geocoding-topo">Localizando endereços no mapa...</span>
+            </div>
+            <button class="btn-round-top" style="background: var(--cor-laranja);" onclick="abrirScanner()">📷</button>
+        </div>
         <div id="mapa"></div>
     </div>
 
-    <button class="btn-menu" onclick="toggleMenu()">☰</button>
-    <div id="menu-opcoes">
-        <button class="menu-item" onclick="abrirScanner()">📷 Iniciar Scanner</button>
-        <button class="menu-item" onclick="executarOtimizacaoTSP()">⚡ Otimizar Rota Atual</button>
-        <button class="menu-item" onclick="exportarRelatorioCSV()">📥 Exportar Relatório</button>
-        <button class="menu-item" onclick="forcarBaixaManual()">✍️ Digitar Código Manual</button>
-        <button class="menu-item" style="color: #dc2626;" onclick="limparSessao()">🗑️ Apagar Rota</button>
+    <!-- WIDGET DE PACAOTES AGRUPADOS NO MESMO ENDEREÇO -->
+    <div id="widget-agrupado">
+        <div class="agrupado-header">
+            <span class="agrupado-sub">MÚLTIPLOS PACOTES NESTE LOCAL</span>
+            <span style="font-size: 12px; color: #aaa;" id="agrupado-index-txt">Pacote 1 de 2</span>
+        </div>
+        <div style="font-weight: bold; font-size: 15px; color: white;" id="agrupado-rua">Avenida Mendonça Drumond, 732</div>
+        <div style="font-size: 13px; color: var(--cor-laranja);" id="agrupado-codigo">BR269930241563E</div>
+        
+        <div class="carrossel-controles">
+            <button class="btn-carrossel" onclick="navegarAgrupado(-1)">◄ Anterior</button>
+            <span style="flex:1; text-align:center; font-size:12px; color:#aaa;">Deslize para trocar</span>
+            <button class="btn-carrossel" onclick="navegarAgrupado(1)">Próximo ►</button>
+        </div>
     </div>
 
+    <!-- PAINEL INFERIOR COM A LISTA DE PARADAS (FOTO ESQUERDA) -->
     <div id="bottom-sheet">
-        <h2 class="titulo-passo2">Passo 2: Processar Rota Ativa</h2>
-        <div id="container-lista"></div>
-    </div>
+        <div class="sheet-handle" onclick="toggleBottomSheet()">
+            <div class="handle-bar"></div>
+        </div>
 
-    <div id="widget-escuro">
-        <div class="widget-controls">
-            <button class="btn-ctrl" onclick="minimizarWidget()">−</button>
-            <button class="btn-ctrl" onclick="fecharWidget()">×</button>
+        <div class="sheet-header">
+            <h2 class="sheet-title">Paradas</h2>
+            <div class="badge-restantes">⚡ <span id="contador-restantes">0</span> restantes</div>
         </div>
-        <div class="w-topo">
-            <span id="wg-num">01</span>
-            <span class="w-badge" id="wg-badge">1</span>
-        </div>
-        <h3 class="w-rua" id="wg-rua">Rua Selecionada, 00</h3>
-        <p class="w-sub" id="wg-detalhe">Detalhes e código da encomenda</p>
-    </div>
 
-    <div id="barra-acoes-inferior">
-        <div class="banner-laranja">
-            ⚡ <span id="contador-restantes">0</span> Paradas Restantes (Rota Otimizada)
+        <div class="sheet-actions-row">
+            <button class="btn-sheet-action destaque" onclick="executarOtimizacaoTSP()">⚡ Roteirizar</button>
+            <button class="btn-sheet-action" onclick="executarOtimizacaoTSP()">🔀 Reotimizar</button>
+            <button class="btn-sheet-action" onclick="abrirSeletorArquivo()">📄 Importar</button>
         </div>
-        <div class="texto-status">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--cor-verde)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-            Rota em Execução!
+
+        <div id="lista-paradas">
+            <!-- As paradas renderizadas via JS entrarão aqui com Drag & Drop habilitado -->
         </div>
-        <div class="linha-3-botoes">
-            <button class="btn-acao-dark" onclick="navegarApp()">
-                <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
-                Abrir app
+
+        <!-- BARRA FIXA DE AÇÕES NO RODAPÉ -->
+        <div class="barra-fixa-inferior">
+            <button class="btn-inferior-acao btn-inferior-navegar" onclick="navegarApp()">
+                ▲ Navegar
             </button>
-            <button class="btn-acao-dark" onclick="registrarAcaoFinal('falhou')">
-                <svg class="icone-vermelho" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
-                Não entre...
+            <button class="btn-inferior-acao btn-inferior-falhou" onclick="registrarAcaoFinal('falhou')">
+                ✕ Falhou
             </button>
-            <button class="btn-acao-dark" onclick="registrarAcaoFinal('entregue')">
-                <svg class="icone-verde" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
-                Entregue
+            <button class="btn-inferior-acao btn-inferior-entregue" onclick="registrarAcaoFinal('entregue')">
+                ✓ Entregue
             </button>
         </div>
     </div>
 
+    <!-- MODAL DE EDIÇÃO DE ENDEREÇO -->
+    <div id="modalEdit">
+        <div class="modal-body">
+            <h3 style="margin-top:0;">Editar Endereço</h3>
+            <input type="text" id="inputEditEndereco" class="input-dark">
+            <div style="display:flex; gap:10px;">
+                <button class="btn-sheet-action" onclick="fecharModalEdit()">Cancelar</button>
+                <button class="btn-sheet-action destaque" onclick="salvarEdicaoEndereco()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SCANNER DA CÂMERA -->
     <div id="modalScanner">
-        <button onclick="fecharScanner()" style="padding: 12px; margin-bottom: 20px; background: #dc2626; color: white; border: none; border-radius: 8px; font-size: 16px; width: 100%; max-width: 400px; font-weight: bold;">✕ Fechar Scanner</button>
-        <div id="reader" style="width: 100%; max-width: 400px; background: #000; border-radius: 8px; overflow: hidden; border: 2px solid #333;"></div>
-        <div id="scannerFeedback" style="color: white; margin-top: 20px; font-size: 18px; font-weight: bold; text-align: center;">Aguardando leitura do código...</div>
+        <button onclick="fecharScanner()" style="padding: 12px; margin-bottom: 20px; background: var(--cor-vermelho); color: white; border: none; border-radius: 8px; font-size: 16px; width: 100%; max-width: 400px; font-weight: bold;">✕ Fechar Scanner</button>
+        <div id="reader" style="width: 100%; max-width: 400px; background: #000; border-radius: 12px; overflow: hidden;"></div>
+        <div id="scannerFeedback" style="color: white; margin-top: 20px; font-size: 16px; font-weight: bold; text-align: center;">Aguardando leitura do código...</div>
     </div>
 
     <script>
-        let bdRotas = JSON.parse(localStorage.getItem('rota_facil_db_oficial')) || [];
+        let bdRotas = JSON.parse(localStorage.getItem('rota_rapida_db_oficial')) || [];
         let html5QrcodeScanner = null;
-        let indexAtivo = null;
-        let processandoLeitura = false;
-       
+        let indexAtivo = 0;
+        let sortableInstance = null;
+        
         let map;
         let layerMarkers = [];
         let mapPolyline = null;
+        let editIndexTarget = null;
+
+        // Variaveis de Agrupamento
+        let grupoAtual = [];
+        let indexAgrupadoInterno = 0;
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         window.onload = () => {
             inicializarMapa();
+            inicializarSortable();
            
             if (bdRotas.length > 0) {
-                document.getElementById('tela-setup').style.display = 'none';
-                map.invalidateSize();
+                atualizarMenuInicialUI();
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
@@ -365,9 +644,52 @@
 
         function inicializarMapa() {
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
+            L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap © CartoDB'
             }).addTo(map);
+        }
+
+        function inicializarSortable() {
+            const el = document.getElementById('lista-paradas');
+            sortableInstance = new Sortable(el, {
+                handle: '.handle-drag',
+                animation: 150,
+                onEnd: function (evt) {
+                    const itemMovido = bdRotas.splice(evt.oldIndex, 1)[0];
+                    bdRotas.splice(evt.newIndex, 0, itemMovido);
+                    salvarBD();
+                    renderizarLista();
+                    plotarNoMapa();
+                }
+            });
+        }
+
+        function voltarParaMenu() {
+            document.getElementById('tela-menu-inicial').style.display = 'flex';
+        }
+
+        function irParaMapa() {
+            document.getElementById('tela-menu-inicial').style.display = 'none';
+            map.invalidateSize();
+        }
+
+        function abrirSeletorArquivo() {
+            document.getElementById('arquivoPlanilha').click();
+        }
+
+        function toggleBottomSheet() {
+            const sheet = document.getElementById('bottom-sheet');
+            sheet.classList.toggle('recolhido');
+        }
+
+        function atualizarMenuInicialUI() {
+            const badge = document.getElementById('badge-status-menu');
+            const texto = document.getElementById('texto-status-menu');
+            if (bdRotas.length > 0) {
+                texto.innerText = `Rota carregada • ${bdRotas.length} paradas`;
+                badge.style.borderColor = 'var(--cor-verde)';
+                badge.style.color = 'var(--cor-verde)';
+            }
         }
 
         function plotarNoMapa() {
@@ -383,18 +705,18 @@
             let latlngsLinha = [];
 
             bdRotas.forEach((e, idx) => {
-                let cor = e.status === 'pendente' ? '#3b82f6' : (e.status === 'entregue' ? '#16a34a' : '#dc2626');
+                let cor = e.status === 'pendente' ? 'var(--cor-laranja)' : (e.status === 'entregue' ? 'var(--cor-verde)' : 'var(--cor-vermelho)');
                
                 let customIcon = L.divIcon({
                     className: 'custom-pin-wrapper',
-                    html: `<div class="marker-pin" style="background-color: ${cor};">${idx + 1}</div>`,
+                    html: `<div class="marker-pin-custom" style="background-color: ${cor};">${idx + 1}</div>`,
                     iconSize: [28, 28],
                     iconAnchor: [14, 14]
                 });
 
                 let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
                
-                marker.on('click', () => ativarWidget(idx));
+                marker.on('click', () => selecionarParadaEVerificarAgrupamento(idx));
                
                 layerMarkers.push(marker);
                 bounds.push([e.lat, e.lon]);
@@ -405,66 +727,73 @@
             });
 
             if(latlngsLinha.length > 1) {
-                mapPolyline = L.polyline(latlngsLinha, {color: '#3b82f6', weight: 4, opacity: 0.8}).addTo(map);
+                mapPolyline = L.polyline(latlngsLinha, {color: '#3b82f6', weight: 3, opacity: 0.8}).addTo(map);
             }
 
             if (bounds.length > 0) {
-                map.fitBounds(bounds, { padding: [30, 30] });
+                map.fitBounds(bounds, { padding: [40, 40] });
             }
         }
 
-        function emitirBip() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(950, ctx.currentTime);
-                gain.gain.setValueAtTime(0.15, ctx.currentTime);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.12);
-            } catch (e) { console.log("Áudio indisponível."); }
+        function selecionarParadaEVerificarAgrupamento(idx) {
+            indexAtivo = idx;
+            const alvo = bdRotas[idx];
+
+            // Busca paradas com o mesmo endereço/coordenadas aproximadas
+            grupoAtual = bdRotas.filter(r => r.endereco.trim().toLowerCase() === alvo.endereco.trim().toLowerCase());
+            
+            if (grupoAtual.length > 1) {
+                indexAgrupadoInterno = grupoAtual.findIndex(r => r.codigo === alvo.codigo);
+                exibirWidgetAgrupado();
+            } else {
+                document.getElementById('widget-agrupado').style.display = 'none';
+            }
+
+            map.flyTo([alvo.lat, alvo.lon], 15, { animate: true });
         }
 
-        function falarTexto(texto) {
-            try {
-                if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                    const fala = new SpeechSynthesisUtterance(texto);
-                    fala.lang = 'pt-BR';
-                    fala.rate = 1.0;
-                    fala.pitch = 1.0;
-                    window.speechSynthesis.speak(fala);
-                }
-            } catch (e) { console.log("Síntese de voz indisponível."); }
+        function exibirWidgetAgrupado() {
+            const widget = document.getElementById('widget-agrupado');
+            const item = grupoAtual[indexAgrupadoInterno];
+            
+            document.getElementById('agrupado-index-txt').innerText = `Pacote ${indexAgrupadoInterno + 1} de ${grupoAtual.length}`;
+            document.getElementById('agrupado-rua').innerText = item.endereco;
+            document.getElementById('agrupado-codigo').innerText = item.codigo;
+            
+            widget.style.display = 'block';
+        }
+
+        function navegarAgrupado(direcao) {
+            indexAgrupadoInterno += direcao;
+            if (indexAgrupadoInterno < 0) indexAgrupadoInterno = grupoAtual.length - 1;
+            if (indexAgrupadoInterno >= grupoAtual.length) indexAgrupadoInterno = 0;
+            
+            const item = grupoAtual[indexAgrupadoInterno];
+            indexAtivo = bdRotas.findIndex(r => r.codigo === item.codigo);
+            exibirWidgetAgrupado();
         }
 
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
-            if(input.files.length === 0) return alert("Selecione um arquivo de rota primeiro.");
+            if(input.files.length === 0) return;
             const arquivo = input.files[0];
-
-            document.querySelector('.btn-upload').innerText = "Processando arquivo...";
             const nomeArquivo = arquivo.name.toLowerCase();
+
+            document.getElementById('status-geocoding-topo').innerText = "Processando arquivo de rota...";
 
             if (nomeArquivo.endsWith('.xlsx') || nomeArquivo.endsWith('.xls')) {
                 const leitor = new FileReader();
                 leitor.onload = function(e) {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                     const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
                    
                     let linhasTexto = [];
                     json.forEach(row => {
                         if (row && row.length > 0) {
-                            let linhaStr = row.map(cell => cell !== null && cell !== undefined ? String(cell).trim() : "").join(" ").trim();
-                            if (linhaStr.length > 5) {
-                                linhasTexto.push(linhaStr);
-                            }
+                            let linhaStr = row.map(cell => cell ? String(cell).trim() : "").join(" ").trim();
+                            if (linhaStr.length > 5) linhasTexto.push(linhaStr);
                         }
                     });
                     estruturarBancoDeDados(linhasTexto.join("\n"));
@@ -477,30 +806,15 @@
                     try {
                         const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
                         let textoCompleto = "";
-                       
                         for (let i = 1; i <= pdf.numPages; i++) {
                             const page = await pdf.getPage(i);
                             const content = await page.getTextContent();
-                           
-                            let items = content.items.sort((a, b) => {
-                                if (Math.abs(a.transform[5] - b.transform[5]) < 5) return a.transform[4] - b.transform[4];
-                                return b.transform[5] - a.transform[5];
-                            });
-                           
-                            let textoPagina = "";
-                            let lastY = null;
-                           
-                            for (let item of items) {
-                                if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) textoPagina += "\n";
-                                textoPagina += item.str + " ";
-                                lastY = item.transform[5];
-                            }
+                            let textoPagina = content.items.map(item => item.str).join(" ");
                             textoCompleto += textoPagina + "\n";
                         }
                         estruturarBancoDeDados(textoCompleto);
                     } catch (err) {
-                        alert("Erro ao decodificar as tabelas do PDF.");
-                        document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+                        alert("Erro ao ler arquivo PDF.");
                     }
                 };
                 leitor.readAsArrayBuffer(arquivo);
@@ -524,7 +838,7 @@
                     return { lat: data.lat, lon: data.lon };
                 }
             } catch (e) {
-                console.log("Serviço de geocoding indisponível, usando fallback de proximidade.", e);
+                console.log("Serviço de geocoding offline, aplicando posição fallback.");
             }
             return {
                 lat: -23.5505 + (Math.random() - 0.5) * 0.05,
@@ -534,14 +848,14 @@
 
         async function estruturarBancoDeDados(texto) {
             const linhas = texto.split(/\r?\n/);
-            let idCounter = 0;
             bdRotas = [];
+            let idCounter = 0;
            
             for (let i = 0; i < linhas.length; i++) {
                 let linha = linhas[i];
                 if (linha.trim().length < 5) continue;
 
-                const match = linha.match(/(BR\d{11})/i);
+                const match = linha.match(/(BR\d{11}\w?)/i);
                 if (!match) continue;
 
                 let codigo = match[1].toUpperCase();
@@ -562,36 +876,77 @@
 
             if(bdRotas.length > 0) {
                 salvarBD();
-                document.getElementById('tela-setup').style.display = 'none';
-                map.invalidateSize();
+                document.getElementById('status-geocoding-topo').innerText = "Rota carregada com sucesso!";
+                atualizarMenuInicialUI();
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
+                irParaMapa();
             } else {
-                alert("Nenhum código no padrão Shopee (BR + 11 dígitos) localizado.");
-                document.querySelector('.btn-upload').innerText = "Processar Rota Ativa";
+                alert("Nenhum código no padrão de rastreamento foi localizado.");
             }
         }
 
         function renderizarLista() {
-            const container = document.getElementById('container-lista');
+            const container = document.getElementById('lista-paradas');
             container.innerHTML = '';
            
             bdRotas.forEach((e, idx) => {
-                const div = document.createElement('div');
-                div.className = `item-lista ${e.status !== 'pendente' ? 'concluido' : ''}`;
-                div.onclick = () => ativarWidget(idx);
+                const card = document.createElement('div');
+                card.className = 'card-parada';
+                card.setAttribute('data-id', idx);
                
-                div.innerHTML = `
-                    <div class="item-topo">
-                        <span class="parada-titulo">📌 Parada #${idx + 1}</span>
-                        <span class="parada-codigo">${e.codigo}</span>
+                card.innerHTML = `
+                    <div class="handle-drag">☰</div>
+                    <div class="badge-numero-parada">${idx + 1}</div>
+                    <div class="parada-info" onclick="selecionarParadaEVerificarAgrupamento(${idx})">
+                        <div class="parada-codigo">${e.codigo}</div>
+                        <div class="parada-rua">${e.endereco}</div>
                     </div>
-                    <div class="parada-endereco">${e.endereco.substring(0, 65)}...</div>
-                    ${e.status !== 'pendente' ? `<div style="font-size:11px; color:#16a34a; font-weight:bold; margin-top:4px;">${e.status.toUpperCase()} às ${e.timestamp}</div>` : ''}
+                    <div class="parada-acoes">
+                        <button class="btn-icon-acao" onclick="abrirModalEdit(${idx})">✎</button>
+                        <button class="btn-icon-acao delete" onclick="excluirParada(${idx})">🗑</button>
+                    </div>
                 `;
-                container.appendChild(div);
+                container.appendChild(card);
             });
+        }
+
+        function abrirModalEdit(idx) {
+            editIndexTarget = idx;
+            document.getElementById('inputEditEndereco').value = bdRotas[idx].endereco;
+            document.getElementById('modalEdit').style.display = 'flex';
+        }
+
+        function fecharModalEdit() {
+            document.getElementById('modalEdit').style.display = 'none';
+        }
+
+        async function salvarEdicaoEndereco() {
+            if (editIndexTarget !== null) {
+                const novoEnd = document.getElementById('inputEditEndereco').value;
+                bdRotas[editIndexTarget].endereco = novoEnd;
+                
+                // Atualiza geocoding
+                let coords = await buscarGeocodingBackend(novoEnd);
+                bdRotas[editIndexTarget].lat = coords.lat;
+                bdRotas[editIndexTarget].lon = coords.lon;
+
+                salvarBD();
+                renderizarLista();
+                plotarNoMapa();
+                fecharModalEdit();
+            }
+        }
+
+        function excluirParada(idx) {
+            if(confirm("Deseja realmente remover esta parada?")) {
+                bdRotas.splice(idx, 1);
+                salvarBD();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+            }
         }
 
         function atualizarContador() {
@@ -599,67 +954,28 @@
             document.getElementById('contador-restantes').innerText = pendentes;
         }
 
-        function toggleMenu() {
-            const menu = document.getElementById('menu-opcoes');
-            menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
-        }
-       
-        document.addEventListener('click', function(event) {
-            const menu = document.getElementById('menu-opcoes');
-            const btn = document.querySelector('.btn-menu');
-            if (menu.style.display === 'flex' && !menu.contains(event.target) && event.target !== btn) {
-                menu.style.display = 'none';
-            }
-        });
-
-        function fecharWidget() { document.getElementById('widget-escuro').style.display = 'none'; }
-       
-        function minimizarWidget() {
-            const det = document.getElementById('wg-detalhe');
-            det.style.display = (det.style.display === 'none') ? 'block' : 'none';
-        }
-
-        function ativarWidget(idx) {
-            indexAtivo = idx;
-            const e = bdRotas[idx];
-            document.getElementById('wg-num').innerText = String(idx + 1).padStart(2, '0');
-            document.getElementById('wg-badge').innerText = idx + 1;
-           
-            const partes = e.endereco.split(',');
-            document.getElementById('wg-rua').innerText = partes[0] || 'Endereço';
-            document.getElementById('wg-detalhe').innerText = `${e.codigo} - ${partes.slice(1).join(',').trim()}`;
-           
-            document.getElementById('widget-escuro').style.display = 'block';
-
-            map.flyTo([e.lat - 0.015, e.lon], 14, { animate: true, duration: 1 });
-        }
-
         function registrarAcaoFinal(status) {
-            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
+            if (bdRotas.length === 0) return;
            
             bdRotas[indexAtivo].status = status;
             bdRotas[indexAtivo].timestamp = new Date().toLocaleTimeString();
-           
-            if (status === 'entregue') emitirBip();
            
             salvarBD();
             renderizarLista();
             atualizarContador();
             plotarNoMapa();
-           
-            document.getElementById('widget-escuro').style.display = 'none';
-            indexAtivo = null;
+            
+            document.getElementById('widget-agrupado').style.display = 'none';
         }
 
         function navegarApp() {
-            if (indexAtivo === null) return alert("Selecione uma parada na lista primeiro.");
+            if (bdRotas.length === 0) return;
             const end = bdRotas[indexAtivo].endereco;
             window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`, '_blank');
         }
 
         function executarOtimizacaoTSP() {
-            toggleMenu();
-            if(bdRotas.length <= 2) return alert("Quantidade de paradas insuficiente.");
+            if(bdRotas.length <= 2) return alert("Paradas insuficientes para otimizar.");
            
             let rascunho = [...bdRotas.filter(r => r.status === 'pendente')];
             let concluidos = [...bdRotas.filter(r => r.status !== 'pendente')];
@@ -686,89 +1002,36 @@
             salvarBD();
             renderizarLista();
             plotarNoMapa();
-            alert("Rota otimizada com sucesso via motor de proximidade TSP.");
+            alert("Rota reordenada com sucesso!");
         }
 
         function abrirScanner() {
-            toggleMenu();
             document.getElementById('modalScanner').style.display = 'flex';
-            const feedback = document.getElementById('scannerFeedback');
-            feedback.innerText = "Aguardando leitura do código...";
-            feedback.style.color = "white";
-           
             if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
            
             html5QrcodeScanner.start(
                 { facingMode: "environment" },
                 { fps: 15, qrbox: { width: 280, height: 150 } },
-                processarLeituraDaCamera
-            ).catch(e => {
-                feedback.innerText = "Erro de hardware na câmera.";
-            });
+                (textoLido) => {
+                    const token = textoLido.trim().toUpperCase();
+                    const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
+                    if (idx !== -1) {
+                        selecionarParadaEVerificarAgrupamento(idx);
+                        fecharScanner();
+                    }
+                }
+            );
         }
 
         function fecharScanner() {
             document.getElementById('modalScanner').style.display = 'none';
             if (html5QrcodeScanner) {
-                html5QrcodeScanner.stop().then(() => {
-                    html5QrcodeScanner = null;
-                }).catch(err => console.log("Erro ao parar scanner:", err));
-            }
-            processandoLeitura = false;
-        }
-
-        function processarLeituraDaCamera(textoLido) {
-            if (processandoLeitura) return;
-            processandoLeitura = true;
-           
-            const token = textoLido.trim().toUpperCase();
-            const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
-           
-            const feedback = document.getElementById('scannerFeedback');
-           
-            if (idx !== -1) {
-                emitirBip();
-               
-                const ultimosDigitos = bdRotas[idx].codigo.slice(-4);
-                falarTexto(`Parada ${idx + 1}. Final ${ultimosDigitos.split('').join(' ')}`);
-               
-                feedback.innerText = `✅ Parada #${idx + 1} Localizada!`;
-                feedback.style.color = "var(--cor-verde)";
-               
-                ativarWidget(idx);
-               
-                setTimeout(() => {
-                    feedback.innerText = "Aguardando leitura do próximo código...";
-                    feedback.style.color = "white";
-                    processandoLeitura = false;
-                }, 2500);
-            } else {
-                feedback.innerText = `❌ Código não listado nesta rota.`;
-                feedback.style.color = "var(--cor-vermelho)";
-                setTimeout(() => {
-                    feedback.innerText = "Aguardando leitura do código...";
-                    feedback.style.color = "white";
-                    processandoLeitura = false;
-                }, 2000);
-            }
-        }
-
-        function forcarBaixaManual() {
-            toggleMenu();
-            const cod = prompt("Digite o código identificador da encomenda:");
-            if(cod && cod.trim() !== "") {
-                const idx = bdRotas.findIndex(i => i.codigo.toUpperCase().includes(cod.trim().toUpperCase()));
-                if(idx !== -1) {
-                    ativarWidget(idx);
-                } else {
-                    alert("Código inexistente.");
-                }
+                html5QrcodeScanner.stop().then(() => html5QrcodeScanner = null);
             }
         }
 
         function exportarRelatorioCSV() {
-            toggleMenu();
-            if(bdRotas.length === 0) return alert("Sem dados.");
+            if(bdRotas.length === 0) return alert("Sem dados para exportar.");
             let csv = "\uFEFFID,Codigo,Endereco,Status,Horario\n";
             bdRotas.forEach(p => {
                 csv += `"${p.id + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.status.toUpperCase()}","${p.timestamp || 'N/A'}"\n`;
@@ -776,20 +1039,12 @@
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `Rota_Facil_Relatorio_${new Date().toISOString().slice(0,10)}.csv`;
+            link.download = `Relatorio_Rota_${new Date().toISOString().slice(0,10)}.csv`;
             link.click();
         }
 
-        function limparSessao() {
-            toggleMenu();
-            if(confirm("Deseja expurgar e limpar a rota ativa?")) {
-                localStorage.removeItem('rota_facil_db_oficial');
-                location.reload();
-            }
-        }
-
         function salvarBD() {
-            localStorage.setItem('rota_facil_db_oficial', JSON.stringify(bdRotas));
+            localStorage.setItem('rota_rapida_db_oficial', JSON.stringify(bdRotas));
         }
     </script>
 </body>
