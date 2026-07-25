@@ -704,7 +704,7 @@
             const arquivo = input.files[0];
             const nome = arquivo.name.toLowerCase();
 
-            document.getElementById('status-geocoding-topo').innerText = "Lendo arquivo de rota...";
+            document.getElementById('status-geocoding-topo').innerText = "Lendo arquivo e colunas explícitas...";
 
             if (nome.endsWith('.xlsx') || nome.endsWith('.xls')) {
                 const leitor = new FileReader();
@@ -712,17 +712,61 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
                     
-                    let linhasBrutas = [];
-                    json.forEach(row => {
-                        if (row && row.length > 0) {
-                            let celulas = row.filter(c => c !== null && c !== undefined && String(c).trim() !== "").map(c => String(c).trim());
-                            let texto = celulas.join(" ");
-                            if (validarLinhaValida(texto)) linhasBrutas.push({ texto: texto, rowData: row });
+                    // Converte planilha para Objetos JSON mapeando cabeçalhos
+                    const jsonObjetos = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                    
+                    let itensProcessados = [];
+
+                    jsonObjetos.forEach((row, idx) => {
+                        let keys = Object.keys(row);
+                        
+                        // Mapeamento preciso por nome da coluna (Headers)
+                        let latKey = keys.find(k => /latitude|^lat$/i.test(k.trim()));
+                        let lonKey = keys.find(k => /longitude|^lon$|^lng$/i.test(k.trim()));
+                        let codKey = keys.find(k => /código|codigo|rastreio|spx|tracking|pacote|tn/i.test(k.trim()));
+                        let endKey = keys.find(k => /endereço|endereco|rua|logradouro|address/i.test(k.trim()));
+                        let bairroKey = keys.find(k => /bairro/i.test(k.trim()));
+                        let cidadeKey = keys.find(k => /cidade|municipio/i.test(k.trim()));
+                        let cepKey = keys.find(k => /cep|zip/i.test(k.trim()));
+
+                        let lat = latKey ? parseFloat(row[latKey]) : null;
+                        let lon = lonKey ? parseFloat(row[lonKey]) : null;
+
+                        let codigo = codKey && row[codKey] ? String(row[codKey]).trim().toUpperCase() : '';
+                        
+                        // Montagem do endereço completo caso venha fragmentado
+                        let partesEndereco = [];
+                        if (endKey && row[endKey]) partesEndereco.push(String(row[endKey]).trim());
+                        if (bairroKey && row[bairroKey]) partesEndereco.push(String(row[bairroKey]).trim());
+                        if (cidadeKey && row[cidadeKey]) partesEndereco.push(String(row[cidadeKey]).trim());
+                        if (cepKey && row[cepKey]) partesEndereco.push(`CEP ${String(row[cepKey]).trim()}`);
+
+                        let enderecoTexto = partesEndereco.join(', ');
+
+                        // Se o cabeçalho não foi encontrado, fallback para busca na linha bruta
+                        if (!enderecoTexto) {
+                            let linhaTexto = Object.values(row).join(' ');
+                            if (validarLinhaValida(linhaTexto)) {
+                                const matchCod = linhaTexto.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
+                                codigo = matchCod ? matchCod[0].toUpperCase() : `VOL-${String(idx + 1).padStart(3, '0')}`;
+                                enderecoTexto = matchCod ? linhaTexto.replace(matchCod[0], '').trim() : linhaTexto.trim();
+                            }
+                        }
+
+                        if (!codigo) codigo = `VOL-${String(idx + 1).padStart(3, '0')}`;
+
+                        if (enderecoTexto.length > 2 || (!isNaN(lat) && !isNaN(lon))) {
+                            itensProcessados.push({
+                                codigo: codigo,
+                                endereco: enderecoTexto || "Localização Exata via Coordenadas",
+                                lat: (!isNaN(lat) && lat !== 0) ? lat : null,
+                                lon: (!isNaN(lon) && lon !== 0) ? lon : null
+                            });
                         }
                     });
-                    estruturarBancoDeDados(linhasBrutas);
+
+                    estruturarBancoDeDados(itensProcessados);
                 };
                 leitor.readAsArrayBuffer(arquivo);
             } else if (nome.endsWith('.pdf')) {
@@ -751,7 +795,15 @@
                                 }
                             });
                         }
-                        estruturarBancoDeDados(linhasExtraidas);
+
+                        let itens = linhasExtraidas.map((l, idx) => {
+                            const match = l.texto.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
+                            let cod = match ? match[0].toUpperCase() : `VOL-${String(idx + 1).padStart(3, '0')}`;
+                            let end = match ? l.texto.replace(match[0], '').trim() : l.texto.trim();
+                            return { codigo: cod, endereco: end, lat: null, lon: null };
+                        });
+
+                        estruturarBancoDeDados(itens);
                     } catch (err) {
                         alert("Erro ao extrair o PDF.");
                     }
@@ -760,55 +812,42 @@
             } else {
                 const leitor = new FileReader();
                 leitor.onload = (e) => {
-                    let linhas = e.target.result.split(/\r?\n/).filter(validarLinhaValida).map(l => ({ texto: l }));
-                    estruturarBancoDeDados(linhas);
+                    let linhas = e.target.result.split(/\r?\n/).filter(validarLinhaValida);
+                    let itens = linhas.map((linha, idx) => {
+                        const match = linha.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
+                        let cod = match ? match[0].toUpperCase() : `VOL-${String(idx + 1).padStart(3, '0')}`;
+                        let end = match ? linha.replace(match[0], '').trim() : linha.trim();
+                        return { codigo: cod, endereco: end, lat: null, lon: null };
+                    });
+                    estruturarBancoDeDados(itens);
                 };
                 leitor.readAsText(arquivo);
             }
         }
 
-        async function estruturarBancoDeDados(linhasArray) {
+        async function estruturarBancoDeDados(listaItens) {
             bdRotas = [];
-            for (let i = 0; i < linhasArray.length; i++) {
-                let itemObj = linhasArray[i];
-                let linha = itemObj.texto.trim();
 
-                const match = linha.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
-                
-                let codigo = match ? match[0].toUpperCase() : `VOL-${String(i + 1).padStart(3, '0')}`;
-                let endereco = match ? linha.replace(match[0], '').replace(/[;\t\|]+/g, ' ').trim() : linha.replace(/[;\t\|]+/g, ' ').trim();
+            for (let i = 0; i < listaItens.length; i++) {
+                let item = listaItens[i];
+                let lat = item.lat;
+                let lon = item.lon;
 
-                if (endereco.length < 3) continue;
-
-                // Captura direta de Latitude / Longitude do arquivo (caso existam)
-                let latExtraida = null;
-                let lonExtraida = null;
-
-                if (itemObj.rowData) {
-                    itemObj.rowData.forEach(val => {
-                        let num = parseFloat(val);
-                        if (!isNaN(num)) {
-                            if (num < -1 && num > -35 && !latExtraida) latExtraida = num;
-                            else if (num < -30 && num > -75 && !lonExtraida) lonExtraida = num;
-                        }
-                    });
-                }
-
-                let coords;
-                if (latExtraida && lonExtraida) {
-                    coords = { lat: latExtraida, lon: lonExtraida };
-                } else {
-                    coords = await buscarGeocodingBackend(endereco);
+                // Se não veio Latitude/Longitude explícita na planilha, faz geocodificação
+                if (!lat || !lon) {
+                    let coords = await buscarGeocodingBackend(item.endereco);
+                    lat = coords.lat;
+                    lon = coords.lon;
                 }
 
                 bdRotas.push({
                     id: i + 1,
-                    codigo: codigo,
-                    endereco: endereco,
+                    codigo: item.codigo,
+                    endereco: item.endereco,
                     status: 'pendente',
                     timestamp: null,
-                    lat: coords.lat,
-                    lon: coords.lon
+                    lat: lat,
+                    lon: lon
                 });
             }
 
@@ -817,10 +856,10 @@
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
-                document.getElementById('status-geocoding-topo').innerText = `Sucesso! ${bdRotas.length} paradas importadas.`;
+                document.getElementById('status-geocoding-topo').innerText = `Mapeamento concluído: ${bdRotas.length} paradas no mapa!`;
                 iniciarOtimizacaoComEtapas(false);
             } else {
-                alert("Nenhuma parada válida identificada.");
+                alert("Nenhuma parada válida foi identificada.");
             }
         }
 
@@ -973,7 +1012,6 @@
                     renderizarLista();
                     plotarNoMapa();
 
-                    // Desenhar caminho pelas ruas no mapa
                     if (mapPolyline) map.removeLayer(mapPolyline);
                     let routeCoords = data.trips[0].geometry.coordinates.map(c => [c[1], c[0]]);
                     mapPolyline = L.polyline(routeCoords, { color: '#ff5722', weight: 4, opacity: 0.9 }).addTo(map);
@@ -1071,7 +1109,7 @@
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `Rota_Pronta_Shopee_${new Date().toISOString().slice(0,10)}.csv`;
+            link.download = `Rota_Pronta_${new Date().toISOString().slice(0,10)}.csv`;
             link.click();
         }
 
