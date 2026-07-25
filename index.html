@@ -552,6 +552,12 @@
             border-radius: 12px;
             padding: 12px;
             text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .scanner-stat-card:active {
+            background: #1e2636;
         }
 
         .scanner-stat-card.active {
@@ -573,6 +579,10 @@
             color: #9ca3af;
             margin-top: 2px;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
         }
 
         #scanner-bip-toast {
@@ -773,9 +783,10 @@
                 <div class="scanner-stat-num" id="scanner-stat-faltam">0</div>
                 <div class="scanner-stat-label">Faltam</div>
             </div>
-            <div class="scanner-stat-card">
-                <div class="scanner-stat-num" id="scanner-stat-total">0</div>
-                <div class="scanner-stat-label">Total</div>
+            <!-- Botão de Inserir Código Manual adicionado aqui na barra de estatísticas -->
+            <div class="scanner-stat-card" onclick="inserirCodigoManual()">
+                <div class="scanner-stat-num">✏️</div>
+                <div class="scanner-stat-label">Digitar Código</div>
             </div>
         </div>
     </div>
@@ -1538,6 +1549,8 @@
                 exibirToastScanner(`Parada #${idx + 1} (${qtdNoLocal}x Pacote${qtdNoLocal > 1 ? 's' : ''})`);
                 
                 selecionarParadaEVerificarAgrupamento(idx);
+            } else {
+                alert(`Código "${token}" não encontrado na rota atual.`);
             }
         }
 
