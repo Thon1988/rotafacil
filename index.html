@@ -1,3 +1,13 @@
+Entendido! Aqui está o código completo atualizado com todas as alterações solicitadas:
+ 1. **Correção do PDF:** Mantém a ordem exata sequencial das paradas encontradas no arquivo PDF sem reordenar/agrupar de forma inadequada durante a leitura.
+ 2. **Tema Claro / Escuro (Light / Dark Mode):** Adicionado no menu lateral um alternador de tema ("Alternar Tema Claro/Escuro") que altera toda a interface.
+ 3. **Seleção de GPS Preferido:** Opção no menu lateral para definir entre **Google Maps** e **Waze**.
+ 4. **Interface do Scanner Atualizada (conforme imagem):**
+   * Removidos os botões do Google Maps e Waze do scanner.
+   * Adicionada a barra com contadores em tempo real: **Bipados**, **Faltam** e **Total** (ex: 0 de 78).
+   * Alerta visual/sonoro dinâmico ao bipar que informa o número da parada e a quantidade de pacotes naquele mesmo local (ex: Parada #4 (3x Pacotes)).
+ 5. **Navegação no Mapa:** Os botões **Navegar (Maps/Waze)**, **Entregue** e **Falhou** aparecem na barra inferior ao selecionar a parada/pino no mapa.
+```html
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="dark">
 <head>
@@ -1543,3 +1553,4 @@
 </body>
 </html>
 
+```
