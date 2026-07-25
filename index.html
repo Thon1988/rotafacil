@@ -783,6 +783,11 @@
                 <div class="scanner-stat-num" id="scanner-stat-faltam">0</div>
                 <div class="scanner-stat-label">Faltam</div>
             </div>
+            <!-- Elemento Faltante Adicionado de Volta -->
+            <div class="scanner-stat-card" style="display:none;">
+                <div class="scanner-stat-num" id="scanner-stat-total">0</div>
+                <div class="scanner-stat-label">Total</div>
+            </div>
             <!-- Botão de Inserir Código Manual adicionado aqui na barra de estatísticas -->
             <div class="scanner-stat-card" onclick="inserirCodigoManual()">
                 <div class="scanner-stat-num">✏️</div>
@@ -1517,7 +1522,8 @@
             document.getElementById('scanner-topo-badge').innerText = `📦 ${bipados} de ${total}`;
             document.getElementById('scanner-stat-bipados').innerText = bipados;
             document.getElementById('scanner-stat-faltam').innerText = faltam;
-            document.getElementById('scanner-stat-total').innerText = total;
+            const elTotal = document.getElementById('scanner-stat-total');
+            if (elTotal) elTotal.innerText = total;
         }
 
         function abrirScanner() {
