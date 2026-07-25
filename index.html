@@ -44,7 +44,7 @@
             height: 100vh;
         }
 
-        /* DRAWER / MENU LATERAL COMPLETO */
+        /* DRAWER / MENU LATERAL COMPLETO (IDENTICO À IMAGEM) */
         #menu-lateral-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -59,15 +59,16 @@
             top: 0; left: 0; bottom: 0;
             width: 310px;
             max-width: 85%;
-            background: var(--bg-dark-principal);
+            background: #141923;
             z-index: 100000;
             transform: translateX(-100%);
-            transition: transform 0.3s ease;
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
             display: flex;
             flex-direction: column;
             padding: 20px 16px;
             overflow-y: auto;
-            box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+            box-shadow: 5px 0 25px rgba(0,0,0,0.6);
+            border-right: 1px solid rgba(255,255,255,0.05);
         }
 
         #menu-lateral.aberto {
@@ -78,13 +79,13 @@
             display: flex;
             align-items: center;
             gap: 14px;
-            padding: 12px 14px;
+            padding: 13px 14px;
             border-radius: 12px;
             color: var(--texto-principal);
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
             transition: background 0.2s;
         }
 
@@ -106,10 +107,10 @@
         .divisor-menu {
             height: 1px;
             background: rgba(255,255,255,0.08);
-            margin: 10px 0;
+            margin: 8px 0;
         }
 
-        /* MAPA E INTERFACE PRINCIPAL */
+        /* CONTAINER MAPA E NAVEGAÇÃO */
         #mapa-container {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -155,7 +156,7 @@
             text-overflow: ellipsis;
         }
 
-        /* BOTTOM SHEET */
+        /* PAINEL INFERIOR (BOTTOM SHEET) */
         #bottom-sheet {
             position: absolute;
             bottom: 0; left: 0; right: 0;
@@ -237,7 +238,7 @@
             background: var(--cor-laranja);
         }
 
-        /* LISTA DE PARADAS */
+        /* LISTA DE PARADAS COM DRAG/DROP */
         #lista-paradas {
             flex: 1;
             overflow-y: auto;
@@ -311,7 +312,7 @@
 
         .btn-icon-acao.delete { color: var(--cor-vermelho); }
 
-        /* BARRA FIXA RODAPÉ */
+        /* BARRA FIXA DE AÇÕES INFERIORES */
         .barra-fixa-inferior {
             position: absolute;
             bottom: 0; left: 0; right: 0;
@@ -342,7 +343,37 @@
         .btn-inferior-falhou { background: var(--cor-vermelho); }
         .btn-inferior-entregue { background: var(--cor-verde); }
 
-        /* MODAIS E DIÁLOGOS */
+        /* WIDGET AGRUPAMENTO DE PACOTES */
+        #widget-agrupado {
+            position: absolute;
+            top: 75px; left: 16px; right: 16px;
+            background: var(--bg-dark-card);
+            border-radius: 16px;
+            padding: 14px;
+            z-index: 1500;
+            border: 1px solid var(--cor-laranja);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            display: none;
+        }
+
+        .carrossel-controles {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-carrossel {
+            background: var(--cor-laranja);
+            border: none;
+            color: white;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* MODAIS */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -392,7 +423,7 @@
 </head>
 <body>
 
-    <!-- OVERLAY E MENU LATERAL -->
+    <!-- OVERLAY E MENU LATERAL COMPLETO -->
     <div id="menu-lateral-overlay" onclick="fecharMenuLateral()"></div>
     <div id="menu-lateral">
         <div style="font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--cor-laranja);">Rota+Rápida</div>
@@ -405,6 +436,11 @@
         <div class="menu-item" onclick="inserirCodigoManual(); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Inserir Código Manual
+        </div>
+
+        <div class="menu-item" onclick="alert('Configurações de saída e ritmo atualizadas!'); fecharMenuLateral();">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Configurar Rota (saída, ritmo)
         </div>
 
         <div class="divisor-menu"></div>
@@ -454,7 +490,7 @@
         </div>
     </div>
 
-    <!-- MAPA E TOPO -->
+    <!-- MAPA E NAVEGAÇÃO SUPERIOR -->
     <div id="mapa-container">
         <div class="top-bar-overlay">
             <button class="btn-round-top" onclick="abrirMenuLateral()">☰</button>
@@ -466,7 +502,23 @@
         <div id="mapa"></div>
     </div>
 
-    <!-- LISTA E PAINEL INFERIOR -->
+    <!-- WIDGET DE PACOTES AGRUPADOS -->
+    <div id="widget-agrupado">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:12px; color:var(--cor-laranja); font-weight:700;">MÚLTIPLOS PACOTES NESTE LOCAL</span>
+            <span style="font-size: 12px; color: #aaa;" id="agrupado-index-txt">Pacote 1 de 2</span>
+        </div>
+        <div style="font-weight: bold; font-size: 15px; color: white;" id="agrupado-rua">---</div>
+        <div style="font-size: 13px; color: var(--cor-laranja);" id="agrupado-codigo">---</div>
+        
+        <div class="carrossel-controles">
+            <button class="btn-carrossel" onclick="navegarAgrupado(-1)">◄ Anterior</button>
+            <span style="flex:1; text-align:center; font-size:12px; color:#aaa;">Deslize para trocar</span>
+            <button class="btn-carrossel" onclick="navegarAgrupado(1)">Próximo ►</button>
+        </div>
+    </div>
+
+    <!-- PAINEL INFERIOR -->
     <div id="bottom-sheet">
         <div class="sheet-handle" id="handleTouch">
             <div class="handle-bar"></div>
@@ -493,7 +545,19 @@
         </div>
     </div>
 
-    <!-- MODAL RESUMO E FILTRO POR DIA -->
+    <!-- MODAL EDITAR ENDEREÇO -->
+    <div id="modalEdit" class="modal-overlay">
+        <div class="modal-body">
+            <h3 style="margin-top:0;">Editar Endereço</h3>
+            <input type="text" id="inputEditEndereco" class="input-dark">
+            <div style="display:flex; gap:10px;">
+                <button class="btn-sheet-action" onclick="fecharModalEdit()">Cancelar</button>
+                <button class="btn-sheet-action destaque" onclick="salvarEdicaoEndereco()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL RESUMO DOS DIAS -->
     <div id="modalResumo" class="modal-overlay">
         <div class="modal-body">
             <h3 style="margin-top:0; color:var(--cor-laranja);">Resumo dos Dias de Trabalho</h3>
@@ -517,8 +581,12 @@
         let historicoDias = JSON.parse(localStorage.getItem('rota_rapida_historico')) || [];
         let html5QrcodeScanner = null;
         let indexAtivo = 0;
+        let editIndexTarget = null;
         let sortableInstance = null;
         let map, layerMarkers = [], mapPolyline = null;
+
+        let grupoAtual = [];
+        let indexAgrupadoInterno = 0;
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
@@ -539,6 +607,8 @@
             L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap © CartoDB'
             }).addTo(map);
+
+            map.on('click', () => recolherBottomSheet());
         }
 
         function abrirMenuLateral() {
@@ -575,14 +645,39 @@
         function recolherBottomSheet() { document.getElementById('bottom-sheet').classList.add('recolhido'); }
         function abrirSeletorArquivo() { document.getElementById('arquivoPlanilha').click(); }
 
-        /* PARSER DE ARQUIVOS (EXCEL / PDF / CSV) - 1 LINHA = 1 PARADA ÚNICA */
+        async function buscarGeocodingBackend(endereco) {
+            try {
+                const response = await fetch('/geocode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address: endereco })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    return { lat: data.lat, lon: data.lon };
+                }
+            } catch (e) { }
+            
+            return {
+                lat: -23.5505 + (Math.random() - 0.5) * 0.05,
+                lon: -46.6333 + (Math.random() - 0.5) * 0.05
+            };
+        }
+
+        function validarLinhaValida(linha) {
+            if (!linha || linha.length < 6) return false;
+            let l = linha.toLowerCase();
+            if (l.includes("address notes") || l.includes("endereço") || l.includes("código de rastreio") || l.includes("relatório de entrega") || l.includes("total de pacotes")) return false;
+            return true;
+        }
+
         async function processarArquivoFisico() {
             const input = document.getElementById('arquivoPlanilha');
             if (input.files.length === 0) return;
             const arquivo = input.files[0];
             const nome = arquivo.name.toLowerCase();
 
-            document.getElementById('status-geocoding-topo').innerText = "Processando arquivo...";
+            document.getElementById('status-geocoding-topo').innerText = "Lendo arquivo de rota...";
 
             if (nome.endsWith('.xlsx') || nome.endsWith('.xls')) {
                 const leitor = new FileReader();
@@ -590,72 +685,74 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
+                    const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
                     
-                    let linhasEnderecos = [];
-                    rows.forEach(row => {
-                        let textoLinha = row.join(" ").trim();
-                        if(validarLinhaEndereco(textoLinha)) {
-                            linhasEnderecos.push(textoLinha);
+                    let linhasBrutas = [];
+                    json.forEach(row => {
+                        if (row && row.length > 0) {
+                            let celulas = row.filter(c => c !== null && c !== undefined && String(c).trim() !== "").map(c => String(c).trim());
+                            let texto = celulas.join(" ");
+                            if (validarLinhaValida(texto)) linhasBrutas.push(texto);
                         }
                     });
-                    estruturarBancoDeDados(linhasEnderecos);
+                    estruturarBancoDeDados(linhasBrutas);
                 };
                 leitor.readAsArrayBuffer(arquivo);
             } else if (nome.endsWith('.pdf')) {
                 const leitor = new FileReader();
                 leitor.onload = async function() {
-                    const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                    let linhasEnderecos = [];
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        let Ys = {};
-                        content.items.forEach(item => {
-                            let y = Math.round(item.transform[5]);
-                            if (!Ys[y]) Ys[y] = [];
-                            Ys[y].push(item.str);
-                        });
-                        Object.keys(Ys).sort((a,b) => b - a).forEach(y => {
-                            let txt = Ys[y].join(" ").trim();
-                            if(validarLinhaEndereco(txt)) linhasEnderecos.push(txt);
-                        });
+                    try {
+                        const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+                        let linhasExtraidas = [];
+
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const content = await page.getTextContent();
+                            
+                            let linhasPorY = {};
+                            content.items.forEach(item => {
+                                let y = Math.round(item.transform[5]);
+                                if (!linhasPorY[y]) linhasPorY[y] = [];
+                                linhasPorY[y].push(item.str);
+                            });
+
+                            let chavesY = Object.keys(linhasPorY).sort((a,b) => b - a);
+                            chavesY.forEach(y => {
+                                let textoLinha = linhasPorY[y].join(" ").trim();
+                                if (validarLinhaValida(textoLinha)) {
+                                    linhasExtraidas.push(textoLinha);
+                                }
+                            });
+                        }
+                        estruturarBancoDeDados(linhasExtraidas);
+                    } catch (err) {
+                        alert("Erro ao extrair o PDF.");
                     }
-                    estruturarBancoDeDados(linhasEnderecos);
                 };
                 leitor.readAsArrayBuffer(arquivo);
             } else {
                 const leitor = new FileReader();
                 leitor.onload = (e) => {
-                    let linhas = e.target.result.split(/\r?\n/).filter(validarLinhaEndereco);
+                    let linhas = e.target.result.split(/\r?\n/).filter(validarLinhaValida);
                     estruturarBancoDeDados(linhas);
                 };
                 leitor.readAsText(arquivo);
             }
         }
 
-        function validarLinhaEndereco(linha) {
-            if (!linha || linha.length < 8) return false;
-            let l = linha.toLowerCase();
-            if (l.includes("address notes") || l.includes("endereço") || l.includes("código de rastreio") || l.includes("relatório de entrega")) return false;
-            return true;
-        }
-
-        async function estruturarBancoDeDados(linhas) {
+        async function estruturarBancoDeDados(linhasArray) {
             bdRotas = [];
-            for (let i = 0; i < linhas.length; i++) {
-                let linha = linhas[i].trim();
+            for (let i = 0; i < linhasArray.length; i++) {
+                let linha = linhasArray[i].trim();
+
                 const match = linha.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
                 
                 let codigo = match ? match[0].toUpperCase() : `VOL-${String(i + 1).padStart(3, '0')}`;
-                let endereco = match ? linha.replace(match[0], '').trim() : linha;
+                let endereco = match ? linha.replace(match[0], '').replace(/[;\t\|]+/g, ' ').trim() : linha.replace(/[;\t\|]+/g, ' ').trim();
 
-                // Simulação de coordenadas para demonstração rápida sem falhas de API
-                let baseLat = -23.5505, baseLon = -46.6333;
-                let coords = {
-                    lat: baseLat + (Math.random() - 0.5) * 0.08,
-                    lon: baseLon + (Math.random() - 0.5) * 0.08
-                };
+                if (endereco.length < 3) continue;
+
+                let coords = await buscarGeocodingBackend(endereco);
 
                 bdRotas.push({
                     id: i + 1,
@@ -668,27 +765,34 @@
                 });
             }
 
-            salvarBD();
-            renderizarLista();
-            atualizarContador();
-            plotarNoMapa();
-            document.getElementById('status-geocoding-topo').innerText = `Sucesso! ${bdRotas.length} paradas prontas.`;
+            if (bdRotas.length > 0) {
+                salvarBD();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+                document.getElementById('status-geocoding-topo').innerText = `Sucesso! ${bdRotas.length} paradas importadas.`;
+            } else {
+                alert("Nenhuma parada válida identificada.");
+            }
         }
 
         function renderizarLista() {
             const container = document.getElementById('lista-paradas');
             container.innerHTML = '';
+           
             bdRotas.forEach((e, idx) => {
                 const card = document.createElement('div');
                 card.className = 'card-parada';
+               
                 card.innerHTML = `
                     <div class="handle-drag">☰</div>
                     <div class="badge-numero-parada" style="background:${e.status==='entregue'?'var(--cor-verde)':(e.status==='falhou'?'var(--cor-vermelho)':'var(--cor-laranja)')}">${idx + 1}</div>
-                    <div class="parada-info" onclick="selecionarParada(${idx})">
+                    <div class="parada-info" onclick="selecionarParadaEVerificarAgrupamento(${idx})">
                         <div class="parada-codigo">${e.codigo}</div>
                         <div class="parada-rua">${e.endereco}</div>
                     </div>
                     <div class="parada-acoes">
+                        <button class="btn-icon-acao" onclick="abrirModalEdit(${idx})">✎</button>
                         <button class="btn-icon-acao delete" onclick="excluirParada(${idx})">🗑</button>
                     </div>
                 `;
@@ -696,11 +800,42 @@
             });
         }
 
-        function selecionarParada(idx) {
+        function selecionarParadaEVerificarAgrupamento(idx) {
             indexAtivo = idx;
-            let p = bdRotas[idx];
-            map.flyTo([p.lat, p.lon], 16);
+            const alvo = bdRotas[idx];
+
+            grupoAtual = bdRotas.filter(r => r.endereco.trim().toLowerCase() === alvo.endereco.trim().toLowerCase());
+            
+            if (grupoAtual.length > 1) {
+                indexAgrupadoInterno = grupoAtual.findIndex(r => r.codigo === alvo.codigo);
+                exibirWidgetAgrupado();
+            } else {
+                document.getElementById('widget-agrupado').style.display = 'none';
+            }
+
+            map.flyTo([alvo.lat, alvo.lon], 16);
             recolherBottomSheet();
+        }
+
+        function exibirWidgetAgrupado() {
+            const widget = document.getElementById('widget-agrupado');
+            const item = grupoAtual[indexAgrupadoInterno];
+            
+            document.getElementById('agrupado-index-txt').innerText = `Pacote ${indexAgrupadoInterno + 1} de ${grupoAtual.length}`;
+            document.getElementById('agrupado-rua').innerText = item.endereco;
+            document.getElementById('agrupado-codigo').innerText = item.codigo;
+            
+            widget.style.display = 'block';
+        }
+
+        function navegarAgrupado(direcao) {
+            indexAgrupadoInterno += direcao;
+            if (indexAgrupadoInterno < 0) indexAgrupadoInterno = grupoAtual.length - 1;
+            if (indexAgrupadoInterno >= grupoAtual.length) indexAgrupadoInterno = 0;
+            
+            const item = grupoAtual[indexAgrupadoInterno];
+            indexAtivo = bdRotas.findIndex(r => r.codigo === item.codigo);
+            exibirWidgetAgrupado();
         }
 
         function plotarNoMapa() {
@@ -720,6 +855,9 @@
                     iconAnchor: [14, 14]
                 });
                 let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
+                
+                marker.on('click', () => selecionarParadaEVerificarAgrupamento(idx));
+                
                 layerMarkers.push(marker);
                 bounds.push([e.lat, e.lon]);
                 latlngs.push([e.lat, e.lon]);
@@ -731,17 +869,15 @@
             map.fitBounds(bounds, { padding: [40, 40] });
         }
 
-        /* INVERTER ORDEM DAS PARADAS */
         function inverterOrdemParadas() {
             if (bdRotas.length < 2) return alert("Paradas insuficientes para inverter.");
             bdRotas.reverse();
             salvarBD();
             renderizarLista();
             plotarNoMapa();
-            alert("Ordem das paradas invertida com sucesso!");
+            alert("Ordem das paradas invertida!");
         }
 
-        /* ROTEIRIZAR E REOTIMIZAR (FIXA 1ª E ÚLTIMA / CÁLCULO DE KM E TEMPO) */
         function executarOtimizacaoTSP(fixarExtremos = false) {
             if (bdRotas.length <= 2) return alert("Paradas insuficientes para otimizar.");
 
@@ -802,7 +938,6 @@
             return { km: kmTotal.toFixed(1), tempo: tempoMinutos };
         }
 
-        /* EXPORTAÇÃO CSV DA SHOPEE E PDF DA ROTA */
         function exportarRelatorioCSV() {
             if (bdRotas.length === 0) return alert("Sem rota para exportar.");
             let csv = "\uFEFFOrdem,Codigo_Rastreio,Endereco,Latitude,Longitude,Status\n";
@@ -836,16 +971,13 @@
             doc.save(`Folha_de_Rota_${new Date().toISOString().slice(0,10)}.pdf`);
         }
 
-        /* RESUMO E HISTÓRICO DE DIAS TRABALHADOS */
         function abrirResumo() {
             document.getElementById('modalResumo').style.display = 'flex';
             document.getElementById('filtroDataResumo').value = new Date().toISOString().slice(0,10);
             filtrarResumoPorData();
         }
 
-        function fecharModalResumo() {
-            document.getElementById('modalResumo').style.display = 'none';
-        }
+        function fecharModalResumo() { document.getElementById('modalResumo').style.display = 'none'; }
 
         function filtrarResumoPorData() {
             let dataSel = document.getElementById('filtroDataResumo').value;
@@ -899,6 +1031,40 @@
             atualizarContador();
             plotarNoMapa();
             document.getElementById('status-geocoding-topo').innerText = "Aguardando importação de rota...";
+            document.getElementById('widget-agrupado').style.display = 'none';
+        }
+
+        function abrirModalEdit(idx) {
+            editIndexTarget = idx;
+            document.getElementById('inputEditEndereco').value = bdRotas[idx].endereco;
+            document.getElementById('modalEdit').style.display = 'flex';
+        }
+
+        function fecharModalEdit() { document.getElementById('modalEdit').style.display = 'none'; }
+
+        async function salvarEdicaoEndereco() {
+            if (editIndexTarget !== null) {
+                const novoEnd = document.getElementById('inputEditEndereco').value;
+                bdRotas[editIndexTarget].endereco = novoEnd;
+                let coords = await buscarGeocodingBackend(novoEnd);
+                bdRotas[editIndexTarget].lat = coords.lat;
+                bdRotas[editIndexTarget].lon = coords.lon;
+
+                salvarBD();
+                renderizarLista();
+                plotarNoMapa();
+                fecharModalEdit();
+            }
+        }
+
+        function excluirParada(idx) {
+            if (confirm("Deseja remover esta parada?")) {
+                bdRotas.splice(idx, 1);
+                salvarBD();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+            }
         }
 
         function registrarAcaoFinal(status) {
@@ -908,6 +1074,7 @@
             renderizarLista();
             atualizarContador();
             plotarNoMapa();
+            document.getElementById('widget-agrupado').style.display = 'none';
         }
 
         function navegarApp() {
@@ -923,13 +1090,35 @@
             localStorage.setItem('rota_rapida_db_oficial', JSON.stringify(bdRotas));
         }
 
-        function abrirScanner() { document.getElementById('modalScanner').style.display = 'flex'; }
-        function fecharScanner() { document.getElementById('modalScanner').style.display = 'none'; }
+        function abrirScanner() {
+            document.getElementById('modalScanner').style.display = 'flex';
+            if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 15, qrbox: { width: 280, height: 150 } },
+                (textoLido) => {
+                    const token = textoLido.trim().toUpperCase();
+                    const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
+                    if (idx !== -1) {
+                        selecionarParadaEVerificarAgrupamento(idx);
+                        fecharScanner();
+                    }
+                }
+            );
+        }
+
+        function fecharScanner() {
+            document.getElementById('modalScanner').style.display = 'none';
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => html5QrcodeScanner = null);
+            }
+        }
+
         function inserirCodigoManual() {
             let cod = prompt("Digite o código de rastreio:");
             if (cod) {
                 let idx = bdRotas.findIndex(r => r.codigo.includes(cod.toUpperCase()));
-                if (idx !== -1) selecionarParada(idx);
+                if (idx !== -1) selecionarParadaEVerificarAgrupamento(idx);
                 else alert("Código não encontrado na rota.");
             }
         }
