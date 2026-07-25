@@ -27,8 +27,8 @@
             --bg-input: #2d3748;
             --texto-principal: #ffffff;
             --texto-secundario: #9ca3af;
-            --border-color: rgba(255,255,255,0.05);
-            --tile-filter: brightness(0.8) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+            --border-color: rgba(255,255,255,0.08);
+            --tile-filter: brightness(0.85) invert(1) contrast(2.5) hue-rotate(200deg) saturate(0.4) brightness(0.8);
         }
 
         :root[data-theme="light"] {
@@ -846,8 +846,9 @@
 
         function inicializarMapa() {
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
-            L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap © CartoDB'
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap contributors © CARTO',
+                maxZoom: 19
             }).addTo(map);
 
             map.on('click', () => recolherBottomSheet());
@@ -889,20 +890,22 @@
 
         async function buscarGeocodingBackend(endereco) {
             try {
-                const response = await fetch('/geocode', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ address: endereco })
+                // Consulta Nominatim OpenStreetMap gratuita e precisa para endereços reais
+                let queryEnc = encodeURIComponent(endereco);
+                let response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${queryEnc}&limit=1`, {
+                    headers: { 'User-Agent': 'RotaRapidaApp/1.0' }
                 });
                 if (response.ok) {
-                    const data = await response.json();
-                    return { lat: data.lat, lon: data.lon };
+                    let data = await response.json();
+                    if (data && data.length > 0) {
+                        return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+                    }
                 }
             } catch (e) { }
             
             return {
-                lat: -23.5505 + (Math.random() - 0.5) * 0.05,
-                lon: -46.6333 + (Math.random() - 0.5) * 0.05
+                lat: -23.5505 + (Math.random() - 0.5) * 0.02,
+                lon: -46.6333 + (Math.random() - 0.5) * 0.02
             };
         }
 
@@ -994,64 +997,59 @@
                             chavesY.forEach(y => {
                                 let linhaItens = linhasPorY[y].sort((a, b) => a.x - b.x);
                                 
-                                // Separar colunas pelo eixo X (endereço está à esquerda, mas após a numeração)
-                                let itensAddress = linhaItens.filter(i => i.x > 30 && i.x < 220); 
-                                let itensNotes = linhaItens.filter(i => i.x >= 220);
+                                // Correção de espaçamento e união correta dos caracteres acentuados gerados pelo PDF.js
+                                let textoCompletoLinha = "";
+                                let ultimoX = -1;
+                                linhaItens.forEach(i => {
+                                    if (ultimoX !== -1 && (i.x - ultimoX) > 12) {
+                                        textoCompletoLinha += " ";
+                                    }
+                                    textoCompletoLinha += i.str;
+                                    ultimoX = i.x + (i.str.length * 6);
+                                });
 
-                                let textoAddress = itensAddress.map(i => i.str).join(" ").trim();
-                                let textoNotes = itensNotes.map(i => i.str).join(" ").trim();
-                                let textoCompleto = (textoAddress + " " + textoNotes).toLowerCase();
+                                textoCompletoLinha = textoCompletoLinha.replace(/\s+/g, ' ').trim();
+                                let textoLower = textoCompletoLinha.toLowerCase();
 
-                                // Ignora rodapés, cabeçalhos, tempo total e a linha "Destino"
-                                if (textoCompleto.includes("address") || 
-                                    textoCompleto.includes("powered by spoke") || 
-                                    textoCompleto.includes("tempo total") ||
-                                    textoCompleto.includes("distância total") ||
-                                    textoCompleto.includes("destino") ||
-                                    textoCompleto.includes("estimated arrival")) {
+                                if (textoLower.includes("address") || 
+                                    textoLower.includes("powered by spoke") || 
+                                    textoLower.includes("tempo total") ||
+                                    textoLower.includes("distância total") ||
+                                    textoLower.includes("destino") ||
+                                    textoLower.includes("estimated arrival")) {
                                     return;
                                 }
 
                                 let codigoExtraido = null;
-                                let matchNotas = textoNotes.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
+                                let matchNotas = textoCompletoLinha.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
                                 if (matchNotas) {
                                     codigoExtraido = matchNotas[0].toUpperCase();
-                                } else {
-                                    let matchEnd = textoAddress.match(/([A-Z]{2}\d{9}[A-Z]{2}|\bBR\d{9,13}\w?|\b\d{10,14}\b)/i);
-                                    if (matchEnd) codigoExtraido = matchEnd[0].toUpperCase();
                                 }
 
-                                if (codigoExtraido && textoAddress.includes(codigoExtraido)) {
-                                    textoAddress = textoAddress.replace(codigoExtraido, '').replace(/^[;,-\s]+|[;,-\s]+$/g, '').trim();
-                                }
-
-                                // Se achou código, é um novo pacote!
                                 if (codigoExtraido) {
                                     if (paradaAtual && paradaAtual.endereco.length > 3) {
                                         itensExtraidos.push(paradaAtual);
                                     }
                                     
+                                    let enderecoLimpo = textoCompletoLinha.replace(codigoExtraido, '').replace(/^[;,-\s]+|[;,-\s]+$/g, '').trim();
                                     paradaAtual = {
                                         codigo: codigoExtraido,
-                                        endereco: textoAddress,
+                                        endereco: enderecoLimpo,
                                         lat: null,
                                         lon: null
                                     };
                                 } else {
-                                    // Se não tem código, mas tem texto e já abrimos uma parada, unifica as quebras de linha!
-                                    if (paradaAtual && textoAddress.length > 1 && !/^[\d]+$/.test(textoAddress)) {
-                                        paradaAtual.endereco += " " + textoAddress;
+                                    if (paradaAtual && textoCompletoLinha.length > 1 && !/^[\d]+$/.test(textoCompletoLinha)) {
+                                        paradaAtual.endereco += " " + textoCompletoLinha;
                                     }
                                 }
                             });
                         }
                         
-                        // Empurrar a última parada que estava sendo construída no loop
                         if (paradaAtual && paradaAtual.endereco.length > 3) {
                             itensExtraidos.push(paradaAtual);
                         }
 
-                        // Limpa os endereços para ficar apenas com espaços únicos
                         let itens = itensExtraidos.map((item) => ({
                             codigo: item.codigo,
                             endereco: item.endereco.replace(/\s+/g, ' ').trim(),
@@ -1589,4 +1587,3 @@
     </script>
 </body>
 </html>
-
