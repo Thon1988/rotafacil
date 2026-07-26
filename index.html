@@ -232,6 +232,7 @@
             margin: 4px 0 0 0;
         }
 
+        /* CARDS DA TELA INICIAL (GRID 2x2 original) */
         .home-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -731,6 +732,7 @@
             margin-bottom: 20px;
         }
 
+        /* Switch Toggle */
         .switch {
             position: relative;
             display: inline-block;
@@ -998,7 +1000,7 @@
             📦 Abrir Scanner
         </button>
 
-        <div class="home-footer-tip" id="home-footer-tip-texto">
+        <div class="home-footer-tip">
             💡 <b>Dica:</b> Carregue o PDF ou Excel/CSV separadamente em seus botões e clique em "Abrir Scanner" para bipar os pacotes!
         </div>
     </div>
@@ -1026,7 +1028,7 @@
         <div class="divisor-menu"></div>
 
         <div class="menu-item" onclick="abrirConfigRota(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             Configurar Rota
         </div>
 
@@ -1261,7 +1263,7 @@
         <div class="scanner-viewport-container">
             <div id="scanner-bip-toast">Parada #1 (1x)</div>
             <div id="reader"></div>
-            <div class="scanner-instruction" id="scanner-instruction-txt">Aponte para o código de barras do pacote</div>
+            <div class="scanner-instruction">Aponte para o código de barras do pacote</div>
         </div>
 
         <div class="scanner-stats-bar">
@@ -1322,7 +1324,6 @@
         let grupoAtual = [];
         let indexAgrupadoInterno = 0;
         let listaBipados = new Set();
-        let modoPdfApenasScanner = false;
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
@@ -1390,12 +1391,8 @@
         }
 
         function abrirMapaDaRota() {
-            if (modoPdfApenasScanner) {
-                alert("O arquivo carregado é um PDF. O PDF é apenas para carregar e abrir o scanner, não gerando pontos no mapa.");
-                return;
-            }
             if (bdRotas.length === 0) {
-                alert("Nenhuma rota carregada para exibir no mapa. Carregue um arquivo Excel/CSV.");
+                alert("Nenhuma rota carregada para exibir no mapa. Carregue um arquivo Excel/CSV ou PDF.");
                 return;
             }
             document.getElementById('fluxo-inicial-container').style.display = 'none';
@@ -1408,14 +1405,9 @@
             const descPdf = document.getElementById('desc-rota-pdf');
 
             if (bdRotas.length > 0) {
-                if (modoPdfApenasScanner) {
-                    txt.innerText = `${bdRotas.length} paradas carregadas via PDF`;
-                    descPdf.innerText = `PDF carregado (${bdRotas.length} paradas)`;
-                } else {
-                    txt.innerText = `Rota carregada · ${bdRotas.length} paradas`;
-                    descExcel.innerText = `Excel / CSV (${bdRotas.length} paradas)`;
-                    descPdf.innerText = `PDF processado`;
-                }
+                txt.innerText = `${bdRotas.length} paradas carregadas`;
+                descExcel.innerText = `Excel / CSV (${bdRotas.length} paradas)`;
+                descPdf.innerText = `PDF carregado (${bdRotas.length} paradas)`;
             } else {
                 txt.innerText = "Nenhuma rota carregada";
                 descExcel.innerText = "Excel / CSV (Mapa)";
@@ -1485,7 +1477,7 @@
 
                     let lat = latKey ? parseFloat(row[latKey]) : null;
                     let lon = lonKey ? parseFloat(row[lonKey]) : null;
-                    let codigo = codKey && row[codigo] ? cleanAddressString(String(row[codKey])).toUpperCase() : '';
+                    let codigo = codKey && row[codKey] ? cleanAddressString(String(row[codKey])).toUpperCase() : '';
                     
                     let partesEndereco = [];
                     if (endKey && row[endKey]) partesEndereco.push(cleanAddressString(String(row[endKey])));
@@ -1507,7 +1499,6 @@
                     }
                 });
 
-                modoPdfApenasScanner = false;
                 await estruturarBancoDeDados(itensPlanilha);
                 alert(`Rota carregada com sucesso! ${bdRotas.length} paradas carregadas do Excel/CSV.`);
                 abrirMapaDaRota();
@@ -1515,7 +1506,7 @@
             leitor.readAsArrayBuffer(arquivo);
         }
 
-        /* 2. CARREGAR PDF (Apenas para o scanner, sem ir para o mapa) */
+        /* 2. CARREGAR PDF */
         function acionarInputPdfUnico() {
             document.getElementById('inputPdfUnico').click();
         }
@@ -1573,46 +1564,17 @@
                 itensExtraidos.sort((a, b) => a.sequencia - b.sequencia);
 
                 if (itensExtraidos.length === 0) {
-                    alert("Não foi possível extrair a tabela de entregas deste PDF.");
+                    alert("Não foi possível extrair a tabela de entregas (# e Address) deste PDF.");
                     return;
                 }
 
-                modoPdfApenasScanner = true;
-                await estruturarBancoDeDadosPdf(itensExtraidos);
-                
-                // Exibe contagem logo abaixo do botão laranja ou notifica o usuário conforme solicitado
-                alert(`✅ PDF carregado com sucesso! ${bdRotas.length} paradas carregadas para o Scanner.`);
-                
-                // Abre o scanner automaticamente logo após carregar o PDF
-                abrirScanner();
+                await estruturarBancoDeDados(itensExtraidos);
+                alert(`✅ PDF carregado! ${bdRotas.length} paradas extraídas na sequência correta.`);
+                abrirMapaDaRota();
 
             } catch (err) {
                 alert("Erro ao processar o arquivo PDF.");
                 console.error(err);
-            }
-        }
-
-        async function estruturarBancoDeDadosPdf(listaItens) {
-            bdRotas = [];
-            // PDF não vai para o mapa, coordenadas fixas fictícias apenas para integridade interna
-            for (let i = 0; i < listaItens.length; i++) {
-                let item = listaItens[i];
-                bdRotas.push({
-                    id: i + 1,
-                    codigo: item.codigo,
-                    endereco: item.endereco,
-                    status: 'pendente',
-                    timestamp: null,
-                    lat: -23.5505,
-                    lon: -46.6333
-                });
-            }
-
-            if (bdRotas.length > 0) {
-                salvarBD();
-                atualizarStatusHome();
-                renderizarLista();
-                atualizarContador();
             }
         }
 
@@ -1699,9 +1661,7 @@
                 document.getElementById('widget-agrupado').style.display = 'none';
             }
 
-            if (!modoPdfApenasScanner) {
-                map.flyTo([alvo.lat, alvo.lon], 16);
-            }
+            map.flyTo([alvo.lat, alvo.lon], 16);
             recolherBottomSheet();
         }
 
@@ -1727,8 +1687,6 @@
         }
 
         function plotarNoMapa() {
-            if (modoPdfApenasScanner) return;
-
             layerMarkers.forEach(m => map.removeLayer(m));
             layerMarkers = [];
 
@@ -1757,10 +1715,6 @@
         }
 
         function iniciarOtimizacaoComEtapas(fixarExtremos = false) {
-            if (modoPdfApenasScanner) {
-                alert("A otimização de rota por mapa não está disponível para arquivos PDF (modo scanner).");
-                return;
-            }
             if (bdRotas.length < 2) return alert("Paradas insuficientes para otimizar.");
 
             const modal = document.getElementById('modalOtimizacaoEtapas');
@@ -1976,7 +1930,6 @@
         function novaRota() {
             bdRotas = [];
             listaBipados.clear();
-            modoPdfApenasScanner = false;
             salvarBD();
             atualizarStatusHome();
             renderizarLista();
@@ -1998,16 +1951,13 @@
             if (editIndexTarget !== null) {
                 const novoEnd = cleanAddressString(document.getElementById('inputEditEndereco').value);
                 bdRotas[editIndexTarget].endereco = novoEnd;
-                
-                if (!modoPdfApenasScanner) {
-                    let coords = await buscarGeocodingBackend(novoEnd);
-                    bdRotas[editIndexTarget].lat = coords.lat;
-                    bdRotas[editIndexTarget].lon = coords.lon;
-                    plotarNoMapa();
-                }
+                let coords = await buscarGeocodingBackend(novoEnd);
+                bdRotas[editIndexTarget].lat = coords.lat;
+                bdRotas[editIndexTarget].lon = coords.lon;
 
                 salvarBD();
                 renderizarLista();
+                plotarNoMapa();
                 fecharModalEdit();
             }
         }
@@ -2148,4 +2098,3 @@
     </script>
 </body>
 </html>
-
