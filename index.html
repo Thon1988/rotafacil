@@ -1576,8 +1576,11 @@
                     
                     let partesEndereco = [];
                     if (endKey && row[endKey]) partesEndereco.push(cleanAddressString(String(row[endKey])));
-                    if (bairroKey && row[bairroKey]) partesEndereco.push(cleanAddressString(String(bairroKey])));
-                    if (cidadeKey && row[cidadeKey]) partesEndereco.push(cleanAddressString(String(cidadeKey])));
+                    
+                    // CORREÇÃO APLICADA NESTA LINHA! 
+                    if (bairroKey && row[bairroKey]) partesEndereco.push(cleanAddressString(String(row[bairroKey])));
+                    
+                    if (cidadeKey && row[cidadeKey]) partesEndereco.push(cleanAddressString(String(row[cidadeKey])));
                     if (cepKey && row[cepKey]) partesEndereco.push(`CEP ${cleanAddressString(String(row[cepKey]))}`);
 
                     let enderecoTexto = partesEndereco.join(', ');
