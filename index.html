@@ -1350,8 +1350,8 @@
             aplicarTema(temaAtual);
             atualizarLabelGPS();
             inicializarMapa();
-            inicializarSortable();
-            configurarGestoBottomSheet();
+            inicializarSortable(); // Agora implementada!
+            configurarGestoBottomSheet(); // Agora implementada!
 
             if (bdRotas.length > 0) {
                 document.getElementById('fluxo-inicial-container').style.display = 'none';
@@ -1363,6 +1363,83 @@
                 atualizarStatusHome();
             }
         };
+
+        // ====== FUNÇÕES AUSENTES IMPLEMENTADAS ====== //
+
+        function inicializarSortable() {
+            const lista = document.getElementById('lista-paradas');
+            if (lista && typeof Sortable !== 'undefined') {
+                sortableInstance = new Sortable(lista, {
+                    handle: '.handle-drag',
+                    animation: 150,
+                    onEnd: function (evt) {
+                        const itemMovido = bdRotas.splice(evt.oldIndex, 1)[0];
+                        bdRotas.splice(evt.newIndex, 0, itemMovido);
+                        salvarBD();
+                        renderizarLista();
+                        plotarNoMapa();
+                    }
+                });
+            }
+        }
+
+        function recolherBottomSheet() {
+            document.getElementById('bottom-sheet').classList.add('recolhido');
+        }
+
+        function configurarGestoBottomSheet() {
+            const handle = document.getElementById('handleTouch');
+            if(handle) {
+                handle.addEventListener('click', () => {
+                    const sheet = document.getElementById('bottom-sheet');
+                    sheet.classList.toggle('recolhido');
+                });
+            }
+        }
+
+        // Funções do Modal de Configuração de Rota
+        function abrirConfigRota() {
+            document.getElementById('modalConfigRota').style.display = 'flex';
+        }
+
+        function fecharConfigRota() {
+            document.getElementById('modalConfigRota').style.display = 'none';
+        }
+
+        function selecionarPontoSaida(tipo) {
+            configRotaData.pontoSaida = tipo;
+            document.querySelectorAll('.config-opcao-box').forEach(el => el.classList.remove('ativo'));
+            document.getElementById('cfg-saida-' + tipo).classList.add('ativo');
+        }
+
+        function atualizarConfigEstado() {
+            configRotaData.voltaInicio = document.getElementById('cfgVoltaInicio').checked;
+        }
+
+        function definirTempoParada(minutos) {
+            configRotaData.tempoParada = minutos;
+            document.querySelectorAll('#modalConfigRota .config-opcoes-grid:nth-of-type(1) .config-opcao-pill').forEach(el => {
+                if(el.innerText.includes(minutos + 'm')) el.classList.add('ativo');
+                else el.classList.remove('ativo');
+            });
+            document.getElementById('lblTempoMin').innerText = minutos;
+            document.getElementById('lblPacotesHora').innerText = `≈ ${Math.floor(60 / minutos)} pacotes/hora`;
+        }
+
+        function definirVelocidade(vel) {
+            configRotaData.velocidadeMedia = vel;
+            document.querySelectorAll('#modalConfigRota .config-opcoes-grid:nth-of-type(2) .config-opcao-pill').forEach(el => {
+                if(el.innerText.includes(vel + ' km/h')) el.classList.add('ativo');
+                else el.classList.remove('ativo');
+            });
+        }
+
+        function salvarEFecharConfigRota() {
+            localStorage.setItem('appegg_config', JSON.stringify(configRotaData));
+            fecharConfigRota();
+        }
+
+        // ============================================ //
 
         function alternarTema() {
             temaAtual = temaAtual === 'dark' ? 'light' : 'dark';
@@ -1539,7 +1616,7 @@
             await lerArquivoPdfLogica(inputElement.files[0]);
         }
 
-        async function processarPdfEntregasOnScanner(inputElement) {
+        async function processarPdfEntregasNoScanner(inputElement) {
             if (inputElement.files.length === 0) return;
             await lerArquivoPdfLogica(inputElement.files[0]);
             atualizarEstatisticasScanner();
