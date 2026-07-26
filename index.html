@@ -1503,8 +1503,9 @@
                 descExcel.innerText = "Excel / CSV (Mapa)";
             }
 
-            if (Object.keys(pdfTabelaCorrespondencia).length > 0) {
-                descPdf.innerText = `PDF carregado (${Object.keys(pdfTabelaCorrespondencia).length} códigos)`;
+            let totalPdf = Object.keys(pdfTabelaCorrespondencia).length;
+            if (totalPdf > 0) {
+                descPdf.innerText = `PDF carregado (${totalPdf} códigos)`;
             } else {
                 descPdf.innerText = "Lista de entregas";
             }
@@ -1601,7 +1602,7 @@
             leitor.readAsArrayBuffer(arquivo);
         }
 
-        /* 2. CARREGAR PDF (Exclusivo para identificar numeração de paradas na bipagem) */
+        /* 2. CARREGAR PDF (Corrigido para capturar múltiplos pacotes por parada e flexibilizar layouts) */
         function acionarInputPdfUnico() {
             document.getElementById('inputPdfUnico').click();
         }
@@ -1621,6 +1622,7 @@
             try {
                 const pdf = await pdfjsLib.getDocument(new Uint8Array(await arquivo.arrayBuffer())).promise;
                 pdfTabelaCorrespondencia = {}; 
+                let ultimaParadaDetectada = "Parada 1";
 
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
@@ -1628,7 +1630,7 @@
                     
                     let linhasPorY = {};
                     textContent.items.forEach(item => {
-                        let y = Math.round(item.transform[5] / 8) * 8;
+                        let y = Math.round(item.transform[5] / 6) * 6; // Agrupamento espacial refinado
                         if (!linhasPorY[y]) linhasPorY[y] = [];
                         linhasPorY[y].push({ x: item.transform[4], str: item.str });
                     });
@@ -1640,17 +1642,18 @@
                         let linhaTexto = elementos.map(e => e.str).join(" ");
                         let limpo = cleanAddressString(linhaTexto);
 
-                        let matchLinha = limpo.match(/^(\d{1,3})\s+(.+)/);
-                        if (matchLinha) {
-                            let sequencia = parseInt(matchLinha[1]);
-                            let resto = matchLinha[2];
+                        // Identifica número de parada explícito na linha (ex: "15 Rua X" ou "Parada 15")
+                        let matchSeq = limpo.match(/^(?:parada\s*)?(\d{1,3})[\s\-]/i);
+                        if (matchSeq) {
+                            ultimaParadaDetectada = `Parada ${parseInt(matchSeq[1])}`;
+                        }
 
-                            let matchCod = resto.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2})/i);
-                            let codigo = matchCod ? matchCod[0].toUpperCase() : null;
-
-                            if (codigo) {
-                                pdfTabelaCorrespondencia[codigo] = `Parada ${sequencia}`;
-                            }
+                        // Extrai múltiplos códigos de rastreio na mesma linha (suporta BR, SPX, AZ, etc.)
+                        let matchesCodigos = limpo.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|AMAZON-\w+|\d{10,})/gi);
+                        if (matchesCodigos) {
+                            matchesCodigos.forEach(codigo => {
+                                pdfTabelaCorrespondencia[codigo.toUpperCase()] = ultimaParadaDetectada;
+                            });
                         }
                     });
                 }
