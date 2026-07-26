@@ -956,25 +956,25 @@
         </div>
 
         <div class="home-grid">
-            <!-- Card 1: Carregar Rota (Excel / CSV para ajudar a localizar e complementar pontos no mapa estilo Rota Ninja) -->
+            <!-- Card 1: Carregar Rota (Excel / CSV) -->
             <div class="home-card-acao" onclick="acionarInputExcelUnico()">
                 <div class="home-card-icon">📊</div>
                 <div>
                     <p class="home-card-title">Carregar Rota</p>
-                    <p class="home-card-desc">Excel / CSV (Mapa)</p>
+                    <p class="home-card-desc" id="desc-rota-excel">Excel / CSV (Mapa)</p>
                 </div>
             </div>
-            <input type="file" id="inputExcelUnico" accept=".csv, .xlsx, .xls" style="display:none;" onchange="processarExcelMapa(this)">
+            <input type="file" id="inputExcelUnico" accept=".csv, .xlsx, .xls" style="display:none;" onchange="processarExcelRota(this)">
 
-            <!-- Card 2: Carregar PDF (Carrega arquivo exclusivo de PDF) -->
+            <!-- Card 2: Carregar PDF (Extrai sequencia # e Address do PDF de entregas) -->
             <div class="home-card-acao" onclick="acionarInputPdfUnico()">
                 <div class="home-card-icon">📄</div>
                 <div>
                     <p class="home-card-title">Carregar PDF</p>
-                    <p class="home-card-desc">Lista de entregas</p>
+                    <p class="home-card-desc" id="desc-rota-pdf">Lista de entregas</p>
                 </div>
             </div>
-            <input type="file" id="inputPdfUnico" accept=".pdf" style="display:none;" onchange="processarPdfUnico(this)">
+            <input type="file" id="inputPdfUnico" accept=".pdf" style="display:none;" onchange="processarPdfEntregas(this)">
 
             <!-- Card 3: Mapa (Abre o mapa com os pontos da rota) -->
             <div class="home-card-acao" onclick="abrirMapaDaRota()">
@@ -999,10 +999,9 @@
         <button class="home-btn-principal" onclick="abrirScanner()">
             📦 Abrir Scanner
         </button>
-        <input type="file" id="inputExcelComplementar" accept=".csv, .xlsx, .xls" style="display:none;" onchange="processarExcelComplementar(this)">
 
         <div class="home-footer-tip">
-            💡 <b>Dica:</b> Carregue o PDF ou Excel/CSV e clique em "Abrir Scanner" para bipar os pacotes e numerar sua rota!
+            💡 <b>Dica:</b> Carregue o PDF ou Excel/CSV separadamente em seus botões e clique em "Abrir Scanner" para bipar os pacotes!
         </div>
     </div>
 
@@ -1269,13 +1268,9 @@
 
         <div class="scanner-stats-bar">
             <div style="display: flex; gap: 10px; width: 100%; margin-bottom: 4px;">
-                <div class="scanner-stat-card" onclick="acionarExcelComplementar()" style="background: var(--cor-laranja); border-color: var(--cor-laranja); display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px;">
-                    <span style="font-size: 18px;">📊</span>
-                    <div class="scanner-stat-num" style="color: white; font-size: 14px;">Carregar Excel/CSV</div>
-                </div>
-                <div class="scanner-stat-card" onclick="inserirCodigoManual()" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px;">
+                <div class="scanner-stat-card" onclick="inserirCodigoManual()" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; width: 100%;">
                     <div class="scanner-stat-num" style="font-size: 18px;">✏️</div>
-                    <div class="scanner-stat-label" style="font-size: 12px; color: white;">Digitar</div>
+                    <div class="scanner-stat-label" style="font-size: 12px; color: white;">Digitar Código Manual</div>
                 </div>
             </div>
             <div style="display: flex; gap: 10px; width: 100%;">
@@ -1406,10 +1401,17 @@
 
         function atualizarStatusHome() {
             const txt = document.getElementById('home-status-texto');
+            const descExcel = document.getElementById('desc-rota-excel');
+            const descPdf = document.getElementById('desc-rota-pdf');
+
             if (bdRotas.length > 0) {
                 txt.innerText = `Rota carregada · ${bdRotas.length} paradas`;
+                descExcel.innerText = `Excel / CSV (${bdRotas.length} paradas)`;
+                descPdf.innerText = `PDF processado`;
             } else {
                 txt.innerText = "Nenhuma rota carregada";
+                descExcel.innerText = "Excel / CSV (Mapa)";
+                descPdf.innerText = "Lista de entregas";
             }
         }
 
@@ -1445,12 +1447,12 @@
             };
         }
 
-        /* 1. CARREGAR EXCEL/CSV (Estilo Rota Ninja para complementar ou carregar pontos e coordenadas no mapa) */
+        /* 1. CARREGAR EXCEL / CSV (Botão Carregar Rota) */
         function acionarInputExcelUnico() {
             document.getElementById('inputExcelUnico').click();
         }
 
-        async function processarExcelMapa(inputElement) {
+        async function processarExcelRota(inputElement) {
             if (inputElement.files.length === 0) return;
             const arquivo = inputElement.files[0];
             const leitor = new FileReader();
@@ -1498,93 +1500,86 @@
                 });
 
                 await estruturarBancoDeDados(itensPlanilha);
-                alert(`Planilha carregada! ${bdRotas.length} pontos adicionados via Excel/CSV. Abrindo mapa.`);
+                alert(`Rota carregada com sucesso! ${bdRotas.length} paradas carregadas do Excel/CSV.`);
                 abrirMapaDaRota();
             };
             leitor.readAsArrayBuffer(arquivo);
         }
 
-        /* 2. CARREGAR PDF (Botão dedicado exclusivo para PDF) */
+        /* 2. CARREGAR PDF (Botão Carregar PDF - Lê coluna # e Address exatamente como na imagem de exemplo) */
         function acionarInputPdfUnico() {
             document.getElementById('inputPdfUnico').click();
         }
 
-        async function processarPdfUnico(inputElement) {
+        async function processarPdfEntregas(inputElement) {
             if (inputElement.files.length === 0) return;
             const arquivo = inputElement.files[0];
 
             try {
                 const pdf = await pdfjsLib.getDocument(new Uint8Array(await arquivo.arrayBuffer())).promise;
-                let fullExtractedLines = [];
+                let itensExtraidos = [];
 
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
                     
-                    let lastY = null;
-                    let currentRowText = "";
-
+                    // Organizar itens por posição Y aproximada para formar linhas
+                    let linhasPorY = {};
                     textContent.items.forEach(item => {
-                        const currentY = item.transform[5];
-                        if (lastY !== null && Math.abs(currentY - lastY) > 5) {
-                            fullExtractedLines.push(cleanAddressString(currentRowText));
-                            currentRowText = "";
-                        }
-                        currentRowText += " " + item.str;
-                        lastY = currentY;
+                        let y = Math.round(item.transform[5] / 8) * 8; // agrupamento vertical
+                        if (!linhasPorY[y]) linhasPorY[y] = [];
+                        linhasPorY[y].push({ x: item.transform[4], str: item.str });
                     });
 
-                    if (currentRowText.trim() !== "") {
-                        fullExtractedLines.push(cleanAddressString(currentRowText));
-                    }
+                    // Ordenar linhas de cima para baixo
+                    let chavesY = Object.keys(linhasPorY).map(Number).sort((a, b) => b - a);
+
+                    chavesY.forEach(y => {
+                        let elementos = linhasPorY[y].sort((a, b) => a.x - b.x);
+                        let linhaTexto = elementos.map(e => e.str).join(" ");
+                        let limpo = cleanAddressString(linhaTexto);
+
+                        // Detectar formato de tabela com coluna # (ex: "1 Av Mendonça Drummond...")
+                        let matchLinha = limpo.match(/^(\d{1,3})\s+(.+)/);
+                        if (matchLinha) {
+                            let sequencia = parseInt(matchLinha[1]);
+                            let resto = matchLinha[2];
+
+                            // Procurar código de rastreio na mesma linha (ex: BR..., códigos alfanuméricos compridos)
+                            let matchCod = resto.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2})/i);
+                            let codigo = matchCod ? matchCod[0].toUpperCase() : `PKG-${sequencia}`;
+                            let endereco = cleanAddressString(resto.replace(matchCod ? matchCod[0] : '', ''));
+
+                            // Limpar lixos de colunas subsequentes se houver (como horário estimado)
+                            endereco = endereco.replace(/\d{2}:\d{2}.*/, '').trim();
+
+                            if (endereco.length > 5) {
+                                itensExtraidos.push({
+                                    sequencia: sequencia,
+                                    codigo: codigo,
+                                    endereco: endereco,
+                                    lat: null,
+                                    lon: null
+                                });
+                            }
+                        }
+                    });
                 }
 
-                let textoUnificado = fullExtractedLines.join(" ");
-                let regexBlocos = /(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|\b\d{10,14}\b)/g;
-                let posicoes = [];
-                let match;
-
-                while ((match = regexBlocos.exec(textoUnificado)) !== null) {
-                    posicoes.push({ codigo: match[0].toUpperCase(), index: match.index });
-                }
-
-                let itensExtraidos = [];
-                for (let j = 0; j < posicoes.length; j++) {
-                    let inicio = posicoes[j].index;
-                    let fim = (j < posicoes.length - 1) ? posicoes[j + 1].index : textoUnificado.length;
-                    let pedaco = textoUnificado.substring(inicio, fim);
-
-                    let codigo = posicoes[j].codigo;
-                    let endereco = cleanAddressString(pedaco.replace(codigo, '').replace(/^[;,-\s]+|[;,-\s]+$/g, ''));
-
-                    if (endereco.length > 5 && !endereco.toLowerCase().includes("powered by")) {
-                        itensExtraidos.push({
-                            codigo: codigo,
-                            endereco: endereco,
-                            lat: null,
-                            lon: null
-                        });
-                    }
-                }
+                // Ordenar pela coluna # extraída do PDF para garantir a sequência correta exata
+                itensExtraidos.sort((a, b) => a.sequencia - b.sequencia);
 
                 if (itensExtraidos.length === 0) {
-                    fullExtractedLines.forEach((l, idx) => {
-                        let limpo = cleanAddressString(l);
-                        if (limpo.length > 10) {
-                            let matchCod = limpo.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2})/i);
-                            let cod = matchCod ? matchCod[0].toUpperCase() : `PDF-${idx+1}`;
-                            let end = cleanAddressString(limpo.replace(cod, ''));
-                            itensExtraidos.push({ codigo: cod, endereco: end, lat: null, lon: null });
-                        }
-                    });
+                    alert("Não foi possível extrair a tabela de entregas (# e Address) deste PDF.");
+                    return;
                 }
 
                 await estruturarBancoDeDados(itensExtraidos);
-                alert(`✅ Sucesso! ${bdRotas.length} pacotes carregados do PDF. Clique em "Abrir Scanner" para bipar ou veja no mapa.`);
-                atualizarStatusHome();
+                alert(`✅ PDF carregado! ${bdRotas.length} paradas extraídas na sequência correta.`);
+                abrirMapaDaRota();
 
             } catch (err) {
-                alert("Erro ao extrair o PDF.");
+                alert("Erro ao processar o arquivo PDF.");
                 console.error(err);
             }
         }
@@ -1621,57 +1616,8 @@
                 atualizarContador();
                 plotarNoMapa();
             } else {
-                alert("Nenhuma parada válida foi identificada.");
+                alert("Nenhuma parada válida foi estruturada.");
             }
-        }
-
-        /* CARREGAR EXCEL/CSV NO SCANNER PARA COMPLEMENTAR */
-        function acionarExcelComplementar() {
-            document.getElementById('inputExcelComplementar').click();
-        }
-
-        async function processarExcelComplementar(inputElement) {
-            if (inputElement.files.length === 0) return;
-            const arquivo = inputElement.files[0];
-            const leitor = new FileReader();
-
-            leitor.onload = async function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonObjetos = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-                
-                let novosItens = [];
-                jsonObjetos.forEach((row, idx) => {
-                    let keys = Object.keys(row);
-                    let codKey = keys.find(k => /código|codigo|rastreio|spx|tracking|pacote|tn/i.test(k.trim()));
-                    let endKey = keys.find(k => /endereço|endereco|rua|logradouro|address/i.test(k.trim()));
-                    let codigo = codKey && row[codKey] ? cleanAddressString(String(row[codKey])).toUpperCase() : `COMP-${idx+1}`;
-                    let endereco = endKey && row[endKey] ? cleanAddressString(String(row[endKey])) : "Endereço complementar";
-
-                    novosItens.push({ codigo: codigo, endereco: endereco, lat: null, lon: null });
-                });
-
-                for (let item of novosItens) {
-                    let coords = await buscarGeocodingBackend(item.endereco);
-                    bdRotas.push({
-                        id: bdRotas.length + 1,
-                        codigo: item.codigo,
-                        endereco: item.endereco,
-                        status: 'pendente',
-                        timestamp: null,
-                        lat: coords.lat,
-                        lon: coords.lon
-                    });
-                }
-
-                salvarBD();
-                atualizarStatusHome();
-                renderizarLista();
-                atualizarEstatisticasScanner();
-                alert(`Excel/CSV carregado com sucesso para complementar! Total de pacotes atualizado para ${bdRotas.length}.`);
-            };
-            leitor.readAsArrayBuffer(arquivo);
         }
 
         function contarPacotesNoMesmoEndereco(endereco) {
