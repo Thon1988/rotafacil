@@ -232,25 +232,25 @@
             margin: 4px 0 0 0;
         }
 
-        /* CARDS DA TELA INICIAL */
+        /* CARDS DA TELA INICIAL (GRID 2x2 original) */
         .home-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .home-card-acao {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 20px;
-            padding: 18px 16px;
+            padding: 16px 14px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             cursor: pointer;
             transition: all 0.2s;
-            min-height: 125px;
+            min-height: 115px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
@@ -260,23 +260,23 @@
         }
 
         .home-card-icon {
-            width: 38px; height: 38px;
+            width: 36px; height: 36px;
             border-radius: 10px;
             background: rgba(255, 87, 34, 0.1);
             color: var(--cor-laranja);
             display: flex; align-items: center; justify-content: center;
-            font-size: 18px;
+            font-size: 17px;
         }
 
         .home-card-title {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 800;
             color: var(--texto-principal);
             margin: 0;
         }
 
         .home-card-desc {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--texto-secundario);
             margin: 2px 0 0 0;
         }
@@ -290,7 +290,7 @@
             font-size: 13px;
             font-weight: 700;
             text-align: center;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -302,14 +302,14 @@
             background: var(--cor-laranja);
             color: white;
             border: none;
-            padding: 16px;
+            padding: 15px;
             border-radius: 16px;
             font-size: 16px;
             font-weight: 800;
             cursor: pointer;
             box-shadow: 0 6px 20px rgba(255, 87, 34, 0.4);
             text-align: center;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .home-footer-tip {
@@ -317,7 +317,7 @@
             font-size: 12px;
             color: var(--texto-secundario);
             margin-top: auto;
-            padding: 10px 0;
+            padding: 5px 0;
             line-height: 1.4;
         }
 
@@ -942,7 +942,6 @@
                 <div class="wizard-avatar">T</div>
                 <h1 class="wizard-greeting">Olá, Thon</h1>
             </div>
-            <!-- Adicionada chamada também ao menu principal ou opções de tema se preferir (Mantendo alternarTema atual mas pode interligar se necessário) -->
             <button class="btn-round-top" onclick="alternarTema()" style="width: 38px; height: 38px; font-size: 14px;">⚙️</button>
         </div>
 
@@ -957,24 +956,25 @@
         </div>
 
         <div class="home-grid">
-            <!-- Card 1: Carregar rota (Excel/CSV para abrir o mapa) -->
+            <!-- Card 1: Carregar Rota (Excel / CSV para ajudar a localizar e complementar pontos no mapa estilo Rota Ninja) -->
             <div class="home-card-acao" onclick="acionarInputExcelUnico()">
-                <div class="home-card-icon">📂</div>
+                <div class="home-card-icon">📊</div>
                 <div>
-                    <p class="home-card-title">Carregar rota</p>
+                    <p class="home-card-title">Carregar Rota</p>
                     <p class="home-card-desc">Excel / CSV (Mapa)</p>
                 </div>
             </div>
             <input type="file" id="inputExcelUnico" accept=".csv, .xlsx, .xls" style="display:none;" onchange="processarExcelMapa(this)">
 
-            <!-- Card 2: Salvar em PDF (Converte rota carregada em Excel/CSV para PDF) -->
-            <div class="home-card-acao" onclick="gerarPDFRota()">
+            <!-- Card 2: Carregar PDF (Carrega arquivo exclusivo de PDF) -->
+            <div class="home-card-acao" onclick="acionarInputPdfUnico()">
                 <div class="home-card-icon">📄</div>
                 <div>
-                    <p class="home-card-title">Salvar em PDF</p>
-                    <p class="home-card-desc">Converter rota</p>
+                    <p class="home-card-title">Carregar PDF</p>
+                    <p class="home-card-desc">Lista de entregas</p>
                 </div>
             </div>
+            <input type="file" id="inputPdfUnico" accept=".pdf" style="display:none;" onchange="processarPdfUnico(this)">
 
             <!-- Card 3: Mapa (Abre o mapa com os pontos da rota) -->
             <div class="home-card-acao" onclick="abrirMapaDaRota()">
@@ -995,15 +995,14 @@
             </div>
         </div>
 
-        <!-- Botão Laranja: Abrir Scanner e Numerar -->
-        <button class="home-btn-principal" onclick="document.getElementById('inputPdfScanner').click()">
-            📦 Abrir Scanner e Numerar
+        <!-- Botão Laranja Principal: Abrir Scanner (Abre a câmera para bipar a rota carregada) -->
+        <button class="home-btn-principal" onclick="abrirScanner()">
+            📦 Abrir Scanner
         </button>
-        <input type="file" id="inputPdfScanner" accept=".pdf" style="display:none;" onchange="processarPdfParaScanner(this)">
         <input type="file" id="inputExcelComplementar" accept=".csv, .xlsx, .xls" style="display:none;" onchange="processarExcelComplementar(this)">
 
         <div class="home-footer-tip">
-            💡 <b>Dica:</b> Carregue o PDF para iniciar a numeração e use o Excel/CSV para complementar ou ver o mapa completo!
+            💡 <b>Dica:</b> Carregue o PDF ou Excel/CSV e clique em "Abrir Scanner" para bipar os pacotes e numerar sua rota!
         </div>
     </div>
 
@@ -1034,9 +1033,9 @@
             Configurar Rota
         </div>
 
-        <div class="menu-item" onclick="abrirFluxoScannerEDetalhes(); fecharMenuLateral();">
+        <div class="menu-item" onclick="abrirScanner(); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2-2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
-            Numerar Pacotes
+            Abrir Scanner
         </div>
 
         <div class="menu-item" onclick="inserirCodigoManual(); fecharMenuLateral();">
@@ -1130,7 +1129,7 @@
         <div class="sheet-actions-row">
             <button class="btn-sheet-action destaque" onclick="iniciarOtimizacaoComEtapas(false)">⚡ Roteirizar</button>
             <button class="btn-sheet-action" onclick="iniciarOtimizacaoComEtapas(true)">🔀 Reotimizar</button>
-            <button class="btn-sheet-action" onclick="abrirFluxoScannerEDetalhes()">📦 Numerar Pacotes</button>
+            <button class="btn-sheet-action" onclick="abrirScanner()">📦 Abrir Scanner</button>
         </div>
 
         <div id="lista-paradas"></div>
@@ -1257,7 +1256,6 @@
     <!-- MODAL SCANNER REFORMULADO -->
     <div id="modalScanner" class="modal-overlay">
         <div class="scanner-header">
-            <!-- Botão fechar (escondemos aqui, pois pode acessar menu pelo hambúrguer se for o caso, mas mantido p/ fechar modal) -->
             <button class="scanner-btn-close" onclick="fecharScanner()">✕</button>
             <div class="scanner-header-badge" id="scanner-topo-badge">📦 0 de 0</div>
             <button class="scanner-btn-close" onclick="abrirMenuLateral()">☰</button>
@@ -1399,7 +1397,7 @@
 
         function abrirMapaDaRota() {
             if (bdRotas.length === 0) {
-                alert("Nenhuma rota carregada para exibir no mapa. Carregue um arquivo Excel/CSV.");
+                alert("Nenhuma rota carregada para exibir no mapa. Carregue um arquivo Excel/CSV ou PDF.");
                 return;
             }
             document.getElementById('fluxo-inicial-container').style.display = 'none';
@@ -1447,7 +1445,7 @@
             };
         }
 
-        /* 1. CARREGAR EXCEL/CSV -> ABRE O MAPA */
+        /* 1. CARREGAR EXCEL/CSV (Estilo Rota Ninja para complementar ou carregar pontos e coordenadas no mapa) */
         function acionarInputExcelUnico() {
             document.getElementById('inputExcelUnico').click();
         }
@@ -1487,7 +1485,7 @@
 
                     let enderecoTexto = partesEndereco.join(', ');
 
-                    if (!codigo) codigo = `VOL-${String(idx + 1).padStart(3, '0')}`;
+                    if (!codigo) codigo = `EXC-${String(idx + 1).padStart(3, '0')}`;
 
                     if (enderecoTexto.length > 3 || (!isNaN(lat) && !isNaN(lon))) {
                         itensPlanilha.push({
@@ -1500,59 +1498,18 @@
                 });
 
                 await estruturarBancoDeDados(itensPlanilha);
-                alert(`Planilha carregada! ${bdRotas.length} pontos adicionados. Abrindo mapa.`);
+                alert(`Planilha carregada! ${bdRotas.length} pontos adicionados via Excel/CSV. Abrindo mapa.`);
                 abrirMapaDaRota();
             };
             leitor.readAsArrayBuffer(arquivo);
         }
 
-        async function estruturarBancoDeDados(listaItens) {
-            bdRotas = [];
-
-            for (let i = 0; i < listaItens.length; i++) {
-                let item = listaItens[i];
-                let lat = item.lat;
-                let lon = item.lon;
-
-                if (!lat || !lon) {
-                    let coords = await buscarGeocodingBackend(item.endereco);
-                    lat = coords.lat;
-                    lon = coords.lon;
-                }
-
-                bdRotas.push({
-                    id: i + 1,
-                    codigo: item.codigo,
-                    endereco: item.endereco,
-                    status: 'pendente',
-                    timestamp: null,
-                    lat: lat,
-                    lon: lon
-                });
-            }
-
-            if (bdRotas.length > 0) {
-                salvarBD();
-                atualizarStatusHome();
-                renderizarLista();
-                atualizarContador();
-                plotarNoMapa();
-            } else {
-                alert("Nenhuma parada válida foi identificada.");
-            }
+        /* 2. CARREGAR PDF (Botão dedicado exclusivo para PDF) */
+        function acionarInputPdfUnico() {
+            document.getElementById('inputPdfUnico').click();
         }
 
-        /* FLUXO DO BOTÃO LARANJA: ABRIR SCANNER E NUMERAR (Carrega PDF -> abre o scanner) */
-        function abrirFluxoScannerEDetalhes() {
-            if (bdRotas.length === 0) {
-                // Se não há rota carregada, pede o PDF para iniciar a numeração com voz/scanner
-                document.getElementById('inputPdfScanner').click();
-            } else {
-                abrirScanner();
-            }
-        }
-
-        async function processarPdfParaScanner(inputElement) {
+        async function processarPdfUnico(inputElement) {
             if (inputElement.files.length === 0) return;
             const arquivo = inputElement.files[0];
 
@@ -1615,7 +1572,7 @@
                         let limpo = cleanAddressString(l);
                         if (limpo.length > 10) {
                             let matchCod = limpo.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2})/i);
-                            let cod = matchCod ? matchCod[0].toUpperCase() : `VOL-${idx+1}`;
+                            let cod = matchCod ? matchCod[0].toUpperCase() : `PDF-${idx+1}`;
                             let end = cleanAddressString(limpo.replace(cod, ''));
                             itensExtraidos.push({ codigo: cod, endereco: end, lat: null, lon: null });
                         }
@@ -1623,14 +1580,48 @@
                 }
 
                 await estruturarBancoDeDados(itensExtraidos);
-                
-                // Melhoria 1: Aviso explícito da quantidade de pacotes carregados assim que PDF for processado
-                alert(`✅ Sucesso! ${bdRotas.length} pacotes foram carregados do arquivo PDF. Abrindo o scanner...`);
-                abrirScanner();
+                alert(`✅ Sucesso! ${bdRotas.length} pacotes carregados do PDF. Clique em "Abrir Scanner" para bipar ou veja no mapa.`);
+                atualizarStatusHome();
 
             } catch (err) {
                 alert("Erro ao extrair o PDF.");
                 console.error(err);
+            }
+        }
+
+        async function estruturarBancoDeDados(listaItens) {
+            bdRotas = [];
+
+            for (let i = 0; i < listaItens.length; i++) {
+                let item = listaItens[i];
+                let lat = item.lat;
+                let lon = item.lon;
+
+                if (!lat || !lon) {
+                    let coords = await buscarGeocodingBackend(item.endereco);
+                    lat = coords.lat;
+                    lon = coords.lon;
+                }
+
+                bdRotas.push({
+                    id: i + 1,
+                    codigo: item.codigo,
+                    endereco: item.endereco,
+                    status: 'pendente',
+                    timestamp: null,
+                    lat: lat,
+                    lon: lon
+                });
+            }
+
+            if (bdRotas.length > 0) {
+                salvarBD();
+                atualizarStatusHome();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+            } else {
+                alert("Nenhuma parada válida foi identificada.");
             }
         }
 
@@ -1924,7 +1915,7 @@
         }
 
         function gerarPDFRota() {
-            if (bdRotas.length === 0) return alert("Sem rota carregada em Excel/CSV para converter em PDF.");
+            if (bdRotas.length === 0) return alert("Sem rota carregada para converter em PDF.");
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
@@ -2063,7 +2054,7 @@
 
         function abrirScanner() {
             if (bdRotas.length === 0) {
-                alert("Nenhum pacote carregado para numerar. Carregue um PDF ou adicione paradas.");
+                alert("Nenhum pacote carregado para numerar. Carregue um PDF ou Excel/CSV primeiro.");
                 return;
             }
             document.getElementById('modalScanner').style.display = 'flex';
@@ -2167,4 +2158,3 @@
     </script>
 </body>
 </html>
-
