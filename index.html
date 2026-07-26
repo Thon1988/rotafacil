@@ -132,6 +132,7 @@
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             z-index: 1;
+            display: none;
         }
         #mapa { width: 100%; height: 100%; }
 
@@ -146,6 +147,7 @@
             display: flex;
             gap: 10px;
             align-items: center;
+            pointer-events: auto;
         }
 
         .btn-round-top {
@@ -158,6 +160,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             cursor: pointer;
             font-size: 18px;
+            pointer-events: auto;
         }
 
         /* TELA DE FLUXO INICIAL SEPARADA */
@@ -170,6 +173,7 @@
             flex-direction: column;
             padding: 24px 20px;
             overflow-y: auto;
+            pointer-events: auto;
         }
 
         .wizard-header {
@@ -252,6 +256,7 @@
             transition: all 0.2s;
             min-height: 115px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            pointer-events: auto;
         }
 
         .home-card-acao:active {
@@ -311,6 +316,7 @@
             box-shadow: 0 6px 20px rgba(255, 87, 34, 0.4);
             text-align: center;
             margin-bottom: 6px;
+            pointer-events: auto;
         }
 
         .home-pdf-contador {
@@ -344,6 +350,7 @@
             flex-direction: column;
             transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
             transform: translateY(0);
+            pointer-events: auto;
         }
 
         #bottom-sheet.recolhido {
@@ -408,6 +415,7 @@
             justify-content: center;
             gap: 6px;
             cursor: pointer;
+            pointer-events: auto;
         }
 
         .btn-sheet-action.destaque {
@@ -421,6 +429,7 @@
             flex: 1;
             overflow-y: auto;
             padding: 0 16px 40px 16px;
+            pointer-events: auto;
         }
 
         .card-parada {
@@ -455,6 +464,7 @@
         .parada-info {
             flex: 1;
             overflow: hidden;
+            cursor: pointer;
         }
 
         .parada-codigo {
@@ -500,6 +510,7 @@
             display: flex; align-items: center; justify-content: center;
             cursor: pointer;
             font-size: 15px;
+            pointer-events: auto;
         }
 
         .btn-icon-acao.delete { color: var(--cor-vermelho); border-color: rgba(239, 68, 68, 0.3); }
@@ -515,6 +526,7 @@
             border: 1px solid var(--cor-laranja);
             box-shadow: 0 8px 25px rgba(0,0,0,0.3);
             display: none;
+            pointer-events: auto;
         }
 
         .carrossel-controles {
@@ -532,6 +544,7 @@
             padding: 6px 12px;
             font-weight: bold;
             cursor: pointer;
+            pointer-events: auto;
         }
 
         /* MODAIS */
@@ -545,6 +558,7 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
+            pointer-events: auto;
         }
 
         .modal-body {
@@ -817,6 +831,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            pointer-events: auto;
         }
 
         .scanner-viewport-container {
@@ -861,6 +876,8 @@
             padding: 8px 16px !important;
             border-radius: 8px !important;
             font-weight: bold !important;
+            cursor: pointer !important;
+            pointer-events: auto !important;
         }
 
         .scanner-instruction {
@@ -893,6 +910,7 @@
             text-align: center;
             cursor: pointer;
             transition: border-color 0.2s;
+            pointer-events: auto;
         }
 
         .scanner-stat-card:active {
@@ -1349,6 +1367,7 @@
 
             if (bdRotas.length > 0) {
                 document.getElementById('fluxo-inicial-container').style.display = 'none';
+                document.getElementById('mapa-container').style.display = 'block';
                 atualizarStatusHome();
                 renderizarLista();
                 atualizarContador();
@@ -1400,6 +1419,7 @@
 
         function abrirTelaInicial() {
             fecharMenuLateral();
+            document.getElementById('mapa-container').style.display = 'none';
             document.getElementById('fluxo-inicial-container').style.display = 'flex';
         }
 
@@ -1409,6 +1429,7 @@
                 return;
             }
             document.getElementById('fluxo-inicial-container').style.display = 'none';
+            document.getElementById('mapa-container').style.display = 'block';
             setTimeout(() => { map.invalidateSize(); plotarNoMapa(); }, 200);
         }
 
@@ -1578,11 +1599,9 @@
                     return;
                 }
 
-                // Atualizar contadores do PDF logo abaixo do botão laranja
                 const qtdPdf = itensExtraidos.length;
                 document.getElementById('home-pdf-contador-texto').innerText = `📄 ${qtdPdf} paradas carregadas por PDF`;
 
-                // Carrega temporariamente na lista de bipagem / dados se necessário
                 let temporarioPdf = itensExtraidos.map((item, idx) => ({
                     id: idx + 1,
                     codigo: item.codigo,
@@ -1593,7 +1612,6 @@
                     lon: -46.6333 + (Math.random() - 0.5) * 0.02
                 }));
 
-                // Se não houver BD de Excel, define temporariamente para o scanner funcionar
                 if (bdRotas.length === 0) {
                     bdRotas = temporarioPdf;
                 }
