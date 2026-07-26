@@ -232,7 +232,7 @@
             margin: 4px 0 0 0;
         }
 
-        /* CARDS DA TELA INICIAL (GRID 2x2 original) */
+        /* CARDS DA TELA INICIAL (GRID 2x2) */
         .home-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -292,9 +292,10 @@
             text-align: center;
             margin-bottom: 12px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 2px;
         }
 
         .home-btn-principal {
@@ -312,13 +313,13 @@
             margin-bottom: 6px;
         }
 
-        .home-pdf-feedback {
-            text-align: center;
-            font-size: 13px;
-            font-weight: 700;
+        .home-pdf-contador {
+            font-size: 12px;
             color: var(--cor-laranja);
-            min-height: 20px;
-            margin-bottom: 8px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 10px;
+            min-height: 18px;
         }
 
         .home-footer-tip {
@@ -961,7 +962,9 @@
         </div>
 
         <div class="home-status-badge">
-            <span>🟢</span> <span id="home-status-texto">Nenhuma rota carregada</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span>🟢</span> <span id="home-status-texto">Nenhuma rota carregada</span>
+            </div>
         </div>
 
         <div class="home-grid">
@@ -975,7 +978,7 @@
             </div>
             <input type="file" id="inputExcelUnico" accept=".csv, .xlsx, .xls" style="display:none;" onchange="processarExcelRota(this)">
 
-            <!-- Card 2: Carregar PDF -->
+            <!-- Card 2: Carregar PDF (Opcional ou Informativo) -->
             <div class="home-card-acao" onclick="acionarInputPdfUnico()">
                 <div class="home-card-icon">📄</div>
                 <div>
@@ -1004,16 +1007,14 @@
             </div>
         </div>
 
-        <!-- Botão Laranja Principal: Abrir Scanner -->
-        <button class="home-btn-principal" onclick="abrirScanner()">
+        <!-- Botão Laranja Principal: Abrir Scanner (Abre PDF) -->
+        <button class="home-btn-principal" onclick="acionarInputPdfUnico()">
             📦 Abrir Scanner
         </button>
-
-        <!-- Feedback de quantidade de paradas carregadas por PDF logo abaixo do botão laranja -->
-        <div class="home-pdf-feedback" id="home-pdf-feedback-texto"></div>
+        <div class="home-pdf-contador" id="home-pdf-contador-texto">Nenhum PDF carregado</div>
 
         <div class="home-footer-tip">
-            💡 <b>Dica:</b> Carregue o PDF ou Excel/CSV separadamente em seus botões e clique em "Abrir Scanner" para bipar os pacotes!
+            💡 <b>Dica:</b> O mapa carrega via Excel/CSV. Clique em "Abrir Scanner" para escolher o PDF e carregar as paradas.
         </div>
     </div>
 
@@ -1044,9 +1045,9 @@
             Configurar Rota
         </div>
 
-        <div class="menu-item" onclick="abrirScanner(); fecharMenuLateral();">
+        <div class="menu-item" onclick="acionarInputPdfUnico(); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2-2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
-            Abrir Scanner
+            Abrir Scanner (PDF)
         </div>
 
         <div class="menu-item" onclick="inserirCodigoManual(); fecharMenuLateral();">
@@ -1140,7 +1141,7 @@
         <div class="sheet-actions-row">
             <button class="btn-sheet-action destaque" onclick="iniciarOtimizacaoComEtapas(false)">⚡ Roteirizar</button>
             <button class="btn-sheet-action" onclick="iniciarOtimizacaoComEtapas(true)">🔀 Reotimizar</button>
-            <button class="btn-sheet-action" onclick="abrirScanner()">📦 Abrir Scanner</button>
+            <button class="btn-sheet-action" onclick="acionarInputPdfUnico()">📦 Abrir Scanner</button>
         </div>
 
         <div id="lista-paradas"></div>
@@ -1347,6 +1348,7 @@
             configurarGestoBottomSheet();
 
             if (bdRotas.length > 0) {
+                document.getElementById('fluxo-inicial-container').style.display = 'none';
                 atualizarStatusHome();
                 renderizarLista();
                 atualizarContador();
@@ -1403,7 +1405,7 @@
 
         function abrirMapaDaRota() {
             if (bdRotas.length === 0) {
-                alert("Nenhuma rota carregada para exibir no mapa. Carregue um arquivo Excel/CSV ou PDF.");
+                alert("Nenhuma rota carregada para exibir no mapa. Carregue um arquivo Excel/CSV.");
                 return;
             }
             document.getElementById('fluxo-inicial-container').style.display = 'none';
@@ -1413,16 +1415,13 @@
         function atualizarStatusHome() {
             const txt = document.getElementById('home-status-texto');
             const descExcel = document.getElementById('desc-rota-excel');
-            const descPdf = document.getElementById('desc-rota-pdf');
 
             if (bdRotas.length > 0) {
-                txt.innerText = `${bdRotas.length} paradas carregadas`;
+                txt.innerText = `Rota carregada · ${bdRotas.length} paradas`;
                 descExcel.innerText = `Excel / CSV (${bdRotas.length} paradas)`;
-                descPdf.innerText = `PDF processado (${bdRotas.length} paradas)`;
             } else {
                 txt.innerText = "Nenhuma rota carregada";
                 descExcel.innerText = "Excel / CSV (Mapa)";
-                descPdf.innerText = "Lista de entregas";
             }
         }
 
@@ -1493,7 +1492,7 @@
                     let partesEndereco = [];
                     if (endKey && row[endKey]) partesEndereco.push(cleanAddressString(String(row[endKey])));
                     if (bairroKey && row[bairroKey]) partesEndereco.push(cleanAddressString(String(row[bairroKey])));
-                    if (cidadeKey && row[cidadeKey]) partesEndereco.push(cleanAddressString(String(row[cidadeKey])));
+                    if (cidadeKey && row[cidadeKey]) partesEndereco.push(cleanAddressString(String(cidadeKey])));
                     if (cepKey && row[cepKey]) partesEndereco.push(`CEP ${cleanAddressString(String(row[cepKey]))}`);
 
                     let enderecoTexto = partesEndereco.join(', ');
@@ -1517,7 +1516,7 @@
             leitor.readAsArrayBuffer(arquivo);
         }
 
-        /* 2. CARREGAR PDF */
+        /* 2. CARREGAR PDF (Botão Abrir Scanner) */
         function acionarInputPdfUnico() {
             document.getElementById('inputPdfUnico').click();
         }
@@ -1575,14 +1574,32 @@
                 itensExtraidos.sort((a, b) => a.sequencia - b.sequencia);
 
                 if (itensExtraidos.length === 0) {
-                    alert("Não foi possível extrair a tabela de entregas (# e Address) deste PDF.");
+                    alert("Não foi possível extrair a tabela de entregas deste PDF.");
                     return;
                 }
 
-                await estruturarBancoDeDados(itensExtraidos);
-                
-                // Exibe a quantidade de paradas carregadas logo abaixo do botão laranja conforme solicitado
-                document.getElementById('home-pdf-feedback-texto').innerText = `📄 ${bdRotas.length} paradas carregadas pelo PDF`;
+                // Atualizar contadores do PDF logo abaixo do botão laranja
+                const qtdPdf = itensExtraidos.length;
+                document.getElementById('home-pdf-contador-texto').innerText = `📄 ${qtdPdf} paradas carregadas por PDF`;
+
+                // Carrega temporariamente na lista de bipagem / dados se necessário
+                let temporarioPdf = itensExtraidos.map((item, idx) => ({
+                    id: idx + 1,
+                    codigo: item.codigo,
+                    endereco: item.endereco,
+                    status: 'pendente',
+                    timestamp: null,
+                    lat: -23.5505 + (Math.random() - 0.5) * 0.02,
+                    lon: -46.6333 + (Math.random() - 0.5) * 0.02
+                }));
+
+                // Se não houver BD de Excel, define temporariamente para o scanner funcionar
+                if (bdRotas.length === 0) {
+                    bdRotas = temporarioPdf;
+                }
+
+                alert(`✅ PDF carregado com sucesso! ${qtdPdf} paradas carregadas por PDF.`);
+                abrirScanner();
 
             } catch (err) {
                 alert("Erro ao processar o arquivo PDF.");
@@ -1944,12 +1961,12 @@
             listaBipados.clear();
             salvarBD();
             atualizarStatusHome();
-            document.getElementById('home-pdf-feedback-texto').innerText = '';
             renderizarLista();
             atualizarContador();
             plotarNoMapa();
             if (mapPolyline) map.removeLayer(mapPolyline);
             document.getElementById('widget-agrupado').style.display = 'none';
+            document.getElementById('home-pdf-contador-texto').innerText = "Nenhum PDF carregado";
         }
 
         function abrirModalEdit(idx) {
@@ -2007,7 +2024,7 @@
 
         function abrirScanner() {
             if (bdRotas.length === 0) {
-                alert("Nenhum pacote carregado para numerar. Carregue um PDF ou Excel/CSV primeiro.");
+                alert("Nenhum pacote carregado para numerar. Carregue um PDF primeiro.");
                 return;
             }
             document.getElementById('modalScanner').style.display = 'flex';
