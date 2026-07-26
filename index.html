@@ -942,6 +942,7 @@
                 <div class="wizard-avatar">T</div>
                 <h1 class="wizard-greeting">Olá, Thon</h1>
             </div>
+            <!-- Adicionada chamada também ao menu principal ou opções de tema se preferir (Mantendo alternarTema atual mas pode interligar se necessário) -->
             <button class="btn-round-top" onclick="alternarTema()" style="width: 38px; height: 38px; font-size: 14px;">⚙️</button>
         </div>
 
@@ -1256,9 +1257,10 @@
     <!-- MODAL SCANNER REFORMULADO -->
     <div id="modalScanner" class="modal-overlay">
         <div class="scanner-header">
+            <!-- Botão fechar (escondemos aqui, pois pode acessar menu pelo hambúrguer se for o caso, mas mantido p/ fechar modal) -->
             <button class="scanner-btn-close" onclick="fecharScanner()">✕</button>
             <div class="scanner-header-badge" id="scanner-topo-badge">📦 0 de 0</div>
-            <div style="width: 36px;"></div>
+            <button class="scanner-btn-close" onclick="abrirMenuLateral()">☰</button>
         </div>
 
         <div class="scanner-viewport-container">
@@ -1621,7 +1623,9 @@
                 }
 
                 await estruturarBancoDeDados(itensExtraidos);
-                alert(`PDF carregado! ${bdRotas.length} pacotes prontos para numerar.`);
+                
+                // Melhoria 1: Aviso explícito da quantidade de pacotes carregados assim que PDF for processado
+                alert(`✅ Sucesso! ${bdRotas.length} pacotes foram carregados do arquivo PDF. Abrindo o scanner...`);
                 abrirScanner();
 
             } catch (err) {
@@ -2163,3 +2167,4 @@
     </script>
 </body>
 </html>
+
