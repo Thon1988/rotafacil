@@ -232,7 +232,7 @@
             margin: 4px 0 0 0;
         }
 
-        /* CARDS DA TELA INICIAL (GRID 2x2 original) */
+        /* CARDS DA TELA INICIAL (GRID 2x2) */
         .home-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1263,7 +1263,7 @@
         <div class="scanner-viewport-container">
             <div id="scanner-bip-toast">Parada #1 (1x)</div>
             <div id="reader"></div>
-            <div class="scanner-instruction">Aponte para o código de barras do pacote</div>
+            <div class="scanner-instruction">Aponte para o código de barras ou QR Code do pacote</div>
         </div>
 
         <div class="scanner-stats-bar">
@@ -1405,9 +1405,9 @@
             const descPdf = document.getElementById('desc-rota-pdf');
 
             if (bdRotas.length > 0) {
-                txt.innerText = `${bdRotas.length} paradas carregadas`;
+                txt.innerText = `Rota carregada · ${bdRotas.length} paradas`;
                 descExcel.innerText = `Excel / CSV (${bdRotas.length} paradas)`;
-                descPdf.innerText = `PDF carregado (${bdRotas.length} paradas)`;
+                descPdf.innerText = `PDF processado (${bdRotas.length} paradas)`;
             } else {
                 txt.innerText = "Nenhuma rota carregada";
                 descExcel.innerText = "Excel / CSV (Mapa)";
