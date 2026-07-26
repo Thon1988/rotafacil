@@ -956,7 +956,7 @@
         </div>
 
         <div class="home-grid">
-            <!-- Card 1: Carregar Rota (Excel / CSV) -->
+            <!-- Card 1: Carregar Rota (Excel / CSV) - Alterado para abrir o input de arquivo Excel/CSV ao clicar em "Mapa" ou no card -->
             <div class="home-card-acao" onclick="acionarInputExcelUnico()">
                 <div class="home-card-icon">📊</div>
                 <div>
@@ -966,7 +966,7 @@
             </div>
             <input type="file" id="inputExcelUnico" accept=".csv, .xlsx, .xls" style="display:none;" onchange="processarExcelRota(this)">
 
-            <!-- Card 2: Carregar PDF -->
+            <!-- Card 2: Carregar PDF - Ao clicar em "abrir scanner" (ou carregar PDF), abre a pasta de arquivos para escolher o PDF -->
             <div class="home-card-acao" onclick="acionarInputPdfUnico()">
                 <div class="home-card-icon">📄</div>
                 <div>
@@ -976,12 +976,12 @@
             </div>
             <input type="file" id="inputPdfUnico" accept=".pdf" style="display:none;" onchange="processarPdfEntregas(this)">
 
-            <!-- Card 3: Mapa -->
-            <div class="home-card-acao" onclick="abrirMapaDaRota()">
+            <!-- Card 3: Mapa - Agora aciona o carregamento do arquivo excel/csv e atualiza a quantidade de paradas na parte superior onde está escrito "nenhuma rota carregada" -->
+            <div class="home-card-acao" onclick="acionarInputExcelUnico()">
                 <div class="home-card-icon">🗺️</div>
                 <div>
                     <p class="home-card-title">Mapa</p>
-                    <p class="home-card-desc">Ver pontos</p>
+                    <p class="home-card-desc">Carregar Excel/CSV</p>
                 </div>
             </div>
 
@@ -995,13 +995,14 @@
             </div>
         </div>
 
-        <!-- Botão Laranja Principal: Abrir Scanner -->
-        <button class="home-btn-principal" onclick="abrirScanner()">
-            📦 Abrir Scanner
+        <!-- Botão Laranja Principal: Abrir Scanner - Abre a pasta de arquivos para escolher o arquivo PDF e logo abaixo do botão laranja aparecerá a quantidade de paradas carregadas por PDF -->
+        <button class="home-btn-principal" onclick="acionarInputPdfUnico()">
+            📦 Abrir Scanner (Carregar PDF)
         </button>
+        <div id="qtd-paradas-pdf-abaixo-botao" style="text-align: center; font-size: 13px; font-weight: bold; color: var(--cor-laranja); margin-bottom: 15px;"></div>
 
         <div class="home-footer-tip">
-            💡 <b>Dica:</b> Carregue o PDF ou Excel/CSV separadamente em seus botões e clique em "Abrir Scanner" para bipar os pacotes!
+            💡 <b>Dica:</b> Clique em "Abrir Scanner" para escolher o PDF e ver as paradas, ou em "Mapa" para carregar o Excel/CSV!
         </div>
     </div>
 
@@ -1028,13 +1029,13 @@
         <div class="divisor-menu"></div>
 
         <div class="menu-item" onclick="abrirConfigRota(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             Configurar Rota
         </div>
 
-        <div class="menu-item" onclick="abrirScanner(); fecharMenuLateral();">
+        <div class="menu-item" onclick="abrirScannerCamera(); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2-2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
-            Abrir Scanner
+            Abrir Câmera Scanner
         </div>
 
         <div class="menu-item" onclick="inserirCodigoManual(); fecharMenuLateral();">
@@ -1128,7 +1129,7 @@
         <div class="sheet-actions-row">
             <button class="btn-sheet-action destaque" onclick="iniciarOtimizacaoComEtapas(false)">⚡ Roteirizar</button>
             <button class="btn-sheet-action" onclick="iniciarOtimizacaoComEtapas(true)">🔀 Reotimizar</button>
-            <button class="btn-sheet-action" onclick="abrirScanner()">📦 Abrir Scanner</button>
+            <button class="btn-sheet-action" onclick="acionarInputPdfUnico()">📦 Carregar PDF</button>
         </div>
 
         <div id="lista-paradas"></div>
@@ -1447,7 +1448,7 @@
             };
         }
 
-        /* 1. CARREGAR EXCEL / CSV (Botão Carregar Rota) */
+        /* 1. CARREGAR EXCEL / CSV (Botão Mapa / Carregar Rota) */
         function acionarInputExcelUnico() {
             document.getElementById('inputExcelUnico').click();
         }
@@ -1500,13 +1501,17 @@
                 });
 
                 await estruturarBancoDeDados(itensPlanilha);
+                
+                // Atualiza a quantidade de paradas na parte superior onde está escrito "nenhuma rota carregada"
+                document.getElementById('home-status-texto').innerText = `${bdRotas.length} paradas carregadas`;
+                
                 alert(`Rota carregada com sucesso! ${bdRotas.length} paradas carregadas do Excel/CSV.`);
                 abrirMapaDaRota();
             };
             leitor.readAsArrayBuffer(arquivo);
         }
 
-        /* 2. CARREGAR PDF */
+        /* 2. CARREGAR PDF (Botão Abrir Scanner) */
         function acionarInputPdfUnico() {
             document.getElementById('inputPdfUnico').click();
         }
@@ -1569,6 +1574,10 @@
                 }
 
                 await estruturarBancoDeDados(itensExtraidos);
+                
+                // Logo abaixo do botão laranja aparecerá a quantidade de paradas que foram carregadas por PDF
+                document.getElementById('qtd-paradas-pdf-abaixo-botao').innerText = `✅ ${bdRotas.length} paradas carregadas via PDF`;
+
                 alert(`✅ PDF carregado! ${bdRotas.length} paradas extraídas na sequência correta.`);
                 abrirMapaDaRota();
 
@@ -1992,7 +2001,7 @@
             document.getElementById('scanner-stat-total').innerText = total;
         }
 
-        function abrirScanner() {
+        function abrirScannerCamera() {
             if (bdRotas.length === 0) {
                 alert("Nenhum pacote carregado para numerar. Carregue um PDF ou Excel/CSV primeiro.");
                 return;
