@@ -1350,8 +1350,8 @@
             aplicarTema(temaAtual);
             atualizarLabelGPS();
             inicializarMapa();
-            inicializarSortable(); // Agora implementada!
-            configurarGestoBottomSheet(); // Agora implementada!
+            inicializarSortable(); 
+            configurarGestoBottomSheet(); 
 
             if (bdRotas.length > 0) {
                 document.getElementById('fluxo-inicial-container').style.display = 'none';
@@ -1363,8 +1363,6 @@
                 atualizarStatusHome();
             }
         };
-
-        // ====== FUNÇÕES AUSENTES IMPLEMENTADAS ====== //
 
         function inicializarSortable() {
             const lista = document.getElementById('lista-paradas');
@@ -1397,7 +1395,6 @@
             }
         }
 
-        // Funções do Modal de Configuração de Rota
         function abrirConfigRota() {
             document.getElementById('modalConfigRota').style.display = 'flex';
         }
@@ -1438,8 +1435,6 @@
             localStorage.setItem('appegg_config', JSON.stringify(configRotaData));
             fecharConfigRota();
         }
-
-        // ============================================ //
 
         function alternarTema() {
             temaAtual = temaAtual === 'dark' ? 'light' : 'dark';
@@ -1625,7 +1620,7 @@
         async function lerArquivoPdfLogica(arquivo) {
             try {
                 const pdf = await pdfjsLib.getDocument(new Uint8Array(await arquivo.arrayBuffer())).promise;
-                pdfTabelaCorrespondencia = {}; // Salvo em memória
+                pdfTabelaCorrespondencia = {}; 
 
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
@@ -2091,7 +2086,6 @@
         }
 
         function abrirScanner() {
-            // Não bloqueia mais a abertura do scanner se não houver PDF/Excel carregado
             document.getElementById('modalScanner').style.display = 'flex';
             atualizarEstatisticasScanner();
 
@@ -2111,12 +2105,10 @@
         function processarBipagem(token) {
             let resultadoEncontrado = null;
 
-            // 1. Procura na tabela do PDF carregado em memória
             let chavePDF = Object.keys(pdfTabelaCorrespondencia).find(k => token.includes(k) || k.includes(token));
             if (chavePDF) {
-                resultadoEncontrado = pdfTabelaCorrespondencia[chavePDF]; // ex: "Parada 18"
+                resultadoEncontrado = pdfTabelaCorrespondencia[chavePDF]; 
             } else {
-                // 2. Fallback na lista de rotas do Excel
                 const idx = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
                 if (idx !== -1) {
                     resultadoEncontrado = `Parada ${idx + 1}`;
@@ -2129,11 +2121,9 @@
 
                 document.getElementById('scanner-parada-encontrada-txt').innerText = resultadoEncontrado;
 
-                // Emite bip sonoro e fala por voz se suportado
                 emitirAudioESpeech(resultadoEncontrado);
                 exibirToastScanner(`🔊 ${resultadoEncontrado}`);
 
-                // Se houver correspondência no mapa, centraliza nele também
                 const idxMapa = bdRotas.findIndex(i => token.includes(i.codigo) || i.codigo.includes(token));
                 if (idxMapa !== -1) {
                     selecionarParadaEVerificarAgrupamento(idxMapa);
@@ -2145,7 +2135,6 @@
         }
 
         function emitirAudioESpeech(textoParada) {
-            // Emite bip sintético (Web Audio API)
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = audioCtx.createOscillator();
@@ -2159,7 +2148,6 @@
                 osc.stop(audioCtx.currentTime + 0.15);
             } catch(e) {}
 
-            // Usa síntese de voz nativa para falar a parada (ex: "Parada dezoito")
             if ('speechSynthesis' in window) {
                 let utterance = new SpeechSynthesisUtterance(textoParada);
                 utterance.lang = 'pt-BR';
@@ -2194,3 +2182,4 @@
     </script>
 </body>
 </html>
+
