@@ -1303,12 +1303,12 @@
     </div>
 
     <script>
-        let bdRotas = JSON.parse(localStorage.getItem('rota_rapida_db_oficial')) || [];
-        let historicoDias = JSON.parse(localStorage.getItem('rota_rapida_historico')) || [];
-        let gpsPreferido = localStorage.getItem('rota_rapida_gps') || 'maps';
-        let temaAtual = localStorage.getItem('rota_rapida_tema') || 'dark';
+        let bdRotas = JSON.parse(localStorage.getItem('appegg_db_oficial')) || [];
+        let historicoDias = JSON.parse(localStorage.getItem('appegg_historico')) || [];
+        let gpsPreferido = localStorage.getItem('appegg_gps') || 'maps';
+        let temaAtual = localStorage.getItem('appegg_tema') || 'dark';
 
-        let configRotaData = JSON.parse(localStorage.getItem('rota_rapida_config')) || {
+        let configRotaData = JSON.parse(localStorage.getItem('appegg_config')) || {
             pontoSaida: 'primeira',
             voltaInicio: false,
             tempoParada: 3,
@@ -1347,7 +1347,7 @@
 
         function alternarTema() {
             temaAtual = temaAtual === 'dark' ? 'light' : 'dark';
-            localStorage.setItem('rota_rapida_tema', temaAtual);
+            localStorage.setItem('appegg_tema', temaAtual);
             aplicarTema(temaAtual);
         }
 
@@ -1357,7 +1357,7 @@
 
         function alternarGPSPreferido() {
             gpsPreferido = gpsPreferido === 'maps' ? 'waze' : 'maps';
-            localStorage.setItem('rota_rapida_gps', gpsPreferido);
+            localStorage.setItem('appegg_gps', gpsPreferido);
             atualizarLabelGPS();
         }
 
@@ -1921,7 +1921,7 @@
                     falhas: falhas
                 });
 
-                localStorage.setItem('rota_rapida_historico', JSON.stringify(historicoDias));
+                localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
                 novaRota();
                 alert("Rota encerrada e salva com sucesso!");
             }
@@ -1978,7 +1978,7 @@
         }
 
         function salvarBD() {
-            localStorage.setItem('rota_rapida_db_oficial', JSON.stringify(bdRotas));
+            localStorage.setItem('appegg_db_oficial', JSON.stringify(bdRotas));
         }
 
         function atualizarEstatisticasScanner() {
@@ -2053,48 +2053,6 @@
             }
         }
 
-        function abrirConfigRota() {
-            document.getElementById('modalConfigRota').style.display = 'flex';
-        }
-
-        function fecharConfigRota() {
-            document.getElementById('modalConfigRota').style.display = 'none';
-        }
-
-        function selecionarPontoSaida(tipo) {
-            configRotaData.pontoSaida = tipo;
-        }
-
-        function definirTempoParada(m) {
-            configRotaData.tempoParada = m;
-        }
-
-        function definirVelocidade(v) {
-            configRotaData.velocidadeMedia = v;
-        }
-
-        function atualizarConfigEstado() {}
-        function salvarEFecharConfigRota() { fecharConfigRota(); }
-        function inicializarSortable() {
-            const el = document.getElementById('lista-paradas');
-            sortableInstance = new Sortable(el, {
-                handle: '.handle-drag',
-                animation: 150,
-                onEnd: function (evt) {
-                    const itemMovido = bdRotas.splice(evt.oldIndex, 1)[0];
-                    bdRotas.splice(evt.newIndex, 0, itemMovido);
-                    salvarBD();
-                    renderizarLista();
-                    plotarNoMapa();
-                }
-            });
-        }
-        function configurarGestoBottomSheet() {
-            const sheet = document.getElementById('bottom-sheet');
-            const handle = document.getElementById('handleTouch');
-            handle.addEventListener('click', () => sheet.classList.toggle('recolhido'));
-        }
-        function recolherBottomSheet() { document.getElementById('bottom-sheet').classList.add('recolhido'); }
     </script>
 </body>
 </html>
