@@ -1407,7 +1407,7 @@
             if (bdRotas.length > 0) {
                 txt.innerText = `Rota carregada · ${bdRotas.length} paradas`;
                 descExcel.innerText = `Excel / CSV (${bdRotas.length} paradas)`;
-                descPdf.innerText = `PDF processado`;
+                descPdf.innerText = `PDF processado (${bdRotas.length} paradas)`;
             } else {
                 txt.innerText = "Nenhuma rota carregada";
                 descExcel.innerText = "Excel / CSV (Mapa)";
@@ -1447,7 +1447,7 @@
             };
         }
 
-        /* 1. CARREGAR EXCEL / CSV (Botão Carregar Rota) */
+        /* 1. CARREGAR EXCEL / CSV (Botão Mapa / Carregar Rota) */
         function acionarInputExcelUnico() {
             document.getElementById('inputExcelUnico').click();
         }
@@ -1506,7 +1506,7 @@
             leitor.readAsArrayBuffer(arquivo);
         }
 
-        /* 2. CARREGAR PDF */
+        /* 2. CARREGAR PDF (Botão Abrir Scanner) */
         function acionarInputPdfUnico() {
             document.getElementById('inputPdfUnico').click();
         }
@@ -1569,9 +1569,11 @@
                 }
 
                 await estruturarBancoDeDados(itensExtraidos);
+                
+                // Exibição da quantidade de paradas carregadas logo abaixo do botão laranja e no status
+                atualizarStatusHome();
                 alert(`✅ PDF carregado! ${bdRotas.length} paradas extraídas na sequência correta.`);
-                abrirMapaDaRota();
-
+                
             } catch (err) {
                 alert("Erro ao processar o arquivo PDF.");
                 console.error(err);
