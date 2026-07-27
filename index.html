@@ -1460,7 +1460,6 @@
         function inicializarMapa() {
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
             
-            // Camada OpenStreetMap padrão que inclui setas de sentido único das vias
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
                 maxZoom: 19
@@ -1826,10 +1825,10 @@
             barra.style.width = '0%';
 
             const etapas = [
-                { text: "Analisando suas paradas...", pct: "25%", delay: 600 },
-                { text: "Encontrando a melhor ordem...", pct: "50%", delay: 700 },
-                { text: "Considerando a melhor rota...", pct: "75%", delay: 600 },
-                { text: "Finalizando otimização...", pct: "100%", delay: 500 }
+                { text: "Analisando suas paradas...", pct: "25%", delay: 500 },
+                { text: "Encontrando a melhor ordem...", pct: "50%", delay: 600 },
+                { text: "Calculando traçado sobre as ruas...", pct: "75%", delay: 600 },
+                { text: "Finalizando otimização...", pct: "100%", delay: 400 }
             ];
 
             let step = 0;
@@ -1856,7 +1855,6 @@
 
             mapPolyline = L.polyline(routeCoords, { color: '#ff5722', weight: 5, opacity: 0.9 }).addTo(map);
 
-            // Adiciona setas brancas com contorno indicando o sentido de direção da rota
             if (typeof L.polylineDecorator === 'function') {
                 mapPolylineDecorator = L.polylineDecorator(mapPolyline, {
                     patterns: [
@@ -1880,40 +1878,45 @@
             }
         }
 
-        async function executarOtimizacaoOSRM(fixarExtremos = false) {
-            let coordsStr = bdRotas.map(r => `${r.lon},${r.lat}`).join(';');
-            let url = `https://router.project-osrm.org/trip/v1/driving/${coordsStr}?source=first&overview=full&geometries=geojson`;
+        /* Busca os nós geométricos exatos das ruas em lotes seguros de 20 paradas */
+        async function obterGeometriaRuasCompleta(paradasOrdenadas) {
+            if (!paradasOrdenadas || paradasOrdenadas.length < 2) return [];
 
-            try {
-                let response = await fetch(url);
-                let data = await response.json();
+            let todasCoordenadasRuas = [];
+            const tamanhoLote = 20;
 
-                if (data.code === 'Ok' && data.waypoint_order) {
-                    let otimizado = data.waypoint_order.map(orderIdx => bdRotas[orderIdx]);
-                    
-                    if ((fixarExtremos || configRotaData.pontoSaida === 'primeira') && otimizado.length > 2) {
-                        let ultimaOriginal = bdRotas[bdRotas.length - 1];
-                        otimizado = otimizado.filter(r => r.codigo !== ultimaOriginal.codigo);
-                        otimizado.push(ultimaOriginal);
+            for (let i = 0; i < paradasOrdenadas.length - 1; i += (tamanhoLote - 1)) {
+                let lote = paradasOrdenadas.slice(i, i + tamanhoLote);
+                if (lote.length < 2) break;
+
+                let coordsStr = lote.map(r => `${r.lon},${r.lat}`).join(';');
+                let url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`;
+
+                try {
+                    let res = await fetch(url);
+                    let data = await res.json();
+                    if (data.code === 'Ok' && data.routes && data.routes[0]) {
+                        let pts = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                        if (todasCoordenadasRuas.length > 0) {
+                            todasCoordenadasRuas.push(...pts.slice(1));
+                        } else {
+                            todasCoordenadasRuas.push(...pts);
+                        }
+                    } else {
+                        let pts = lote.map(r => [r.lat, r.lon]);
+                        todasCoordenadasRuas.push(...pts);
                     }
-
-                    bdRotas = otimizado;
-                    salvarBD();
-                    renderizarLista();
-                    plotarNoMapa();
-
-                    let routeCoords = data.trips[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                    desenharRotaComSetas(routeCoords);
-                } else {
-                    fallbackTSPLocal(fixarExtremos);
+                } catch (e) {
+                    let pts = lote.map(r => [r.lat, r.lon]);
+                    todasCoordenadasRuas.push(...pts);
                 }
-            } catch (e) {
-                fallbackTSPLocal(fixarExtremos);
             }
+            return todasCoordenadasRuas;
         }
 
-        function fallbackTSPLocal(fixarExtremos = false) {
-            let rascunho = [...bdRotas];
+        function otimizarOrdemParadasLocal(paradas, fixarExtremos = false) {
+            if (paradas.length <= 2) return paradas;
+            let rascunho = [...paradas];
             let otimizado = [];
 
             if (fixarExtremos || configRotaData.pontoSaida === 'primeira') {
@@ -1943,14 +1946,26 @@
                     otimizado.push(rascunho.splice(idxProx, 1)[0]);
                 }
             }
+            return otimizado;
+        }
 
-            bdRotas = otimizado;
+        async function executarOtimizacaoOSRM(fixarExtremos = false) {
+            if (bdRotas.length < 2) return;
+
+            // 1. Roteirização por menor distância entre paradas
+            bdRotas = otimizarOrdemParadasLocal(bdRotas, fixarExtremos);
             salvarBD();
             renderizarLista();
             plotarNoMapa();
 
-            let latlngs = bdRotas.map(r => [r.lat, r.lon]);
-            desenharRotaComSetas(latlngs);
+            // 2. Busca o caminho exato pelas ruas e desenha no mapa
+            let routeCoords = await obterGeometriaRuasCompleta(bdRotas);
+            if (routeCoords.length > 0) {
+                desenharRotaComSetas(routeCoords);
+            } else {
+                let latlngs = bdRotas.map(r => [r.lat, r.lon]);
+                desenharRotaComSetas(latlngs);
+            }
         }
 
         function calcularDistanciaKM(lat1, lon1, lat2, lon2) {
@@ -1967,6 +1982,7 @@
             salvarBD();
             renderizarLista();
             plotarNoMapa();
+            executarOtimizacaoOSRM(false);
             alert("Ordem das paradas invertida!");
         }
 
