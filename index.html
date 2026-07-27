@@ -15,6 +15,8 @@
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Decorador de Direção de Rotas (Setas no Mapa) -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-polylinedecorator@1.6.0/leaflet.polylineDecorator.min.js"></script>
    
     <style>
         :root[data-theme="dark"] {
@@ -942,7 +944,7 @@
                 <div class="wizard-avatar">T</div>
                 <h1 class="wizard-greeting">Olá, Thon</h1>
             </div>
-            <button class="btn-round-top" onclick="alternarTema()" style="width: 38px; height: 38px; font-size: 14px;">⚙️</button>
+            <button class="btn-round-top" onclick="abrirMenuLateral()" style="width: 38px; height: 38px; font-size: 16px;">☰</button>
         </div>
 
         <div class="home-logo-box">
@@ -995,7 +997,7 @@
             </div>
         </div>
 
-        <!-- Botão Laranja Principal: Abrir Scanner (Abre diretamente sem bloquear) -->
+        <!-- Botão Laranja Principal: Abrir Scanner -->
         <button class="home-btn-principal" onclick="abrirScanner()">
             📦 Abrir Scanner
         </button>
@@ -1252,7 +1254,7 @@
         </div>
     </div>
 
-    <!-- MODAL SCANNER REFORMULADO (ATUALIZADO COM OS NOVOS ITENS) -->
+    <!-- MODAL SCANNER -->
     <div id="modalScanner" class="modal-overlay">
         <div class="scanner-header">
             <button class="scanner-btn-close" onclick="fecharScanner()">✕</button>
@@ -1267,7 +1269,6 @@
         </div>
 
         <div class="scanner-stats-bar">
-            <!-- Ações principais de controle dentro do Scanner -->
             <div style="display: flex; gap: 8px; width: 100%; margin-bottom: 4px;">
                 <div class="scanner-stat-card" onclick="document.getElementById('inputPdfScannerUnico').click()" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px;">
                     <div style="font-size: 16px;">📄</div>
@@ -1337,12 +1338,12 @@
         let indexAtivo = 0;
         let editIndexTarget = null;
         let sortableInstance = null;
-        let map, layerMarkers = [], mapPolyline = null;
+        let map, layerMarkers = [], mapPolyline = null, mapPolylineDecorator = null;
 
         let grupoAtual = [];
         let indexAgrupadoInterno = 0;
         let listaBipados = new Set();
-        let pdfTabelaCorrespondencia = {}; // Salvo em memória até nova carga
+        let pdfTabelaCorrespondencia = {};
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
@@ -1458,8 +1459,10 @@
 
         function inicializarMapa() {
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap contributors © CARTO',
+            
+            // Camada OpenStreetMap padrão que inclui setas de sentido único das vias
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
                 maxZoom: 19
             }).addTo(map);
 
@@ -1503,8 +1506,9 @@
                 descExcel.innerText = "Excel / CSV (Mapa)";
             }
 
-            if (Object.keys(pdfTabelaCorrespondencia).length > 0) {
-                descPdf.innerText = `PDF carregado (${Object.keys(pdfTabelaCorrespondencia).length} códigos)`;
+            let totalPdf = Object.keys(pdfTabelaCorrespondencia).length;
+            if (totalPdf > 0) {
+                descPdf.innerText = `PDF carregado (${totalPdf} códigos)`;
             } else {
                 descPdf.innerText = "Lista de entregas";
             }
@@ -1542,7 +1546,6 @@
             };
         }
 
-        /* 1. CARREGAR EXCEL / CSV (Exclusivo para montar o mapa e a rota) */
         function acionarInputExcelUnico() {
             document.getElementById('inputExcelUnico').click();
         }
@@ -1601,7 +1604,6 @@
             leitor.readAsArrayBuffer(arquivo);
         }
 
-        /* 2. CARREGAR PDF (Exclusivo para identificar numeração de paradas na bipagem) */
         function acionarInputPdfUnico() {
             document.getElementById('inputPdfUnico').click();
         }
@@ -1621,6 +1623,7 @@
             try {
                 const pdf = await pdfjsLib.getDocument(new Uint8Array(await arquivo.arrayBuffer())).promise;
                 pdfTabelaCorrespondencia = {}; 
+                let ultimaParadaDetectada = "Parada 1";
 
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
@@ -1628,7 +1631,7 @@
                     
                     let linhasPorY = {};
                     textContent.items.forEach(item => {
-                        let y = Math.round(item.transform[5] / 8) * 8;
+                        let y = Math.round(item.transform[5] / 6) * 6; 
                         if (!linhasPorY[y]) linhasPorY[y] = [];
                         linhasPorY[y].push({ x: item.transform[4], str: item.str });
                     });
@@ -1640,29 +1643,35 @@
                         let linhaTexto = elementos.map(e => e.str).join(" ");
                         let limpo = cleanAddressString(linhaTexto);
 
-                        let matchLinha = limpo.match(/^(\d{1,3})\s+(.+)/);
-                        if (matchLinha) {
-                            let sequencia = parseInt(matchLinha[1]);
-                            let resto = matchLinha[2];
+                        if (/^(página|relatório|total|data|emitido|sumário)/i.test(limpo)) {
+                            return;
+                        }
 
-                            let matchCod = resto.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2})/i);
-                            let codigo = matchCod ? matchCod[0].toUpperCase() : null;
+                        let matchSeq = limpo.match(/^(?:parada\s*)?(\d{1,3})[\s\-]/i);
+                        if (matchSeq) {
+                            ultimaParadaDetectada = `Parada ${parseInt(matchSeq[1])}`;
+                        }
 
-                            if (codigo) {
-                                pdfTabelaCorrespondencia[codigo] = `Parada ${sequencia}`;
-                            }
+                        let matchesCodigos = limpo.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|AMAZON-\w+|\d{10,})/gi);
+                        if (matchesCodigos) {
+                            matchesCodigos.forEach(codigo => {
+                                let codigoUpper = codigo.toUpperCase();
+                                if (codigoUpper.length >= 6) {
+                                    pdfTabelaCorrespondencia[codigoUpper] = ultimaParadaDetectada;
+                                }
+                            });
                         }
                     });
                 }
 
                 let totalCodigos = Object.keys(pdfTabelaCorrespondencia).length;
                 if (totalCodigos === 0) {
-                    alert("Não foi possível extrair a tabela de correspondência (Código → Parada) deste PDF.");
+                    alert("Não foi possível extrair a tabela de correspondência deste PDF.");
                     return;
                 }
 
                 atualizarStatusHome();
-                alert(`✅ PDF carregado com sucesso na memória! ${totalCodigos} códigos mapeados para o scanner.`);
+                alert(`✅ PDF carregado com sucesso na memória! ${totalCodigos} códigos mapeados.`);
 
             } catch (err) {
                 alert("Erro ao processar o arquivo PDF.");
@@ -1841,6 +1850,36 @@
             proximaEtapa();
         }
 
+        function desenharRotaComSetas(routeCoords) {
+            if (mapPolyline) map.removeLayer(mapPolyline);
+            if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
+
+            mapPolyline = L.polyline(routeCoords, { color: '#ff5722', weight: 5, opacity: 0.9 }).addTo(map);
+
+            // Adiciona setas brancas com contorno indicando o sentido de direção da rota
+            if (typeof L.polylineDecorator === 'function') {
+                mapPolylineDecorator = L.polylineDecorator(mapPolyline, {
+                    patterns: [
+                        {
+                            offset: 25,
+                            repeat: 70,
+                            symbol: L.Symbol.arrowHead({
+                                pixelSize: 10,
+                                headAngle: 60,
+                                pathOptions: {
+                                    stroke: true,
+                                    color: '#ffffff',
+                                    fillColor: '#ff5722',
+                                    fillOpacity: 1,
+                                    weight: 2
+                                }
+                            })
+                        }
+                    ]
+                }).addTo(map);
+            }
+        }
+
         async function executarOtimizacaoOSRM(fixarExtremos = false) {
             let coordsStr = bdRotas.map(r => `${r.lon},${r.lat}`).join(';');
             let url = `https://router.project-osrm.org/trip/v1/driving/${coordsStr}?source=first&overview=full&geometries=geojson`;
@@ -1863,9 +1902,8 @@
                     renderizarLista();
                     plotarNoMapa();
 
-                    if (mapPolyline) map.removeLayer(mapPolyline);
                     let routeCoords = data.trips[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                    mapPolyline = L.polyline(routeCoords, { color: '#ff5722', weight: 4, opacity: 0.9 }).addTo(map);
+                    desenharRotaComSetas(routeCoords);
                 } else {
                     fallbackTSPLocal(fixarExtremos);
                 }
@@ -1911,9 +1949,8 @@
             renderizarLista();
             plotarNoMapa();
 
-            if (mapPolyline) map.removeLayer(mapPolyline);
             let latlngs = bdRotas.map(r => [r.lat, r.lon]);
-            mapPolyline = L.polyline(latlngs, { color: '#ff5722', weight: 3 }).addTo(map);
+            desenharRotaComSetas(latlngs);
         }
 
         function calcularDistanciaKM(lat1, lon1, lat2, lon2) {
@@ -1999,9 +2036,7 @@
                         (decodedText, decodedResult) => {
                             processarBipagem(decodedText);
                         },
-                        (errorMessage) => {
-                            // Ignorar erros contínuos de scan sem dar alerta
-                        }
+                        (errorMessage) => {}
                     ).catch((err) => {
                         console.log(err);
                         alert("Erro ao iniciar a câmera. Verifique as permissões.");
@@ -2020,9 +2055,7 @@
                     html5QrcodeScanner.stop().then(() => {
                         html5QrcodeScanner.clear();
                     }).catch(err => console.log("Erro ao parar câmera:", err));
-                } catch(e) {
-                    console.log("Scanner já parado ou erro ao parar.");
-                }
+                } catch(e) {}
             }
             document.getElementById('modalScanner').style.display = 'none';
         }
@@ -2045,14 +2078,13 @@
             listaBipados.add(codigo);
             atualizarEstatisticasScanner();
 
-            // Tocar som de bip sintético (para navegadores mobile)
             try {
                 let ctx = new (window.AudioContext || window.webkitAudioContext)();
                 let osc = ctx.createOscillator();
                 osc.connect(ctx.destination);
-                osc.frequency.value = 800; // Frequência do bip
+                osc.frequency.value = 800;
                 osc.start();
-                setTimeout(() => { osc.stop(); }, 150); // Duração
+                setTimeout(() => { osc.stop(); }, 150);
             } catch(e) {}
 
             let txtParada = "Desconhecida";
@@ -2074,14 +2106,12 @@
 
             document.getElementById('scanner-parada-encontrada-txt').innerText = txtParada;
             
-            // Falar a parada em voz alta
             if ('speechSynthesis' in window) {
                 let msg = new SpeechSynthesisUtterance(txtParada);
                 msg.lang = 'pt-BR';
                 window.speechSynthesis.speak(msg);
             }
 
-            // Exibir Toast animado
             let toast = document.getElementById('scanner-bip-toast');
             toast.innerText = `${txtParada} Registrada!`;
             toast.style.display = 'block';
@@ -2120,6 +2150,8 @@
                 bdRotas = [];
                 listaBipados.clear();
                 pdfTabelaCorrespondencia = {};
+                if (mapPolyline) map.removeLayer(mapPolyline);
+                if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
                 salvarBD();
                 renderizarLista();
                 atualizarContador();
