@@ -141,11 +141,6 @@
             filter: var(--tile-filter);
         }
 
-        /* DESTACAR RÓTULOS E NOMES DAS RUAS EM BRANCO PURO */
-        #mapa .leaflet-pane.leaflet-labelsPane-pane {
-            filter: brightness(2) contrast(1.8) drop-shadow(0px 1px 3px rgba(0,0,0,0.9));
-        }
-
         .top-bar-overlay {
             position: absolute;
             top: 15px; left: 15px; right: 15px;
@@ -1465,23 +1460,14 @@
         function inicializarMapa() {
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
             
-            // Camada de Tiles base (desenha as ruas e a estrutura do mapa)
+            // Camada de Tiles base (desenha as ruas e os nomes nativos do próprio mapa)
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
                 maxZoom: 19
             }).addTo(map);
 
-            // Pane exclusivo para os rótulos e nomes das ruas ficarem SOBRESSALENTES
-            map.createPane('labelsPane');
-            map.getPane('labelsPane').style.zIndex = 650;
-            map.getPane('labelsPane').style.pointerEvents = 'none';
-
-            // Camada de rótulos com texto branco puro (dark_only_labels) para máxima legibilidade
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_only_labels/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19,
-                pane: 'labelsPane'
-            }).addTo(map);
-
+            // Ajusta a espessura da linha da rota dinamicamente quando o mapa sofrer zoom
+            map.on('zoomend', atualizarEspessuraLinha);
             map.on('click', () => recolherBottomSheet());
         }
 
@@ -1866,20 +1852,23 @@
             proximaEtapa();
         }
 
-        /* Desenha a linha da rota e aplica setas direcionais destacadas ao longo da via */
+        /* Desenha a linha da rota e ajusta a espessura dinamicamente ao aproximar/afastar o zoom */
         function desenharRotaComSetas(routeCoords) {
             if (mapPolyline) map.removeLayer(mapPolyline);
             if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
 
-            // Linha principal da rota em cor laranja com transparência adequada para destacar os rótulos de ruas
+            let zoomAtual = map.getZoom();
+            let pesoInicial = zoomAtual >= 16 ? 3 : (zoomAtual >= 14 ? 4 : 6);
+
+            // Linha principal da rota em laranja
             mapPolyline = L.polyline(routeCoords, {
                 color: '#ff5722',
-                weight: 6,
+                weight: pesoInicial,
                 opacity: 0.85,
                 lineJoin: 'round'
             }).addTo(map);
 
-            // Decorador que adiciona setas brancas com contorno indicando o sentido de direção da rua
+            // Setas indicativas de direção
             if (typeof L.polylineDecorator === 'function') {
                 mapPolylineDecorator = L.polylineDecorator(mapPolyline, {
                     patterns: [
@@ -1887,7 +1876,7 @@
                             offset: '25px',
                             repeat: '50px',
                             symbol: L.Symbol.arrowHead({
-                                pixelSize: 11,
+                                pixelSize: 10,
                                 headAngle: 60,
                                 polygon: true,
                                 pathOptions: {
@@ -1901,6 +1890,15 @@
                         }
                     ]
                 }).addTo(map);
+            }
+        }
+
+        function atualizarEspessuraLinha() {
+            if (mapPolyline) {
+                let zoom = map.getZoom();
+                // Quanto maior o zoom (ruas detalhadas na tela), mais fina a linha fica para não ocultar os nomes das ruas
+                let peso = zoom >= 16 ? 3 : (zoom >= 14 ? 4 : 6);
+                mapPolyline.setStyle({ weight: peso });
             }
         }
 
