@@ -1460,9 +1460,20 @@
         function inicializarMapa() {
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
             
+            // Camada de Tiles base (desenha as ruas e a estrutura do mapa)
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
                 maxZoom: 19
+            }).addTo(map);
+
+            // Pane exclusivo para os rótulos e nomes das ruas ficarem SOBRESSALENTES (acima da linha laranja da rota)
+            map.createPane('labelsPane');
+            map.getPane('labelsPane').style.zIndex = 650;
+            map.getPane('labelsPane').style.pointerEvents = 'none';
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+                pane: 'labelsPane'
             }).addTo(map);
 
             map.on('click', () => recolherBottomSheet());
@@ -1849,27 +1860,36 @@
             proximaEtapa();
         }
 
+        /* Desenha a linha da rota e aplica setas direcionais destacadas ao longo da via */
         function desenharRotaComSetas(routeCoords) {
             if (mapPolyline) map.removeLayer(mapPolyline);
             if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
 
-            mapPolyline = L.polyline(routeCoords, { color: '#ff5722', weight: 5, opacity: 0.9 }).addTo(map);
+            // Linha principal da rota em cor laranja com transparência adequada para destacar os rótulos de ruas
+            mapPolyline = L.polyline(routeCoords, {
+                color: '#ff5722',
+                weight: 6,
+                opacity: 0.85,
+                lineJoin: 'round'
+            }).addTo(map);
 
+            // Decorador que adiciona setas brancas com contorno indicando o sentido de direção da rua
             if (typeof L.polylineDecorator === 'function') {
                 mapPolylineDecorator = L.polylineDecorator(mapPolyline, {
                     patterns: [
                         {
-                            offset: 25,
-                            repeat: 70,
+                            offset: '25px',
+                            repeat: '50px',
                             symbol: L.Symbol.arrowHead({
-                                pixelSize: 10,
+                                pixelSize: 11,
                                 headAngle: 60,
+                                polygon: true,
                                 pathOptions: {
                                     stroke: true,
                                     color: '#ffffff',
-                                    fillColor: '#ff5722',
+                                    fillColor: '#ffffff',
                                     fillOpacity: 1,
-                                    weight: 2
+                                    weight: 1.5
                                 }
                             })
                         }
@@ -1958,7 +1978,7 @@
             renderizarLista();
             plotarNoMapa();
 
-            // 2. Busca o caminho exato pelas ruas e desenha no mapa
+            // 2. Busca o caminho exato pelas ruas e desenha no mapa com setas
             let routeCoords = await obterGeometriaRuasCompleta(bdRotas);
             if (routeCoords.length > 0) {
                 desenharRotaComSetas(routeCoords);
@@ -2233,4 +2253,3 @@
     </script>
 </body>
 </html>
-
