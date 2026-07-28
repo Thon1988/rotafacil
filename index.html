@@ -2521,7 +2521,7 @@
         function gerarPDFRota() {
             if (bdRotas.length === 0) return alert("Sem rota carregada.");
             const { jsPDF } = window.jspdf;
-            const doc = new jspdf.jsPDF();
+            const doc = new jsPDF();
             doc.setFontSize(16);
             doc.text("Resumo da Rota", 10, 15);
             doc.setFontSize(10);
@@ -2560,17 +2560,27 @@
                 let hoje = new Date().toISOString().slice(0,10);
                 historicoDias.push({ data: hoje, paradas: bdRotas });
                 localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
-                novaRota();
+                
+                bdRotas = [];
+                listaBipados.clear();
+                pdfTabelaCorrespondencia = {};
+                if (mapPolyline) map.removeLayer(mapPolyline);
+                if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
+                salvarBD();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+                abrirTelaInicial();
+                atualizarStatusHome();
+                calcularEstatisticasEAtualizarUI();
+                alert("Rota encerrada e salva no histórico com sucesso!");
             }
         }
 
         function abrirResumo() {
             document.getElementById('modalResumo').style.display = 'flex';
-            let dataHoje = new Date().toISOString().slice(0, 10);
-            let inputData = document.getElementById('filtroDataResumo');
-            if (inputData && !inputData.value) {
-                inputData.value = dataHoje;
-            }
+            let hoje = new Date().toISOString().slice(0,10);
+            document.getElementById('filtroDataResumo').value = hoje;
             filtrarResumoPorData();
         }
 
@@ -2579,51 +2589,36 @@
         }
 
         function filtrarResumoPorData() {
-            let dataFiltro = document.getElementById('filtroDataResumo').value;
-            let container = document.getElementById('conteudoResumo');
-            container.innerHTML = '';
+            let dataSel = document.getElementById('filtroDataResumo').value;
+            let conteiner = document.getElementById('conteudoResumo');
+            conteiner.innerHTML = '';
 
-            let rotasDia = bdRotas;
-            if (dataFiltro) {
-                let historicoEncontrado = historicoDias.find(h => h.data === dataFiltro);
-                if (historicoEncontrado) {
-                    rotasDia = historicoEncontrado.paradas;
-                }
-            }
+            let rotasData = historicoDias.filter(h => h.data === dataSel);
 
-            if (!rotasDia || rotasDia.length === 0) {
-                container.innerHTML = '<p style="font-size:13px; color:var(--texto-secundario); margin-top:15px;">Nenhum registro encontrado para esta data.</p>';
+            if (rotasData.length === 0) {
+                conteiner.innerHTML = '<p style="color:var(--texto-secundario); font-size:13px; text-align:center; margin-top:15px;">Nenhum registro encontrado para esta data.</p>';
                 return;
             }
 
-            let total = rotasDia.length;
-            let entregues = rotasDia.filter(r => r.status === 'entregue').length;
-            let pendentes = rotasDia.filter(r => r.status === 'pendente').length;
-            let falhou = rotasDia.filter(r => r.status === 'falhou').length;
+            let html = '';
+            rotasData.forEach((item, index) => {
+                let total = item.paradas.length;
+                let entregues = item.paradas.filter(p => p.status === 'entregue').length;
+                let falhas = item.paradas.filter(p => p.status === 'falhou').length;
+                let pendentes = item.paradas.filter(p => p.status === 'pendente').length;
 
-            let html = `
-                <div style="background:var(--bg-input); padding:12px; border-radius:10px; margin-top:10px; border:1px solid var(--border-color);">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-weight:bold; font-size:14px;">
-                        <span>Total de Entregas:</span>
-                        <span>${total}</span>
+                html += `
+                    <div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:12px; padding:12px; margin-top:10px;">
+                        <div style="font-weight:bold; font-size:14px; color:var(--cor-laranja); margin-bottom:6px;">Rota #${index + 1} - ${item.data}</div>
+                        <div style="font-size:13px; color:var(--texto-principal);">
+                            📦 Total: <b>${total}</b> | ✅ Entregues: <b>${entregues}</b><br>
+                            ❌ Falhas: <b>${falhas}</b> | ⏳ Pendentes: <b>${pendentes}</b>
+                        </div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; color:var(--cor-verde); margin-bottom:4px; font-size:13px;">
-                        <span>Concluídas:</span>
-                        <span>${entregues}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; color:var(--cor-laranja); margin-bottom:4px; font-size:13px;">
-                        <span>Pendentes:</span>
-                        <span>${pendentes}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; color:var(--cor-vermelho); font-size:13px;">
-                        <span>Falhas / Outros:</span>
-                        <span>${falhou}</span>
-                    </div>
-                </div>
-            `;
-            container.innerHTML = html;
+                `;
+            });
+            conteiner.innerHTML = html;
         }
     </script>
 </body>
 </html>
-
