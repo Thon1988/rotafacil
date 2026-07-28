@@ -137,12 +137,8 @@
         }
         #mapa { width: 100%; height: 100%; }
 
-        .leaflet-tile-container img {
+        :root[data-theme="dark"] .leaflet-tile-container img {
             filter: var(--tile-filter);
-        }
-
-        .leaflet-pane.leaflet-labelsPane-pane img {
-            filter: none !important;
         }
 
         .top-bar-overlay {
@@ -1466,20 +1462,11 @@
         function inicializarMapa() {
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
             
-            // Base sem rótulos para evitar duplicação de texto
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap contributors © CARTO',
-                maxZoom: 19
-            }).addTo(map);
-
-            // Pane exclusivo de rótulos/nomes de ruas nítidos
-            map.createPane('labelsPane');
-            map.getPane('labelsPane').style.zIndex = 650;
-            map.getPane('labelsPane').style.pointerEvents = 'none';
-
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19,
-                pane: 'labelsPane'
+            // Camada padrão do Google Maps
+            L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                attribution: 'Google Maps'
             }).addTo(map);
 
             map.on('zoomend', atualizarEstiloRotaERotulos);
@@ -1495,15 +1482,6 @@
             if (mapPolyline) {
                 let novoPeso = currentZoom >= 16 ? 3 : (currentZoom >= 14 ? 5 : 7);
                 mapPolyline.setStyle({ weight: novoPeso });
-            }
-
-            let paneLabels = map.getPane('labelsPane');
-            if (paneLabels) {
-                if (currentZoom >= 16) {
-                    paneLabels.style.filter = 'brightness(0) invert(1) drop-shadow(0px 1px 2px rgba(0,0,0,0.8))';
-                } else {
-                    paneLabels.style.filter = 'brightness(0) invert(1)';
-                }
             }
         }
 
