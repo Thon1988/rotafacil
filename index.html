@@ -1050,12 +1050,12 @@
 
         <div class="menu-item" onclick="iniciarOtimizacaoComEtapas(false); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            Roteirizar (TSP)
+            Roteirizar (Padrão)
         </div>
 
         <div class="menu-item" onclick="iniciarOtimizacaoComEtapas(true); fecharMenuLateral();">
             <svg viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg>
-            Reotimizar (fixar 1ª e última)
+            Reotimizar (Intermediárias)
         </div>
 
         <div class="menu-item" onclick="inverterOrdemParadas(); fecharMenuLateral();">
@@ -1148,6 +1148,21 @@
                 <h3 style="margin: 0; font-size: 20px; font-weight: 800; color: var(--texto-principal);">Configurar Rota</h3>
                 <button class="scanner-btn-close" style="background: var(--bg-input); color: var(--texto-principal);" onclick="fecharConfigRota()">✕</button>
             </div>
+
+            <!-- Seção Fixar 1ª e Última Parada -->
+            <div class="config-section-title">🔒 Fixar Extremos na Reotimização</div>
+            <div class="config-switch-row">
+                <div>
+                    <div class="config-box-title">Fixar 1ª e última parada</div>
+                    <div class="config-box-desc">Mantém a 1ª e a última parada (ex: parada 78) fixas enquanto reordena de forma inteligente as paradas intermediárias para o trajeto mais rápido.</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="cfgFixarExtremos" onchange="atualizarConfigEstado()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="config-divisor"></div>
 
             <!-- Seção Ponto de Saída -->
             <div class="config-section-title">📍 Ponto de saída</div>
@@ -1347,7 +1362,8 @@
             voltaInicio: false,
             enderecoManualVolta: '',
             tempoParada: 3,
-            velocidadeMedia: 30
+            velocidadeMedia: 30,
+            fixarExtremos: true
         };
 
         let html5QrcodeScanner = null;
@@ -1416,6 +1432,7 @@
 
         function abrirConfigRota() {
             document.getElementById('modalConfigRota').style.display = 'flex';
+            document.getElementById('cfgFixarExtremos').checked = configRotaData.fixarExtremos !== false;
             document.getElementById('cfgVoltaInicio').checked = !!configRotaData.voltaInicio;
             document.getElementById('cfgEnderecoSaidaInput').value = configRotaData.enderecoManualSaida || '';
             document.getElementById('cfgEnderecoVoltaInput').value = configRotaData.enderecoManualVolta || '';
@@ -1443,6 +1460,7 @@
         }
 
         function atualizarConfigEstado() {
+            configRotaData.fixarExtremos = document.getElementById('cfgFixarExtremos').checked;
             configRotaData.voltaInicio = document.getElementById('cfgVoltaInicio').checked;
             const containerVolta = document.getElementById('container-input-volta-manual');
             if(containerVolta) {
@@ -1469,6 +1487,7 @@
         }
 
         function salvarEFecharConfigRota() {
+            configRotaData.fixarExtremos = document.getElementById('cfgFixarExtremos').checked;
             configRotaData.enderecoManualSaida = document.getElementById('cfgEnderecoSaidaInput').value.trim();
             configRotaData.enderecoManualVolta = document.getElementById('cfgEnderecoVoltaInput').value.trim();
             localStorage.setItem('appegg_config', JSON.stringify(configRotaData));
@@ -1869,8 +1888,11 @@
             }
         }
 
-        function iniciarOtimizacaoComEtapas(fixarExtremos = false) {
+        function iniciarOtimizacaoComEtapas(solicitouFixarExtremos = false) {
             if (bdRotas.length < 2) return alert("Paradas insuficientes para otimizar.");
+
+            const aplicarFixarExtremos = solicitouFixarExtremos && (configRotaData.fixarExtremos !== false);
+            const totalParadas = bdRotas.length;
 
             const modal = document.getElementById('modalOtimizacaoEtapas');
             const textoStatus = document.getElementById('textoStatusEtapa');
@@ -1879,9 +1901,13 @@
             modal.style.display = 'flex';
             barra.style.width = '0%';
 
+            const textoEtapa2 = aplicarFixarExtremos 
+                ? `Fixando Parada 1 e Parada ${totalParadas}...` 
+                : "Encontrando a melhor ordem...";
+
             const etapas = [
                 { text: "Analisando suas paradas...", pct: "25%", delay: 500 },
-                { text: fixarExtremos ? "Fixando 1ª e última parada..." : "Encontrando a melhor ordem...", pct: "50%", delay: 600 },
+                { text: textoEtapa2, pct: "50%", delay: 600 },
                 { text: "Calculando traçado sobre as ruas...", pct: "75%", delay: 600 },
                 { text: "Calculando tempo estimado de término...", pct: "100%", delay: 400 }
             ];
@@ -1897,7 +1923,7 @@
                     }, etapas[step].delay);
                 } else {
                     modal.style.display = 'none';
-                    executarOtimizacaoOSRM(fixarExtremos);
+                    executarOtimizacaoOSRM(aplicarFixarExtremos);
                 }
             }
 
@@ -1985,11 +2011,12 @@
             let otimizado = [];
 
             if (fixarExtremos) {
-                // Fixa a 1ª parada e a última parada (ex: parada 78)
+                // Mantém estritamente a 1ª e a última parada (ex: parada 78) fixas
                 let primeira = rascunho.shift();
                 let ultima = rascunho.pop();
                 otimizado.push(primeira);
 
+                // Construção inicial via vizinho mais próximo das intermediárias
                 while (rascunho.length > 0) {
                     let atual = otimizado[otimizado.length - 1];
                     let idxProx = 0, menorDist = Infinity;
@@ -2000,6 +2027,29 @@
                     otimizado.push(rascunho.splice(idxProx, 1)[0]);
                 }
                 otimizado.push(ultima);
+
+                // Otimização inteligente 2-Opt apenas para as paradas intermediárias (preserva o ponto inicial e final)
+                let melhorou = true;
+                let iteracoes = 0;
+                while (melhorou && iteracoes < 100) {
+                    melhorou = false;
+                    iteracoes++;
+                    for (let i = 1; i < otimizado.length - 2; i++) {
+                        for (let j = i + 1; j < otimizado.length - 1; j++) {
+                            let distAtual = calcularDistanciaKM(otimizado[i-1].lat, otimizado[i-1].lon, otimizado[i].lat, otimizado[i].lon) +
+                                            calcularDistanciaKM(otimizado[j].lat, otimizado[j].lon, otimizado[j+1].lat, otimizado[j+1].lon);
+                            
+                            let distNova = calcularDistanciaKM(otimizado[i-1].lat, otimizado[i-1].lon, otimizado[j].lat, otimizado[j].lon) +
+                                           calcularDistanciaKM(otimizado[i].lat, otimizado[i].lon, otimizado[j+1].lat, otimizado[j+1].lon);
+
+                            if (distNova < distAtual - 0.0001) {
+                                let sub = otimizado.slice(i, j + 1).reverse();
+                                otimizado.splice(i, sub.length, ...sub);
+                                melhorou = true;
+                            }
+                        }
+                    }
+                }
             } else if (configRotaData.pontoSaida === 'primeira') {
                 let primeira = rascunho.shift();
                 otimizado.push(primeira);
@@ -2012,6 +2062,29 @@
                         if (d < menorDist) { menorDist = d; idxProx = i; }
                     }
                     otimizado.push(rascunho.splice(idxProx, 1)[0]);
+                }
+
+                // Refinamento 2-Opt mantendo apenas a 1ª fixa
+                let melhorou = true;
+                let iteracoes = 0;
+                while (melhorou && iteracoes < 100) {
+                    melhorou = false;
+                    iteracoes++;
+                    for (let i = 1; i < otimizado.length - 2; i++) {
+                        for (let j = i + 1; j < otimizado.length - 1; j++) {
+                            let distAtual = calcularDistanciaKM(otimizado[i-1].lat, otimizado[i-1].lon, otimizado[i].lat, otimizado[i].lon) +
+                                            (j + 1 < otimizado.length ? calcularDistanciaKM(otimizado[j].lat, otimizado[j].lon, otimizado[j+1].lat, otimizado[j+1].lon) : 0);
+                            
+                            let distNova = calcularDistanciaKM(otimizado[i-1].lat, otimizado[i-1].lon, otimizado[j].lat, otimizado[j].lon) +
+                                           (j + 1 < otimizado.length ? calcularDistanciaKM(otimizado[i].lat, otimizado[i].lon, otimizado[j+1].lat, otimizado[j+1].lon) : 0);
+
+                            if (distNova < distAtual - 0.0001) {
+                                let sub = otimizado.slice(i, j + 1).reverse();
+                                otimizado.splice(i, sub.length, ...sub);
+                                melhorou = true;
+                            }
+                        }
+                    }
                 }
             } else {
                 otimizado.push(rascunho.shift());
