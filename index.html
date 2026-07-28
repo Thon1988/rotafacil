@@ -341,7 +341,7 @@
         }
 
         #bottom-sheet.recolhido {
-            transform: translateY(calc(100% - 75px)) !important;
+            transform: translateY(calc(100% - 85px)) !important;
         }
 
         .sheet-handle {
@@ -366,7 +366,7 @@
             padding: 0 16px 12px 16px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
         }
 
         .sheet-title {
@@ -559,7 +559,7 @@
             border: 1px solid var(--border-color);
             color: var(--texto-principal);
             border-radius: 8px;
-            margin: 10px 0 20px 0;
+            margin: 10px 0 15px 0;
             font-size: 14px;
         }
 
@@ -733,7 +733,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         /* Switch Toggle */
@@ -1125,7 +1125,10 @@
         </div>
 
         <div class="sheet-header">
-            <h2 class="sheet-title">Paradas</h2>
+            <div>
+                <h2 class="sheet-title">Paradas</h2>
+                <div id="info-tempo-estimado" style="font-size: 12px; font-weight: 700; color: var(--cor-laranja); margin-top: 2px;">🏁 Término: --:--</div>
+            </div>
             <div class="badge-restantes">⚡ <span id="contador-restantes">0</span> restantes</div>
         </div>
 
@@ -1163,9 +1166,13 @@
                 <div class="config-box-icon">✏️</div>
                 <div class="config-box-info">
                     <div class="config-box-title">Endereço manual</div>
-                    <div class="config-box-desc">Digite um endereço</div>
+                    <div class="config-box-desc">Digite um endereço de partida</div>
                 </div>
                 <div class="config-box-radio"></div>
+            </div>
+
+            <div id="container-input-saida-manual" style="display: none; padding: 0 4px;">
+                <input type="text" id="cfgEnderecoSaidaInput" class="input-dark" style="margin-top: 0; margin-bottom: 12px;" placeholder="Ex: Av. Paulista, 1000 - SP">
             </div>
 
             <div class="config-opcao-box ativo" id="cfg-saida-primeira" onclick="selecionarPontoSaida('primeira')">
@@ -1179,17 +1186,22 @@
 
             <div class="config-divisor"></div>
 
-            <!-- Seção Volta ao Início -->
-            <div class="config-section-title">🔄 Volta ao início</div>
+            <!-- Seção Volta ao Início / Casa -->
+            <div class="config-section-title">🔄 Volta ao início / Casa</div>
             <div class="config-switch-row">
                 <div>
-                    <div class="config-box-title">Voltar ao ponto de saída no final</div>
+                    <div class="config-box-title">Voltar para o ponto inicial / Casa no final</div>
                     <div class="config-box-desc">Inclui a viagem de retorno no cálculo de tempo e distância</div>
                 </div>
                 <label class="switch">
                     <input type="checkbox" id="cfgVoltaInicio" onchange="atualizarConfigEstado()">
                     <span class="slider"></span>
                 </label>
+            </div>
+
+            <div id="container-input-volta-manual" style="display: none; padding: 0 4px;">
+                <label style="font-size: 11px; color: var(--texto-secundario); font-weight: 600;">Endereço de volta para casa (opcional):</label>
+                <input type="text" id="cfgEnderecoVoltaInput" class="input-dark" style="margin-top: 4px; margin-bottom: 12px;" placeholder="Ex: Sua rua de casa, 123 (Vazio usa o ponto de saída)">
             </div>
 
             <div class="config-divisor"></div>
@@ -1331,7 +1343,9 @@
 
         let configRotaData = JSON.parse(localStorage.getItem('appegg_config')) || {
             pontoSaida: 'primeira',
+            enderecoManualSaida: '',
             voltaInicio: false,
+            enderecoManualVolta: '',
             tempoParada: 3,
             velocidadeMedia: 30
         };
@@ -1362,6 +1376,7 @@
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
+                calcularEstatisticasEAtualizarUI();
             } else {
                 atualizarStatusHome();
             }
@@ -1379,6 +1394,7 @@
                         salvarBD();
                         renderizarLista();
                         plotarNoMapa();
+                        calcularEstatisticasEAtualizarUI();
                     }
                 });
             }
@@ -1400,6 +1416,14 @@
 
         function abrirConfigRota() {
             document.getElementById('modalConfigRota').style.display = 'flex';
+            document.getElementById('cfgVoltaInicio').checked = !!configRotaData.voltaInicio;
+            document.getElementById('cfgEnderecoSaidaInput').value = configRotaData.enderecoManualSaida || '';
+            document.getElementById('cfgEnderecoVoltaInput').value = configRotaData.enderecoManualVolta || '';
+            
+            selecionarPontoSaida(configRotaData.pontoSaida || 'primeira');
+            definirTempoParada(configRotaData.tempoParada || 3);
+            definirVelocidade(configRotaData.velocidadeMedia || 30);
+            atualizarConfigEstado();
         }
 
         function fecharConfigRota() {
@@ -1409,11 +1433,21 @@
         function selecionarPontoSaida(tipo) {
             configRotaData.pontoSaida = tipo;
             document.querySelectorAll('.config-opcao-box').forEach(el => el.classList.remove('ativo'));
-            document.getElementById('cfg-saida-' + tipo).classList.add('ativo');
+            let targetEl = document.getElementById('cfg-saida-' + tipo);
+            if(targetEl) targetEl.classList.add('ativo');
+
+            const containerInput = document.getElementById('container-input-saida-manual');
+            if(containerInput) {
+                containerInput.style.display = (tipo === 'manual') ? 'block' : 'none';
+            }
         }
 
         function atualizarConfigEstado() {
             configRotaData.voltaInicio = document.getElementById('cfgVoltaInicio').checked;
+            const containerVolta = document.getElementById('container-input-volta-manual');
+            if(containerVolta) {
+                containerVolta.style.display = configRotaData.voltaInicio ? 'block' : 'none';
+            }
         }
 
         function definirTempoParada(minutos) {
@@ -1435,8 +1469,11 @@
         }
 
         function salvarEFecharConfigRota() {
+            configRotaData.enderecoManualSaida = document.getElementById('cfgEnderecoSaidaInput').value.trim();
+            configRotaData.enderecoManualVolta = document.getElementById('cfgEnderecoVoltaInput').value.trim();
             localStorage.setItem('appegg_config', JSON.stringify(configRotaData));
             fecharConfigRota();
+            calcularEstatisticasEAtualizarUI();
         }
 
         function alternarTema() {
@@ -1726,6 +1763,7 @@
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
+                calcularEstatisticasEAtualizarUI();
             } else {
                 alert("Nenhuma parada válida foi estruturada.");
             }
@@ -1843,9 +1881,9 @@
 
             const etapas = [
                 { text: "Analisando suas paradas...", pct: "25%", delay: 500 },
-                { text: "Encontrando a melhor ordem...", pct: "50%", delay: 600 },
+                { text: fixarExtremos ? "Fixando 1ª e última parada..." : "Encontrando a melhor ordem...", pct: "50%", delay: 600 },
                 { text: "Calculando traçado sobre as ruas...", pct: "75%", delay: 600 },
-                { text: "Finalizando otimização...", pct: "100%", delay: 400 }
+                { text: "Calculando tempo estimado de término...", pct: "100%", delay: 400 }
             ];
 
             let step = 0;
@@ -1946,7 +1984,8 @@
             let rascunho = [...paradas];
             let otimizado = [];
 
-            if (fixarExtremos || configRotaData.pontoSaida === 'primeira') {
+            if (fixarExtremos) {
+                // Fixa a 1ª parada e a última parada (ex: parada 78)
                 let primeira = rascunho.shift();
                 let ultima = rascunho.pop();
                 otimizado.push(primeira);
@@ -1961,6 +2000,19 @@
                     otimizado.push(rascunho.splice(idxProx, 1)[0]);
                 }
                 otimizado.push(ultima);
+            } else if (configRotaData.pontoSaida === 'primeira') {
+                let primeira = rascunho.shift();
+                otimizado.push(primeira);
+
+                while (rascunho.length > 0) {
+                    let atual = otimizado[otimizado.length - 1];
+                    let idxProx = 0, menorDist = Infinity;
+                    for (let i = 0; i < rascunho.length; i++) {
+                        let d = calcularDistanciaKM(atual.lat, atual.lon, rascunho[i].lat, rascunho[i].lon);
+                        if (d < menorDist) { menorDist = d; idxProx = i; }
+                    }
+                    otimizado.push(rascunho.splice(idxProx, 1)[0]);
+                }
             } else {
                 otimizado.push(rascunho.shift());
                 while (rascunho.length > 0) {
@@ -1990,6 +2042,52 @@
             } else {
                 let latlngs = bdRotas.map(r => [r.lat, r.lon]);
                 desenharRotaComSetas(latlngs);
+            }
+
+            calcularEstatisticasEAtualizarUI();
+        }
+
+        function calcularEstatisticasEAtualizarUI() {
+            if (bdRotas.length === 0) {
+                const elInfo = document.getElementById('info-tempo-estimado');
+                if (elInfo) elInfo.innerText = '🏁 Término: --:--';
+                return;
+            }
+
+            let distTotalKm = 0;
+            for (let i = 0; i < bdRotas.length - 1; i++) {
+                distTotalKm += calcularDistanciaKM(bdRotas[i].lat, bdRotas[i].lon, bdRotas[i+1].lat, bdRotas[i+1].lon);
+            }
+
+            if (configRotaData.voltaInicio && bdRotas.length > 0) {
+                let ultimaParada = bdRotas[bdRotas.length - 1];
+                let pontoOrigem = bdRotas[0];
+                distTotalKm += calcularDistanciaKM(ultimaParada.lat, ultimaParada.lon, pontoOrigem.lat, pontoOrigem.lon);
+            }
+
+            let paradasPendentes = bdRotas.filter(r => r.status === 'pendente').length;
+            let velMedia = configRotaData.velocidadeMedia || 30;
+            let tempoAtendimentoMin = paradasPendentes * (configRotaData.tempoParada || 3);
+            let tempoDeslocamentoMin = (distTotalKm / velMedia) * 60;
+            let tempoTotalMin = Math.round(tempoAtendimentoMin + tempoDeslocamentoMin);
+
+            let horas = Math.floor(tempoTotalMin / 60);
+            let minutos = tempoTotalMin % 60;
+            let duracaoFormatada = `${horas > 0 ? horas + 'h' : ''}${minutos}min`;
+
+            let agora = new Date();
+            agora.setMinutes(agora.getMinutes() + tempoTotalMin);
+            let horaTermino = agora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const distFormatada = distTotalKm.toFixed(1) + ' km';
+            const textoResumo = `🏁 Término: ${horaTermino} • ${duracaoFormatada} • ${distFormatada}`;
+
+            const elInfo = document.getElementById('info-tempo-estimado');
+            if (elInfo) elInfo.innerText = textoResumo;
+
+            const elBadge = document.getElementById('home-status-texto');
+            if (elBadge && bdRotas.length > 0) {
+                elBadge.innerText = `Rota carregada · ${bdRotas.length} paradas · Término ~${horaTermino}`;
             }
         }
 
@@ -2048,6 +2146,7 @@
                 renderizarLista();
                 plotarNoMapa();
                 fecharModalEdit();
+                calcularEstatisticasEAtualizarUI();
             }
         }
 
@@ -2059,6 +2158,7 @@
                 atualizarContador();
                 plotarNoMapa();
                 atualizarStatusHome();
+                calcularEstatisticasEAtualizarUI();
             }
         }
 
@@ -2142,6 +2242,7 @@
                     renderizarLista();
                     atualizarContador();
                     plotarNoMapa();
+                    calcularEstatisticasEAtualizarUI();
                 }
             }
 
@@ -2169,7 +2270,7 @@
         function gerarPDFRota() {
             if (bdRotas.length === 0) return alert("Sem rota carregada.");
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const doc = new jspdf.jsPDF();
             doc.setFontSize(16);
             doc.text("Resumo da Rota", 10, 15);
             doc.setFontSize(10);
@@ -2199,6 +2300,7 @@
                 plotarNoMapa();
                 abrirTelaInicial();
                 atualizarStatusHome();
+                calcularEstatisticasEAtualizarUI();
             }
         }
 
