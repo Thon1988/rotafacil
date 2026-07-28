@@ -1172,7 +1172,7 @@
             <div class="config-switch-row">
                 <div>
                     <div class="config-box-title">Fixar 1ª e última parada</div>
-                    <div class="config-box-desc">Mantém a 1ª e a última parada fixas enquanto reordena de forma inteligente as paradas intermediárias para o trajeto mais rápido.</div>
+                    <div class="config-box-desc">Mantém a 1ª e a última parada (ex: parada 78) fixas enquanto reordena de forma inteligente as paradas intermediárias para o trajeto mais rápido.</div>
                 </div>
                 <label class="switch">
                     <input type="checkbox" id="cfgFixarExtremos" onchange="atualizarConfigEstado()">
@@ -1199,13 +1199,13 @@
                 <div class="config-box-icon">✏️</div>
                 <div class="config-box-info">
                     <div class="config-box-title">Endereço manual</div>
-                    <div class="config-box-desc">Digite um endereço de partida real</div>
+                    <div class="config-box-desc">Digite um endereço de partida</div>
                 </div>
                 <div class="config-box-radio"></div>
             </div>
 
             <div id="container-input-saida-manual" style="display: none; padding: 0 4px;">
-                <input type="text" id="cfgEnderecoSaidaInput" class="input-dark" style="margin-top: 0; margin-bottom: 12px;" placeholder="Ex: Av. Paulista, 1000 - São Paulo, SP">
+                <input type="text" id="cfgEnderecoSaidaInput" class="input-dark" style="margin-top: 0; margin-bottom: 12px;" placeholder="Ex: Av. Paulista, 1000 - SP">
             </div>
 
             <div class="config-opcao-box ativo" id="cfg-saida-primeira" onclick="selecionarPontoSaida('primeira')">
@@ -1224,7 +1224,7 @@
             <div class="config-switch-row">
                 <div>
                     <div class="config-box-title">Voltar para o ponto inicial / Casa no final</div>
-                    <div class="config-box-desc">Inclui a viagem de retorno no cálculo real de tempo e distância</div>
+                    <div class="config-box-desc">Inclui a viagem de retorno no cálculo de tempo e distância</div>
                 </div>
                 <label class="switch">
                     <input type="checkbox" id="cfgVoltaInicio" onchange="atualizarConfigEstado()">
@@ -1233,8 +1233,8 @@
             </div>
 
             <div id="container-input-volta-manual" style="display: none; padding: 0 4px;">
-                <label style="font-size: 11px; color: var(--texto-secundario); font-weight: 600;">Endereço real de volta para casa (opcional):</label>
-                <input type="text" id="cfgEnderecoVoltaInput" class="input-dark" style="margin-top: 4px; margin-bottom: 12px;" placeholder="Ex: Rua Vergueiro, 500 - São Paulo, SP (Vazio usa o ponto de saída)">
+                <label style="font-size: 11px; color: var(--texto-secundario); font-weight: 600;">Endereço de volta para casa (opcional):</label>
+                <input type="text" id="cfgEnderecoVoltaInput" class="input-dark" style="margin-top: 4px; margin-bottom: 12px;" placeholder="Ex: Sua rua de casa, 123 (Vazio usa o ponto de saída)">
             </div>
 
             <div class="config-divisor"></div>
@@ -1557,18 +1557,13 @@
             });
         }
 
-        async function salvarEFecharConfigRota() {
+        function salvarEFecharConfigRota() {
             configRotaData.fixarExtremos = document.getElementById('cfgFixarExtremos').checked;
             configRotaData.enderecoManualSaida = document.getElementById('cfgEnderecoSaidaInput').value.trim();
             configRotaData.enderecoManualVolta = document.getElementById('cfgEnderecoVoltaInput').value.trim();
             localStorage.setItem('appegg_config', JSON.stringify(configRotaData));
             fecharConfigRota();
-            
-            if (bdRotas.length > 0) {
-                await executarOtimizacaoOSRM(configRotaData.fixarExtremos);
-            } else {
-                await calcularEstatisticasEAtualizarUI();
-            }
+            calcularEstatisticasEAtualizarUI();
         }
 
         function alternarTema() {
@@ -1673,55 +1668,24 @@
                 .trim();
         }
 
-        // BUSCA REAL DE ENDEREÇO (Nominatim / OpenStreetMap) - SEM COORDENADAS FICTÍCIAS
         async function buscarGeocodingBackend(endereco) {
-            if (!endereco || !endereco.trim()) return null;
             try {
-                let queryEnc = encodeURIComponent(endereco.trim());
+                let queryEnc = encodeURIComponent(endereco);
                 let response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${queryEnc}&limit=1`, {
-                    headers: { 'User-Agent': 'AppEggRotas/1.0' }
+                    headers: { 'User-Agent': 'RotasApp/1.0' }
                 });
                 if (response.ok) {
                     let data = await response.json();
                     if (data && data.length > 0) {
-                        return { 
-                            lat: parseFloat(data[0].lat), 
-                            lon: parseFloat(data[0].lon) 
-                        };
+                        return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
                     }
                 }
-            } catch (e) { 
-                console.error("Erro na busca de endereço real:", e);
-            }
-            return null;
-        }
-
-        async function obterPontoInicialConfig() {
-            if (configRotaData.pontoSaida === 'gps') {
-                let loc = await obterLocalizacaoAtual();
-                return loc;
-            } else if (configRotaData.pontoSaida === 'manual' && configRotaData.enderecoManualSaida) {
-                let coords = await buscarGeocodingBackend(configRotaData.enderecoManualSaida);
-                if (!coords) {
-                    alert("Atenção: O endereço manual de saída não foi encontrado na busca real. Verifique se digitou o endereço correto.");
-                }
-                return coords;
-            }
-            return null;
-        }
-
-        async function obterPontoVoltaConfig(pontoInicial) {
-            if (!configRotaData.voltaInicio) return null;
-
-            if (configRotaData.enderecoManualVolta && configRotaData.enderecoManualVolta.trim() !== '') {
-                let coords = await buscarGeocodingBackend(configRotaData.enderecoManualVolta);
-                if (coords) return coords;
-                alert("Atenção: O endereço de volta para casa não foi localizado. Usando o ponto inicial como retorno.");
-            }
-
-            if (pontoInicial) return pontoInicial;
-            if (bdRotas.length > 0) return { lat: bdRotas[0].lat, lon: bdRotas[0].lon };
-            return null;
+            } catch (e) { }
+            
+            return {
+                lat: -23.5505 + (Math.random() - 0.5) * 0.02,
+                lon: -46.6333 + (Math.random() - 0.5) * 0.02
+            };
         }
 
         function acionarInputExcelUnico() {
@@ -1867,13 +1831,8 @@
 
                 if (!lat || !lon) {
                     let coords = await buscarGeocodingBackend(item.endereco);
-                    if (coords) {
-                        lat = coords.lat;
-                        lon = coords.lon;
-                    } else {
-                        lat = -23.5505;
-                        lon = -46.6333;
-                    }
+                    lat = coords.lat;
+                    lon = coords.lon;
                 }
 
                 bdRotas.push({
@@ -1893,7 +1852,7 @@
                 renderizarLista();
                 atualizarContador();
                 plotarNoMapa();
-                await calcularEstatisticasEAtualizarUI();
+                calcularEstatisticasEAtualizarUI();
             } else {
                 alert("Nenhuma parada válida foi estruturada.");
             }
@@ -1971,7 +1930,7 @@
             exibirWidgetAgrupado();
         }
 
-        async function plotarNoMapa() {
+        function plotarNoMapa() {
             layerMarkers.forEach(m => map.removeLayer(m));
             layerMarkers = [];
 
@@ -1982,34 +1941,6 @@
             let bounds = [];
             if (userLocation) {
                 bounds.push([userLocation.lat, userLocation.lon]);
-            }
-
-            let pontoInicial = await obterPontoInicialConfig();
-            if (pontoInicial && configRotaData.pontoSaida === 'manual') {
-                let startIcon = L.divIcon({
-                    className: 'custom-pin-wrapper',
-                    html: `<div class="marker-pin-custom" style="background-color: #10b981;">🚩</div>`,
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                });
-                let mStart = L.marker([pontoInicial.lat, pontoInicial.lon], { icon: startIcon }).addTo(map);
-                mStart.bindPopup("<b>Ponto de Saída Manual</b><br>" + configRotaData.enderecoManualSaida);
-                layerMarkers.push(mStart);
-                bounds.push([pontoInicial.lat, pontoInicial.lon]);
-            }
-
-            let pontoVolta = await obterPontoVoltaConfig(pontoInicial);
-            if (pontoVolta && configRotaData.voltaInicio && configRotaData.enderecoManualVolta) {
-                let homeIcon = L.divIcon({
-                    className: 'custom-pin-wrapper',
-                    html: `<div class="marker-pin-custom" style="background-color: #3b82f6;">🏠</div>`,
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                });
-                let mHome = L.marker([pontoVolta.lat, pontoVolta.lon], { icon: homeIcon }).addTo(map);
-                mHome.bindPopup("<b>Retorno / Casa</b><br>" + configRotaData.enderecoManualVolta);
-                layerMarkers.push(mHome);
-                bounds.push([pontoVolta.lat, pontoVolta.lon]);
             }
 
             bdRotas.forEach((e, idx) => {
@@ -2034,7 +1965,7 @@
         }
 
         function iniciarOtimizacaoComEtapas(solicitouFixarExtremos = false) {
-            if (bdRotas.length < 1) return alert("Paradas insuficientes para otimizar.");
+            if (bdRotas.length < 2) return alert("Paradas insuficientes para otimizar.");
 
             const aplicarFixarExtremos = solicitouFixarExtremos && (configRotaData.fixarExtremos !== false);
             const totalParadas = bdRotas.length;
@@ -2048,12 +1979,12 @@
 
             const textoEtapa2 = aplicarFixarExtremos 
                 ? `Fixando Parada 1 e Parada ${totalParadas}...` 
-                : "Encontrando a melhor ordem...";
+                : "Encontrando a melhor ordem viária...";
 
             const etapas = [
-                { text: "Analisando suas paradas e ponto de saída...", pct: "25%", delay: 500 },
+                { text: "Obtendo matriz de distâncias reais (OSRM)...", pct: "25%", delay: 500 },
                 { text: textoEtapa2, pct: "50%", delay: 600 },
-                { text: "Calculando traçado real sobre as ruas...", pct: "75%", delay: 600 },
+                { text: "Calculando traçado sobre as ruas...", pct: "75%", delay: 600 },
                 { text: "Calculando tempo estimado de término...", pct: "100%", delay: 400 }
             ];
 
@@ -2150,45 +2081,105 @@
             return todasCoordenadasRuas;
         }
 
-        function otimizarOrdemParadasLocal(paradas, fixarExtremos = false, pontoInicial = null) {
+        async function obterPontoInicialConfig() {
+            if (configRotaData.pontoSaida === 'gps') {
+                let loc = await obterLocalizacaoAtual();
+                return loc;
+            } else if (configRotaData.pontoSaida === 'manual' && configRotaData.enderecoManualSaida) {
+                let coords = await buscarGeocodingBackend(configRotaData.enderecoManualSaida);
+                return coords;
+            }
+            return null;
+        }
+
+        async function otimizarOrdemParadasOSRM(paradas, fixarExtremos = false, pontoInicial = null) {
             if (paradas.length <= 1) return paradas;
-            let rascunho = [...paradas];
+
+            let lista = [...paradas];
+            let todosPontos = [];
+            if (pontoInicial) todosPontos.push(pontoInicial);
+            todosPontos.push(...lista);
+
+            let n = todosPontos.length;
+            let matriz = Array.from({ length: n }, () => new Array(n));
+
+            // Matriz inicial de fallback via Haversine
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    if (i === j) matriz[i][j] = 0;
+                    else matriz[i][j] = calcularDistanciaKM(todosPontos[i].lat, todosPontos[i].lon, todosPontos[j].lat, todosPontos[j].lon);
+                }
+            }
+
+            // Busca a Matriz de Distâncias Viárias Reais no OSRM Table Service (1 única requisição HTTP)
+            if (n >= 2 && n <= 100) {
+                try {
+                    let coordsStr = todosPontos.map(p => `${p.lon},${p.lat}`).join(';');
+                    let url = `https://router.project-osrm.org/table/v1/driving/${coordsStr}?annotations=distance`;
+                    let res = await fetch(url);
+                    let data = await res.json();
+                    if (data.code === 'Ok' && data.distances) {
+                        for (let i = 0; i < n; i++) {
+                            for (let j = 0; j < n; j++) {
+                                if (data.distances[i][j] !== null && data.distances[i][j] !== undefined) {
+                                    matriz[i][j] = data.distances[i][j] / 1000; // Converte metros em KM
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Falha ao obter matriz OSRM. Usando fallback Haversine:", e);
+                }
+            }
+
+            let offset = pontoInicial ? 1 : 0;
+            lista.forEach((p, idx) => p._mIdx = idx + offset);
+            let pInitIdx = pontoInicial ? 0 : null;
+
+            function getDistByIdx(i, j) {
+                return matriz[i][j];
+            }
+
+            let rascunho = [...lista];
             let otimizado = [];
 
             if (fixarExtremos) {
                 let ultima = rascunho.pop();
-                let pontoAtual = pontoInicial;
+                let pontoAtualMIdx = (pInitIdx !== null) ? pInitIdx : null;
 
-                if (!pontoAtual) {
-                    pontoAtual = rascunho.shift();
-                    otimizado.push(pontoAtual);
+                if (pontoAtualMIdx === null) {
+                    let primeiro = rascunho.shift();
+                    otimizado.push(primeiro);
+                    pontoAtualMIdx = primeiro._mIdx;
                 }
 
                 while (rascunho.length > 0) {
                     let idxProx = 0, menorDist = Infinity;
                     for (let i = 0; i < rascunho.length; i++) {
-                        let d = calcularDistanciaKM(pontoAtual.lat, pontoAtual.lon, rascunho[i].lat, rascunho[i].lon);
+                        let d = getDistByIdx(pontoAtualMIdx, rascunho[i]._mIdx);
                         if (d < menorDist) { menorDist = d; idxProx = i; }
                     }
-                    pontoAtual = rascunho.splice(idxProx, 1)[0];
-                    otimizado.push(pontoAtual);
+                    let prox = rascunho.splice(idxProx, 1)[0];
+                    otimizado.push(prox);
+                    pontoAtualMIdx = prox._mIdx;
                 }
                 otimizado.push(ultima);
 
+                // Otimização 2-Opt baseada em distâncias de ruas
                 let melhorou = true;
                 let iteracoes = 0;
-                let inicioIdx = pontoInicial ? 0 : 1;
+                let inicioIdx = (pInitIdx !== null) ? 0 : 1;
                 while (melhorou && iteracoes < 100) {
                     melhorou = false;
                     iteracoes++;
                     for (let i = inicioIdx; i < otimizado.length - 2; i++) {
                         for (let j = i + 1; j < otimizado.length - 1; j++) {
-                            let ptAnterior = (i === 0) ? pontoInicial : otimizado[i-1];
-                            let distAtual = calcularDistanciaKM(ptAnterior.lat, ptAnterior.lon, otimizado[i].lat, otimizado[i].lon) +
-                                            calcularDistanciaKM(otimizado[j].lat, otimizado[j].lon, otimizado[j+1].lat, otimizado[j+1].lon);
+                            let ptAnteriorMIdx = (i === 0) ? (pInitIdx !== null ? pInitIdx : otimizado[0]._mIdx) : otimizado[i-1]._mIdx;
+                            let distAtual = getDistByIdx(ptAnteriorMIdx, otimizado[i]._mIdx) +
+                                            getDistByIdx(otimizado[j]._mIdx, otimizado[j+1]._mIdx);
                             
-                            let distNova = calcularDistanciaKM(ptAnterior.lat, ptAnterior.lon, otimizado[j].lat, otimizado[j].lon) +
-                                           calcularDistanciaKM(otimizado[i].lat, otimizado[i].lon, otimizado[j+1].lat, otimizado[j+1].lon);
+                            let distNova = getDistByIdx(ptAnteriorMIdx, otimizado[j]._mIdx) +
+                                           getDistByIdx(otimizado[i]._mIdx, otimizado[j+1]._mIdx);
 
                             if (distNova < distAtual - 0.0001) {
                                 let sub = otimizado.slice(i, j + 1).reverse();
@@ -2199,38 +2190,42 @@
                     }
                 }
             } else {
-                let pontoAtual = pontoInicial;
-                if (!pontoAtual) {
-                    pontoAtual = rascunho.shift();
-                    otimizado.push(pontoAtual);
+                let pontoAtualMIdx = (pInitIdx !== null) ? pInitIdx : null;
+
+                if (pontoAtualMIdx === null) {
+                    let primeiro = rascunho.shift();
+                    otimizado.push(primeiro);
+                    pontoAtualMIdx = primeiro._mIdx;
                 }
 
                 while (rascunho.length > 0) {
                     let idxProx = 0, menorDist = Infinity;
                     for (let i = 0; i < rascunho.length; i++) {
-                        let d = calcularDistanciaKM(pontoAtual.lat, pontoAtual.lon, rascunho[i].lat, rascunho[i].lon);
+                        let d = getDistByIdx(pontoAtualMIdx, rascunho[i]._mIdx);
                         if (d < menorDist) { menorDist = d; idxProx = i; }
                     }
-                    pontoAtual = rascunho.splice(idxProx, 1)[0];
-                    otimizado.push(pontoAtual);
+                    let prox = rascunho.splice(idxProx, 1)[0];
+                    otimizado.push(prox);
+                    pontoAtualMIdx = prox._mIdx;
                 }
 
+                // Otimização 2-Opt baseada em distâncias de ruas
                 let melhorou = true;
                 let iteracoes = 0;
-                let inicioIdx = pontoInicial ? 0 : 1;
+                let inicioIdx = (pInitIdx !== null) ? 0 : 1;
                 while (melhorou && iteracoes < 100) {
                     melhorou = false;
                     iteracoes++;
                     for (let i = inicioIdx; i < otimizado.length - 1; i++) {
                         for (let j = i + 1; j < otimizado.length; j++) {
-                            let ptAnterior = (i === 0) ? pontoInicial : otimizado[i-1];
-                            let ptProximo = (j + 1 < otimizado.length) ? otimizado[j+1] : null;
+                            let ptAnteriorMIdx = (i === 0) ? (pInitIdx !== null ? pInitIdx : otimizado[0]._mIdx) : otimizado[i-1]._mIdx;
+                            let ptProximoMIdx = (j + 1 < otimizado.length) ? otimizado[j+1]._mIdx : null;
 
-                            let distAtual = calcularDistanciaKM(ptAnterior.lat, ptAnterior.lon, otimizado[i].lat, otimizado[i].lon) +
-                                            (ptProximo ? calcularDistanciaKM(otimizado[j].lat, otimizado[j].lon, ptProximo.lat, ptProximo.lon) : 0);
+                            let distAtual = getDistByIdx(ptAnteriorMIdx, otimizado[i]._mIdx) +
+                                            (ptProximoMIdx !== null ? getDistByIdx(otimizado[j]._mIdx, ptProximoMIdx) : 0);
                             
-                            let distNova = calcularDistanciaKM(ptAnterior.lat, ptAnterior.lon, otimizado[j].lat, otimizado[j].lon) +
-                                           (ptProximo ? calcularDistanciaKM(otimizado[i].lat, otimizado[i].lon, ptProximo.lat, ptProximo.lon) : 0);
+                            let distNova = getDistByIdx(ptAnteriorMIdx, otimizado[j]._mIdx) +
+                                           (ptProximoMIdx !== null ? getDistByIdx(otimizado[i]._mIdx, ptProximoMIdx) : 0);
 
                             if (distNova < distAtual - 0.0001) {
                                 let sub = otimizado.slice(i, j + 1).reverse();
@@ -2241,29 +2236,25 @@
                     }
                 }
             }
+
+            // Limpa chave temporária da matriz
+            otimizado.forEach(p => delete p._mIdx);
             return otimizado;
         }
 
         async function executarOtimizacaoOSRM(fixarExtremos = false) {
-            if (bdRotas.length < 1) return;
+            if (bdRotas.length < 2) return;
 
             let pontoInicial = await obterPontoInicialConfig();
 
-            if (bdRotas.length >= 2) {
-                bdRotas = otimizarOrdemParadasLocal(bdRotas, fixarExtremos, pontoInicial);
-                salvarBD();
-                renderizarLista();
-                await plotarNoMapa();
-            }
+            bdRotas = await otimizarOrdemParadasOSRM(bdRotas, fixarExtremos, pontoInicial);
+            salvarBD();
+            renderizarLista();
+            plotarNoMapa();
 
             let listaParaTrajeto = [...bdRotas];
             if (pontoInicial) {
                 listaParaTrajeto.unshift({ lat: pontoInicial.lat, lon: pontoInicial.lon });
-            }
-
-            let pontoVolta = await obterPontoVoltaConfig(pontoInicial);
-            if (pontoVolta) {
-                listaParaTrajeto.push({ lat: pontoVolta.lat, lon: pontoVolta.lon });
             }
 
             let routeCoords = await obterGeometriaRuasCompleta(listaParaTrajeto);
@@ -2274,7 +2265,7 @@
                 desenharRotaComSetas(latlngs);
             }
 
-            await calcularEstatisticasEAtualizarUI();
+            calcularEstatisticasEAtualizarUI();
         }
 
         async function calcularEstatisticasEAtualizarUI() {
@@ -2285,7 +2276,13 @@
             }
 
             let distTotalKm = 0;
-            let pontoInicial = await obterPontoInicialConfig();
+            let pontoInicial = null;
+            
+            if (configRotaData.pontoSaida === 'gps' && userLocation) {
+                pontoInicial = userLocation;
+            } else if (configRotaData.pontoSaida === 'manual' && configRotaData.enderecoManualSaida) {
+                pontoInicial = await buscarGeocodingBackend(configRotaData.enderecoManualSaida);
+            }
 
             if (pontoInicial && bdRotas.length > 0) {
                 distTotalKm += calcularDistanciaKM(pontoInicial.lat, pontoInicial.lon, bdRotas[0].lat, bdRotas[0].lon);
@@ -2297,10 +2294,8 @@
 
             if (configRotaData.voltaInicio && bdRotas.length > 0) {
                 let ultimaParada = bdRotas[bdRotas.length - 1];
-                let pontoVolta = await obterPontoVoltaConfig(pontoInicial);
-                if (pontoVolta) {
-                    distTotalKm += calcularDistanciaKM(ultimaParada.lat, ultimaParada.lon, pontoVolta.lat, pontoVolta.lon);
-                }
+                let pontoOrigem = pontoInicial || bdRotas[0];
+                distTotalKm += calcularDistanciaKM(ultimaParada.lat, ultimaParada.lon, pontoOrigem.lat, pontoOrigem.lon);
             }
 
             let paradasPendentes = bdRotas.filter(r => r.status === 'pendente').length;
@@ -2378,17 +2373,13 @@
                 let novoEnd = document.getElementById('inputEditEndereco').value;
                 bdRotas[editIndexTarget].endereco = novoEnd;
                 let coords = await buscarGeocodingBackend(novoEnd);
-                if (coords) {
-                    bdRotas[editIndexTarget].lat = coords.lat;
-                    bdRotas[editIndexTarget].lon = coords.lon;
-                } else {
-                    alert("Não foi possível encontrar as coordenadas para o endereço digitado.");
-                }
+                bdRotas[editIndexTarget].lat = coords.lat;
+                bdRotas[editIndexTarget].lon = coords.lon;
                 salvarBD();
                 renderizarLista();
                 plotarNoMapa();
                 fecharModalEdit();
-                await calcularEstatisticasEAtualizarUI();
+                calcularEstatisticasEAtualizarUI();
             }
         }
 
