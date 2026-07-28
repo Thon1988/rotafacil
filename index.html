@@ -164,6 +164,23 @@
             pointer-events: auto;
         }
 
+        /* ESTILO DO MARCADOR DE GPS DO USUÁRIO */
+        .marker-user-location {
+            width: 20px;
+            height: 20px;
+            background: #2196F3;
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 12px rgba(33, 150, 243, 0.9);
+            animation: pulsarGps 2s infinite;
+        }
+
+        @keyframes pulsarGps {
+            0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7); }
+            70% { box-shadow: 0 0 0 14px rgba(33, 150, 243, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
+        }
+
         /* TELA DE FLUXO INICIAL SEPARADA */
         #fluxo-inicial-container {
             position: fixed;
@@ -1098,7 +1115,8 @@
         <div id="mapa"></div>
         <div class="top-bar-overlay">
             <button class="btn-round-top" onclick="abrirMenuLateral()">☰</button>
-            <button class="btn-round-top" onclick="abrirTelaInicial()" style="margin-left: auto; font-size: 16px;">🏠</button>
+            <button class="btn-round-top" onclick="centralizarNoGPS()" title="Minha Localização" style="margin-left: auto;">🎯</button>
+            <button class="btn-round-top" onclick="abrirTelaInicial()" style="font-size: 16px;">🏠</button>
         </div>
     </div>
 
@@ -1371,6 +1389,7 @@
         let editIndexTarget = null;
         let sortableInstance = null;
         let map, layerMarkers = [], mapPolyline = null, mapPolylineDecorator = null;
+        let userLocation = null, markerUsuario = null;
 
         let grupoAtual = [];
         let indexAgrupadoInterno = 0;
@@ -1385,6 +1404,7 @@
             inicializarMapa();
             inicializarSortable(); 
             configurarGestoBottomSheet(); 
+            obterLocalizacaoAtual();
 
             if (bdRotas.length > 0) {
                 document.getElementById('fluxo-inicial-container').style.display = 'none';
@@ -1397,6 +1417,53 @@
                 atualizarStatusHome();
             }
         };
+
+        function obterLocalizacaoAtual() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    console.warn("Geolocalização não suportada.");
+                    return resolve(null);
+                }
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        userLocation = {
+                            lat: pos.coords.latitude,
+                            lon: pos.coords.longitude
+                        };
+                        plotarLocalizacaoUsuario();
+                        resolve(userLocation);
+                    },
+                    (err) => {
+                        console.warn("Erro ao obter localização GPS:", err);
+                        resolve(null);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            });
+        }
+
+        function plotarLocalizacaoUsuario() {
+            if (!userLocation || !map) return;
+            if (markerUsuario) map.removeLayer(markerUsuario);
+
+            let userIcon = L.divIcon({
+                className: 'custom-user-pin',
+                html: `<div class="marker-user-location"></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            markerUsuario = L.marker([userLocation.lat, userLocation.lon], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+        }
+
+        async function centralizarNoGPS() {
+            let loc = await obterLocalizacaoAtual();
+            if (loc && map) {
+                map.flyTo([loc.lat, loc.lon], 16);
+            } else {
+                alert("Não foi possível obter sua localização atual de GPS. Verifique se a localização está ativada no seu dispositivo.");
+            }
+        }
 
         function inicializarSortable() {
             const lista = document.getElementById('lista-paradas');
@@ -1447,7 +1514,7 @@
             document.getElementById('modalConfigRota').style.display = 'none';
         }
 
-        function selecionarPontoSaida(tipo) {
+        async function selecionarPontoSaida(tipo) {
             configRotaData.pontoSaida = tipo;
             document.querySelectorAll('.config-opcao-box').forEach(el => el.classList.remove('ativo'));
             let targetEl = document.getElementById('cfg-saida-' + tipo);
@@ -1456,6 +1523,10 @@
             const containerInput = document.getElementById('container-input-saida-manual');
             if(containerInput) {
                 containerInput.style.display = (tipo === 'manual') ? 'block' : 'none';
+            }
+
+            if (tipo === 'gps') {
+                await obterLocalizacaoAtual();
             }
         }
 
@@ -1864,9 +1935,15 @@
             layerMarkers.forEach(m => map.removeLayer(m));
             layerMarkers = [];
 
+            plotarLocalizacaoUsuario();
+
             if (bdRotas.length === 0) return;
 
             let bounds = [];
+            if (userLocation) {
+                bounds.push([userLocation.lat, userLocation.lon]);
+            }
+
             bdRotas.forEach((e, idx) => {
                 let cor = e.status === 'pendente' ? 'var(--cor-laranja)' : (e.status === 'entregue' ? 'var(--cor-verde)' : 'var(--cor-vermelho)');
                 let customIcon = L.divIcon({
@@ -1906,7 +1983,7 @@
                 : "Encontrando a melhor ordem...";
 
             const etapas = [
-                { text: "Analisando suas paradas...", pct: "25%", delay: 500 },
+                { text: "Analisando suas paradas e GPS...", pct: "25%", delay: 500 },
                 { text: textoEtapa2, pct: "50%", delay: 600 },
                 { text: "Calculando traçado sobre as ruas...", pct: "75%", delay: 600 },
                 { text: "Calculando tempo estimado de término...", pct: "100%", delay: 400 }
@@ -2005,41 +2082,55 @@
             return todasCoordenadasRuas;
         }
 
-        function otimizarOrdemParadasLocal(paradas, fixarExtremos = false) {
-            if (paradas.length <= 2) return paradas;
+        async function obterPontoInicialConfig() {
+            if (configRotaData.pontoSaida === 'gps') {
+                let loc = await obterLocalizacaoAtual();
+                return loc;
+            } else if (configRotaData.pontoSaida === 'manual' && configRotaData.enderecoManualSaida) {
+                let coords = await buscarGeocodingBackend(configRotaData.enderecoManualSaida);
+                return coords;
+            }
+            return null;
+        }
+
+        function otimizarOrdemParadasLocal(paradas, fixarExtremos = false, pontoInicial = null) {
+            if (paradas.length <= 1) return paradas;
             let rascunho = [...paradas];
             let otimizado = [];
 
             if (fixarExtremos) {
-                // Mantém estritamente a 1ª e a última parada (ex: parada 78) fixas
-                let primeira = rascunho.shift();
                 let ultima = rascunho.pop();
-                otimizado.push(primeira);
+                let pontoAtual = pontoInicial;
 
-                // Construção inicial via vizinho mais próximo das intermediárias
+                if (!pontoAtual) {
+                    pontoAtual = rascunho.shift();
+                    otimizado.push(pontoAtual);
+                }
+
                 while (rascunho.length > 0) {
-                    let atual = otimizado[otimizado.length - 1];
                     let idxProx = 0, menorDist = Infinity;
                     for (let i = 0; i < rascunho.length; i++) {
-                        let d = calcularDistanciaKM(atual.lat, atual.lon, rascunho[i].lat, rascunho[i].lon);
+                        let d = calcularDistanciaKM(pontoAtual.lat, pontoAtual.lon, rascunho[i].lat, rascunho[i].lon);
                         if (d < menorDist) { menorDist = d; idxProx = i; }
                     }
-                    otimizado.push(rascunho.splice(idxProx, 1)[0]);
+                    pontoAtual = rascunho.splice(idxProx, 1)[0];
+                    otimizado.push(pontoAtual);
                 }
                 otimizado.push(ultima);
 
-                // Otimização inteligente 2-Opt apenas para as paradas intermediárias (preserva o ponto inicial e final)
                 let melhorou = true;
                 let iteracoes = 0;
+                let inicioIdx = pontoInicial ? 0 : 1;
                 while (melhorou && iteracoes < 100) {
                     melhorou = false;
                     iteracoes++;
-                    for (let i = 1; i < otimizado.length - 2; i++) {
+                    for (let i = inicioIdx; i < otimizado.length - 2; i++) {
                         for (let j = i + 1; j < otimizado.length - 1; j++) {
-                            let distAtual = calcularDistanciaKM(otimizado[i-1].lat, otimizado[i-1].lon, otimizado[i].lat, otimizado[i].lon) +
+                            let ptAnterior = (i === 0) ? pontoInicial : otimizado[i-1];
+                            let distAtual = calcularDistanciaKM(ptAnterior.lat, ptAnterior.lon, otimizado[i].lat, otimizado[i].lon) +
                                             calcularDistanciaKM(otimizado[j].lat, otimizado[j].lon, otimizado[j+1].lat, otimizado[j+1].lon);
                             
-                            let distNova = calcularDistanciaKM(otimizado[i-1].lat, otimizado[i-1].lon, otimizado[j].lat, otimizado[j].lon) +
+                            let distNova = calcularDistanciaKM(ptAnterior.lat, ptAnterior.lon, otimizado[j].lat, otimizado[j].lon) +
                                            calcularDistanciaKM(otimizado[i].lat, otimizado[i].lon, otimizado[j+1].lat, otimizado[j+1].lon);
 
                             if (distNova < distAtual - 0.0001) {
@@ -2050,33 +2141,39 @@
                         }
                     }
                 }
-            } else if (configRotaData.pontoSaida === 'primeira') {
-                let primeira = rascunho.shift();
-                otimizado.push(primeira);
-
-                while (rascunho.length > 0) {
-                    let atual = otimizado[otimizado.length - 1];
-                    let idxProx = 0, menorDist = Infinity;
-                    for (let i = 0; i < rascunho.length; i++) {
-                        let d = calcularDistanciaKM(atual.lat, atual.lon, rascunho[i].lat, rascunho[i].lon);
-                        if (d < menorDist) { menorDist = d; idxProx = i; }
-                    }
-                    otimizado.push(rascunho.splice(idxProx, 1)[0]);
+            } else {
+                let pontoAtual = pontoInicial;
+                if (!pontoAtual) {
+                    pontoAtual = rascunho.shift();
+                    otimizado.push(pontoAtual);
                 }
 
-                // Refinamento 2-Opt mantendo apenas a 1ª fixa
+                while (rascunho.length > 0) {
+                    let idxProx = 0, menorDist = Infinity;
+                    for (let i = 0; i < rascunho.length; i++) {
+                        let d = calcularDistanciaKM(pontoAtual.lat, pontoAtual.lon, rascunho[i].lat, rascunho[i].lon);
+                        if (d < menorDist) { menorDist = d; idxProx = i; }
+                    }
+                    pontoAtual = rascunho.splice(idxProx, 1)[0];
+                    otimizado.push(pontoAtual);
+                }
+
                 let melhorou = true;
                 let iteracoes = 0;
+                let inicioIdx = pontoInicial ? 0 : 1;
                 while (melhorou && iteracoes < 100) {
                     melhorou = false;
                     iteracoes++;
-                    for (let i = 1; i < otimizado.length - 2; i++) {
-                        for (let j = i + 1; j < otimizado.length - 1; j++) {
-                            let distAtual = calcularDistanciaKM(otimizado[i-1].lat, otimizado[i-1].lon, otimizado[i].lat, otimizado[i].lon) +
-                                            (j + 1 < otimizado.length ? calcularDistanciaKM(otimizado[j].lat, otimizado[j].lon, otimizado[j+1].lat, otimizado[j+1].lon) : 0);
+                    for (let i = inicioIdx; i < otimizado.length - 1; i++) {
+                        for (let j = i + 1; j < otimizado.length; j++) {
+                            let ptAnterior = (i === 0) ? pontoInicial : otimizado[i-1];
+                            let ptProximo = (j + 1 < otimizado.length) ? otimizado[j+1] : null;
+
+                            let distAtual = calcularDistanciaKM(ptAnterior.lat, ptAnterior.lon, otimizado[i].lat, otimizado[i].lon) +
+                                            (ptProximo ? calcularDistanciaKM(otimizado[j].lat, otimizado[j].lon, ptProximo.lat, ptProximo.lon) : 0);
                             
-                            let distNova = calcularDistanciaKM(otimizado[i-1].lat, otimizado[i-1].lon, otimizado[j].lat, otimizado[j].lon) +
-                                           (j + 1 < otimizado.length ? calcularDistanciaKM(otimizado[i].lat, otimizado[i].lon, otimizado[j+1].lat, otimizado[j+1].lon) : 0);
+                            let distNova = calcularDistanciaKM(ptAnterior.lat, ptAnterior.lon, otimizado[j].lat, otimizado[j].lon) +
+                                           (ptProximo ? calcularDistanciaKM(otimizado[i].lat, otimizado[i].lon, ptProximo.lat, ptProximo.lon) : 0);
 
                             if (distNova < distAtual - 0.0001) {
                                 let sub = otimizado.slice(i, j + 1).reverse();
@@ -2086,17 +2183,6 @@
                         }
                     }
                 }
-            } else {
-                otimizado.push(rascunho.shift());
-                while (rascunho.length > 0) {
-                    let atual = otimizado[otimizado.length - 1];
-                    let idxProx = 0, menorDist = Infinity;
-                    for (let i = 0; i < rascunho.length; i++) {
-                        let d = calcularDistanciaKM(atual.lat, atual.lon, rascunho[i].lat, rascunho[i].lon);
-                        if (d < menorDist) { menorDist = d; idxProx = i; }
-                    }
-                    otimizado.push(rascunho.splice(idxProx, 1)[0]);
-                }
             }
             return otimizado;
         }
@@ -2104,23 +2190,30 @@
         async function executarOtimizacaoOSRM(fixarExtremos = false) {
             if (bdRotas.length < 2) return;
 
-            bdRotas = otimizarOrdemParadasLocal(bdRotas, fixarExtremos);
+            let pontoInicial = await obterPontoInicialConfig();
+
+            bdRotas = otimizarOrdemParadasLocal(bdRotas, fixarExtremos, pontoInicial);
             salvarBD();
             renderizarLista();
             plotarNoMapa();
 
-            let routeCoords = await obterGeometriaRuasCompleta(bdRotas);
+            let listaParaTrajeto = [...bdRotas];
+            if (pontoInicial) {
+                listaParaTrajeto.unshift({ lat: pontoInicial.lat, lon: pontoInicial.lon });
+            }
+
+            let routeCoords = await obterGeometriaRuasCompleta(listaParaTrajeto);
             if (routeCoords.length > 0) {
                 desenharRotaComSetas(routeCoords);
             } else {
-                let latlngs = bdRotas.map(r => [r.lat, r.lon]);
+                let latlngs = listaParaTrajeto.map(r => [r.lat, r.lon]);
                 desenharRotaComSetas(latlngs);
             }
 
             calcularEstatisticasEAtualizarUI();
         }
 
-        function calcularEstatisticasEAtualizarUI() {
+        async function calcularEstatisticasEAtualizarUI() {
             if (bdRotas.length === 0) {
                 const elInfo = document.getElementById('info-tempo-estimado');
                 if (elInfo) elInfo.innerText = '🏁 Término: --:--';
@@ -2128,13 +2221,25 @@
             }
 
             let distTotalKm = 0;
+            let pontoInicial = null;
+            
+            if (configRotaData.pontoSaida === 'gps' && userLocation) {
+                pontoInicial = userLocation;
+            } else if (configRotaData.pontoSaida === 'manual' && configRotaData.enderecoManualSaida) {
+                pontoInicial = await buscarGeocodingBackend(configRotaData.enderecoManualSaida);
+            }
+
+            if (pontoInicial && bdRotas.length > 0) {
+                distTotalKm += calcularDistanciaKM(pontoInicial.lat, pontoInicial.lon, bdRotas[0].lat, bdRotas[0].lon);
+            }
+
             for (let i = 0; i < bdRotas.length - 1; i++) {
                 distTotalKm += calcularDistanciaKM(bdRotas[i].lat, bdRotas[i].lon, bdRotas[i+1].lat, bdRotas[i+1].lon);
             }
 
             if (configRotaData.voltaInicio && bdRotas.length > 0) {
                 let ultimaParada = bdRotas[bdRotas.length - 1];
-                let pontoOrigem = bdRotas[0];
+                let pontoOrigem = pontoInicial || bdRotas[0];
                 distTotalKm += calcularDistanciaKM(ultimaParada.lat, ultimaParada.lon, pontoOrigem.lat, pontoOrigem.lon);
             }
 
