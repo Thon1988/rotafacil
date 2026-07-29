@@ -2558,9 +2558,8 @@
         function encerrarESalvarRota() {
             if(confirm("Encerrar rota e salvar no histórico?")) {
                 let hoje = new Date().toISOString().slice(0,10);
-                historicoDias.push({ data: hoje, paradas: bdRotas });
+                historicoDias.push({ data: hoje, paradas: [...bdRotas] });
                 localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
-                
                 bdRotas = [];
                 listaBipados.clear();
                 pdfTabelaCorrespondencia = {};
@@ -2573,7 +2572,7 @@
                 abrirTelaInicial();
                 atualizarStatusHome();
                 calcularEstatisticasEAtualizarUI();
-                alert("Rota encerrada e salva no histórico com sucesso!");
+                alert("Rota encerrada e salva no histórico!");
             }
         }
 
@@ -2590,35 +2589,34 @@
 
         function filtrarResumoPorData() {
             let dataSel = document.getElementById('filtroDataResumo').value;
-            let conteiner = document.getElementById('conteudoResumo');
-            conteiner.innerHTML = '';
+            let divConteudo = document.getElementById('conteudoResumo');
+            divConteudo.innerHTML = '';
 
-            let rotasData = historicoDias.filter(h => h.data === dataSel);
+            let registros = historicoDias.filter(h => h.data === dataSel);
 
-            if (rotasData.length === 0) {
-                conteiner.innerHTML = '<p style="color:var(--texto-secundario); font-size:13px; text-align:center; margin-top:15px;">Nenhum registro encontrado para esta data.</p>';
+            if (registros.length === 0) {
+                divConteudo.innerHTML = '<p style="font-size:13px; color:var(--texto-secundario); text-align:center; margin-top:15px;">Nenhum histórico encontrado para esta data.</p>';
                 return;
             }
 
             let html = '';
-            rotasData.forEach((item, index) => {
-                let total = item.paradas.length;
-                let entregues = item.paradas.filter(p => p.status === 'entregue').length;
-                let falhas = item.paradas.filter(p => p.status === 'falhou').length;
-                let pendentes = item.paradas.filter(p => p.status === 'pendente').length;
+            registros.forEach((reg, i) => {
+                let entregues = reg.paradas.filter(p => p.status === 'entregue').length;
+                let total = reg.paradas.length;
 
                 html += `
-                    <div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:12px; padding:12px; margin-top:10px;">
-                        <div style="font-weight:bold; font-size:14px; color:var(--cor-laranja); margin-bottom:6px;">Rota #${index + 1} - ${item.data}</div>
-                        <div style="font-size:13px; color:var(--texto-principal);">
-                            📦 Total: <b>${total}</b> | ✅ Entregues: <b>${entregues}</b><br>
-                            ❌ Falhas: <b>${falhas}</b> | ⏳ Pendentes: <b>${pendentes}</b>
+                    <div style="background:var(--bg-input); padding:12px; border-radius:10px; margin-top:10px; text-align:left;">
+                        <div style="font-weight:bold; font-size:14px; color:var(--texto-principal);">Rota #${i+1} (${dataSel})</div>
+                        <div style="font-size:12px; color:var(--texto-secundario); margin-top:4px;">
+                            Total: <b>${total}</b> | Entregues: <span style="color:var(--cor-verde); font-weight:bold;">${entregues}</span> | Pendentes: <span style="color:var(--cor-vermelho); font-weight:bold;">${total - entregues}</span>
                         </div>
                     </div>
                 `;
             });
-            conteiner.innerHTML = html;
+
+            divConteudo.innerHTML = html;
         }
     </script>
 </body>
 </html>
+
