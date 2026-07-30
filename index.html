@@ -4,26 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Rota+Rápida</title>
-   
+
     <!-- Bibliotecas Necessárias -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-   
+
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Decorador de Direção de Rotas (Setas no Mapa) -->
     <script src="https://cdn.jsdelivr.net/npm/leaflet-polylinedecorator@1.6.0/leaflet.polylineDecorator.min.js"></script>
-   
+
     <style>
         :root[data-theme="dark"] {
             --cor-laranja: #ff5722;
             --cor-laranja-hover: #e64a19;
             --cor-verde: #10b981;
             --cor-vermelho: #ef4444;
+            --cor-azul: #2563eb;
             --bg-principal: #0f131a;
             --bg-card: #1a202c;
             --bg-input: #2d3748;
@@ -38,6 +39,7 @@
             --cor-laranja-hover: #e64a19;
             --cor-verde: #10b981;
             --cor-vermelho: #ef4444;
+            --cor-azul: #2563eb;
             --bg-principal: #f3f4f6;
             --bg-card: #ffffff;
             --bg-input: #e5e7eb;
@@ -122,6 +124,12 @@
         .menu-item.perigo svg {
             stroke: var(--cor-vermelho);
         }
+
+        .menu-item.destaque {
+            background: rgba(255, 87, 34, 0.12);
+            color: var(--cor-laranja);
+        }
+        .menu-item.destaque svg { stroke: var(--cor-laranja); }
 
         .divisor-menu {
             height: 1px;
@@ -333,6 +341,11 @@
             margin-bottom: 10px;
         }
 
+        .home-btn-principal.secundario {
+            background: var(--cor-azul);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
+
         .home-footer-tip {
             text-align: center;
             font-size: 12px;
@@ -423,6 +436,12 @@
 
         .btn-sheet-action.destaque {
             background: var(--cor-laranja);
+            color: white;
+            border: none;
+        }
+
+        .btn-sheet-action.navegar {
+            background: var(--cor-azul);
             color: white;
             border: none;
         }
@@ -868,11 +887,11 @@
             z-index: 10 !important;
             position: relative;
         }
-        
+
         #reader__scan_region {
             background: transparent !important;
         }
-        
+
         #reader__dashboard_section_csr button {
             background-color: var(--cor-laranja) !important;
             color: white !important;
@@ -960,6 +979,318 @@
             text-align: center;
             white-space: nowrap;
         }
+
+        /* ============================================================
+           ESTILOS DO SISTEMA DE NAVEGAÇÃO INTERNA TURN-BY-TURN
+           (estilo Circuit Route Planner)
+           ============================================================ */
+
+        /* Marcador do veículo (seta animada) */
+        .icone-veiculo {
+            position: relative;
+        }
+
+        .seta-veiculo {
+            width: 0;
+            height: 0;
+            border-left: 14px solid transparent;
+            border-right: 14px solid transparent;
+            border-bottom: 26px solid #2563eb;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.6));
+            transform-origin: center 70%;
+            transition: transform 0.4s ease;
+        }
+
+        .seta-veiculo::after {
+            content: "";
+            position: absolute;
+            top: 0; left: -7px;
+            width: 14px; height: 14px;
+            background: #2563eb;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 8px rgba(37, 99, 235, 0.6);
+        }
+
+        /* Painel superior com próxima instrução (estilo Waze/Google Maps) */
+        #painel-navegacao-topo {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 8000;
+            background: var(--cor-azul);
+            color: white;
+            padding: 14px 16px 16px 16px;
+            display: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        #painel-navegacao-topo .topo-linha {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        #painel-navegacao-topo .icone-manobra {
+            font-size: 38px;
+            width: 56px;
+            height: 56px;
+            background: white;
+            color: var(--cor-azul);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+        }
+
+        #painel-navegacao-topo .info-manobra {
+            flex: 1;
+            min-width: 0;
+        }
+
+        #painel-navegacao-topo .distancia-manobra {
+            font-size: 30px;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        #painel-navegacao-topo .texto-manobra {
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #painel-navegacao-topo .rua-proxima {
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0.9;
+            line-height: 1.2;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Painel inferior com info da entrega atual */
+        #painel-navegacao-inferior {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 8000;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            padding: 14px 16px 18px 16px;
+            display: none;
+            box-shadow: 0 -6px 20px rgba(0,0,0,0.4);
+        }
+
+        #painel-navegacao-inferior .linha-entrega {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        #painel-navegacao-inferior .badge-parada-nav {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            background: var(--cor-azul);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        #painel-navegacao-inferior .entrega-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        #painel-navegacao-inferior .entrega-codigo {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--cor-laranja);
+            margin: 0;
+        }
+
+        #painel-navegacao-inferior .entrega-end {
+            font-size: 12px;
+            color: var(--texto-secundario);
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #painel-navegacao-inferior .stats-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 4px;
+            background: var(--bg-input);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        #painel-navegacao-inferior .stat-bloco {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--texto-principal);
+        }
+
+        #painel-navegacao-inferior .stat-bloco .ico {
+            font-size: 16px;
+        }
+
+        #painel-navegacao-inferior .stat-separador {
+            width: 1px;
+            height: 18px;
+            background: var(--border-color);
+        }
+
+        .botoes-navegacao-flutuantes {
+            position: fixed;
+            right: 14px;
+            bottom: 230px;
+            z-index: 8500;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn-nav-flutuante {
+            width: 50px; height: 50px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: var(--texto-principal);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            cursor: pointer;
+        }
+
+        .btn-nav-flutuante.sair {
+            background: var(--cor-vermelho);
+            color: white;
+            border: none;
+        }
+
+        /* Overlay de recálculo */
+        #overlay-recalculando {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9000;
+            background: rgba(37, 99, 235, 0.95);
+            color: white;
+            padding: 10px 22px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pulse-recalc {
+            width: 10px; height: 10px;
+            background: white;
+            border-radius: 50%;
+            animation: pulseRecalc 1s infinite ease-in-out;
+        }
+
+        @keyframes pulseRecalc {
+            0%, 100% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+
+        /* Modal de confirmação de chegada */
+        #modal-chegada-confirm {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9500;
+            background: var(--bg-card);
+            border: 1px solid var(--cor-azul);
+            border-radius: 18px;
+            padding: 22px;
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+        }
+
+        #modal-chegada-confirm h3 {
+            margin: 0 0 4px 0;
+            color: var(--cor-azul);
+            font-size: 18px;
+        }
+
+        #modal-chegada-confirm p {
+            margin: 0 0 16px 0;
+            font-size: 13px;
+            color: var(--texto-secundario);
+        }
+
+        #modal-chegada-confirm .botoes {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        #modal-chegada-confirm .botoes button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 800;
+            font-size: 14px;
+            cursor: pointer;
+            color: white;
+        }
+
+        #modal-chegada-confirm .btn-bipar {
+            background: var(--cor-laranja);
+        }
+
+        #modal-chegada-confirm .btn-falhou {
+            background: var(--cor-vermelho);
+        }
+
+        #modal-chegada-confirm .btn-depois {
+            background: var(--bg-input);
+            color: var(--texto-principal);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Esconder elementos no modo navegação */
+        body.modo-navegacao #bottom-sheet,
+        body.modo-navegacao .top-bar-overlay,
+        body.modo-navegacao #widget-agrupado,
+        body.modo-navegacao #fluxo-inicial-container {
+            display: none !important;
+        }
+
+        body.modo-navegacao #menu-lateral {
+            z-index: 7000;
+        }
     </style>
 </head>
 <body>
@@ -1029,90 +1360,98 @@
             📦 Abrir Scanner
         </button>
 
+        <!-- Botão Azul Secundário: Iniciar Navegação Turn-by-Turn -->
+        <button id="btnIniciarNavegacaoHome" class="home-btn-principal secundario" onclick="iniciarNavegacaoInterna()" style="display:none;">
+            🛰️ Iniciar Navegação
+        </button>
+
         <div class="home-footer-tip">
             💡 <b>Dica:</b> Carregue o mapa via Excel/CSV e o PDF de correspondência independentemente para começar a bipar!
         </div>
     </div>
 
     <!-- OVERLAY E MENU LATERAL -->
-    <div id="menu-lateral-overlay" onclick="fecharMenuLateral()"></div>
+    <div id="menu-lateral-overlay" onclick="fecharMenuLateralEx"></div>
     <div id="menu-lateral">
-        <div style="font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--cor-laranja);">Rota+Rápida</div>
+        <div style="font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--cor-laranja); display: flex; align-items: center; justify-content: space-between;">
+            <span>Rota+Rápida</span>
+            <button onclick="fecharMenuLateralEx()" style="background: var(--bg-input); color: var(--texto-principal); border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer;">✕</button>
+        </div>
 
-        <div class="menu-item" onclick="abrirTelaInicial()">
+        <div class="menu-item" onclick="abrirTelaInicial(); fecharMenuLateralEx();">
             <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             Tela Inicial
         </div>
 
-        <div class="menu-item" onclick="alternarTema()">
+        <div class="menu-item destaque" id="menuItemNavegacao" onclick="iniciarNavegacaoInterna(); fecharMenuLateralEx();">
+            <svg viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            <span id="menuItemNavegacaoTxt">Iniciar Navegação</span>
+        </div>
+
+        <div class="menu-item" onclick="alternarTema();">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
             Alternar Tema (Claro/Escuro)
         </div>
 
-        <div class="menu-item" onclick="alternarModoNavegacao()">
-            <svg viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-            Navegação: <span id="label-gps-preferido" style="margin-left: 5px; color: var(--cor-laranja);">Google Maps</span>
-        </div>
-
         <div class="divisor-menu"></div>
 
-        <div class="menu-item" onclick="abrirConfigRota(); fecharMenuLateral();">
+        <div class="menu-item" onclick="abrirConfigRota(); fecharMenuLateralEx();">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             Configurar Rota (Circuit)
         </div>
 
-        <div class="menu-item" onclick="abrirScanner(); fecharMenuLateral();">
+        <div class="menu-item" onclick="abrirScanner(); fecharMenuLateralEx();">
             <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2-2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
             Abrir Scanner
         </div>
 
-        <div class="menu-item" onclick="inserirCodigoManual(); fecharMenuLateral();">
+        <div class="menu-item" onclick="inserirCodigoManual(); fecharMenuLateralEx();">
             <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Inserir Código Manual
         </div>
 
         <div class="divisor-menu"></div>
 
-        <div class="menu-item" onclick="iniciarOtimizacaoComEtapas(false); fecharMenuLateral();">
+        <div class="menu-item" onclick="iniciarOtimizacaoComEtapas(false); fecharMenuLateralEx();">
             <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             Roteirizar (Padrão)
         </div>
 
-        <div class="menu-item" onclick="iniciarOtimizacaoComEtapas(true); fecharMenuLateral();">
+        <div class="menu-item" onclick="iniciarOtimizacaoComEtapas(true); fecharMenuLateralEx();">
             <svg viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg>
             Reotimizar (Intermediárias)
         </div>
 
-        <div class="menu-item" onclick="inverterOrdemParadas(); fecharMenuLateral();">
+        <div class="menu-item" onclick="inverterOrdemParadas(); fecharMenuLateralEx();">
             <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><line x1="21" y1="5" x2="9" y2="5"/><polyline points="7 23 3 19 7 15"/><line x1="3" y1="19" x2="15" y2="19"/></svg>
             Inverter Ordem
         </div>
 
         <div class="divisor-menu"></div>
 
-        <div class="menu-item" onclick="abrirResumo(); fecharMenuLateral();">
+        <div class="menu-item" onclick="abrirResumo(); fecharMenuLateralEx();">
             <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             Ver Resumo
         </div>
 
-        <div class="menu-item" onclick="exportarRelatorioCSV(); fecharMenuLateral();">
+        <div class="menu-item" onclick="exportarRelatorioCSV(); fecharMenuLateralEx();">
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y3="3"/></svg>
             Exportar CSV
         </div>
 
-        <div class="menu-item" onclick="gerarPDFRota(); fecharMenuLateral();">
+        <div class="menu-item" onclick="gerarPDFRota(); fecharMenuLateralEx();">
             <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             Gerar PDF da Rota
         </div>
 
         <div class="divisor-menu"></div>
 
-        <div class="menu-item" onclick="novaRota(); fecharMenuLateral();">
+        <div class="menu-item" onclick="novaRota(); fecharMenuLateralEx();">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
             Nova Rota
         </div>
 
-        <div class="menu-item perigo" onclick="encerrarESalvarRota(); fecharMenuLateral();">
+        <div class="menu-item perigo" onclick="encerrarESalvarRota(); fecharMenuLateralEx();">
             <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
             Encerrar e Salvar Rota
         </div>
@@ -1122,7 +1461,7 @@
     <div id="mapa-container">
         <div id="mapa"></div>
         <div class="top-bar-overlay">
-            <button class="btn-round-top" onclick="abrirMenuLateral()">☰</button>
+            <button class="btn-round-top" onclick="abrirMenuLateralEx()">☰</button>
             <button class="btn-round-top" onclick="centralizarNoGPS()" title="Minha Localização" style="margin-left: auto;">🎯</button>
             <button class="btn-round-top" onclick="abrirTelaInicial()" style="font-size: 16px;">🏠</button>
         </div>
@@ -1136,7 +1475,7 @@
         </div>
         <div style="font-weight: bold; font-size: 15px; color: var(--texto-principal);" id="agrupado-rua">---</div>
         <div style="font-size: 13px; color: var(--cor-laranja);" id="agrupado-codigo">---</div>
-        
+
         <div class="carrossel-controles">
             <button class="btn-carrossel" onclick="navegarAgrupado(-1)">◄ Anterior</button>
             <span style="flex:1; text-align:center; font-size:12px; color:var(--texto-secundario);">Deslize para trocar</span>
@@ -1159,12 +1498,84 @@
         </div>
 
         <div class="sheet-actions-row">
+            <button id="btnIniciarNavegacaoSheet" class="btn-sheet-action navegar" onclick="iniciarNavegacaoInterna()" style="display:none;">🛰️ Navegar</button>
             <button class="btn-sheet-action destaque" onclick="iniciarOtimizacaoComEtapas(false)">⚡ Roteirizar</button>
             <button class="btn-sheet-action" onclick="iniciarOtimizacaoComEtapas(true)">🔀 Reotimizar</button>
             <button class="btn-sheet-action" onclick="abrirScanner()">📦 Abrir Scanner</button>
         </div>
 
         <div id="lista-paradas"></div>
+    </div>
+
+    <!-- ============================================================
+         ELEMENTOS DO SISTEMA DE NAVEGAÇÃO TURN-BY-TURN
+         (Painel topo estilo Waze/Google Maps)
+    ============================================================ -->
+    <div id="painel-navegacao-topo">
+        <div class="topo-linha">
+            <div class="icone-manobra" id="nav-icone-manobra">⬆️</div>
+            <div class="info-manobra">
+                <div class="distancia-manobra" id="nav-distancia-manobra">250 m</div>
+                <div class="texto-manobra" id="nav-texto-manobra">Siga em frente</div>
+                <div class="rua-proxima" id="nav-rua-proxima">—</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Painel inferior com info da próxima entrega -->
+    <div id="painel-navegacao-inferior">
+        <div class="linha-entrega">
+            <div class="badge-parada-nav" id="nav-badge-parada">1</div>
+            <div class="entrega-info">
+                <p class="entrega-codigo" id="nav-entrega-codigo">—</p>
+                <p class="entrega-end" id="nav-entrega-end">—</p>
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat-bloco">
+                <span class="ico">🕐</span>
+                <span id="nav-tempo-restante">-- min</span>
+            </div>
+            <div class="stat-separador"></div>
+            <div class="stat-bloco">
+                <span class="ico">📏</span>
+                <span id="nav-distancia-restante">-- km</span>
+            </div>
+            <div class="stat-separador"></div>
+            <div class="stat-bloco">
+                <span class="ico">📍</span>
+                <span id="nav-paradas-restantes">0 restantes</span>
+            </div>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button class="btn-sheet-action destaque" style="flex: 2;" onclick="confirmarChegadaParada()">✅ Cheguei / Bipar</button>
+            <button class="btn-sheet-action" style="flex: 1; background: var(--cor-vermelho); color: white; border: none;" onclick="confirmarFalhaParada()">❌ Falhou</button>
+        </div>
+    </div>
+
+    <!-- Botões flutuantes durante navegação -->
+    <div class="botoes-navegacao-flutuantes">
+        <button class="btn-nav-flutuante" onclick="alternarVoz()" title="Voz on/off">🔊</button>
+        <button class="btn-nav-flutuante sair" onclick="confirmarSaidaNavegacao()" title="Sair da Navegação">✕</button>
+    </div>
+
+    <!-- Overlay de recálculo de rota -->
+    <div id="overlay-recalculando">
+        <div class="pulse-recalc"></div>
+        <span>Recalculando rota...</span>
+    </div>
+
+    <!-- Modal de confirmação quando o motorista chega à parada -->
+    <div id="modal-chegada-confirm">
+        <h3 id="chegada-titulo">📍 Você chegou!</h3>
+        <p id="chegada-msg">Confirme a entrega da próxima parada</p>
+        <div class="botoes">
+            <button class="btn-bipar" onclick="biparEAvanpar()">📦 Bipar</button>
+            <button class="btn-falhou" onclick="falharEAvanpar()">❌ Falhou</button>
+        </div>
+        <div class="botoes">
+            <button class="btn-depois" onclick="lembrarDepois()">⏰ Lembrar daqui a pouco</button>
+        </div>
     </div>
 
     <!-- MODAL CARD AÇÕES DA PARADA -->
@@ -1175,7 +1586,7 @@
             <p id="cardParadaEndereco" style="font-size:13px; color:var(--texto-secundario); margin-bottom: 20px; line-height: 1.4;"></p>
 
             <div style="display:flex; flex-direction:column; gap:10px;">
-                <button class="btn-sheet-action destaque" onclick="executarNavegacaoCard()" style="padding:14px; font-size:16px; border-radius: 12px;">🧭 Navegar</button>
+                <button class="btn-sheet-action destaque" onclick="executarNavegacaoCard()" style="padding:14px; font-size:16px; border-radius: 12px;" id="btnExecutarNavegacao">🧭 Navegar</button>
                 <div style="display:flex; gap:10px;">
                     <button class="btn-sheet-action" style="background:var(--cor-verde); color:white; border:none; padding:12px; font-size: 15px;" onclick="marcarStatusParadaCard('entregue')">✅ Entregue</button>
                     <button class="btn-sheet-action" style="background:var(--cor-vermelho); color:white; border:none; padding:12px; font-size: 15px;" onclick="marcarStatusParadaCard('falhou')">❌ Falhou</button>
@@ -1193,7 +1604,6 @@
                 <button class="scanner-btn-close" style="background: var(--bg-input); color: var(--texto-principal);" onclick="fecharConfigRota()">✕</button>
             </div>
 
-            <!-- Seção Fixar 1ª e Última Parada -->
             <div class="config-section-title">🔒 Fixar Extremos na Reotimização</div>
             <div class="config-switch-row">
                 <div>
@@ -1208,7 +1618,6 @@
 
             <div class="config-divisor"></div>
 
-            <!-- Seção Ponto de Saída -->
             <div class="config-section-title">📍 Ponto de saída</div>
             <div class="config-section-desc">De onde você vai começar?</div>
 
@@ -1245,7 +1654,6 @@
 
             <div class="config-divisor"></div>
 
-            <!-- Seção Volta ao Início / Casa -->
             <div class="config-section-title">🔄 Volta ao início / Casa</div>
             <div class="config-switch-row">
                 <div>
@@ -1265,7 +1673,6 @@
 
             <div class="config-divisor"></div>
 
-            <!-- Seção Tempo por Parada -->
             <div class="config-section-title">⏱️ Tempo por parada</div>
             <div class="config-section-desc">Quanto tempo você leva em média em cada entrega? Isso ajuda a estimar quando você termina.</div>
 
@@ -1286,7 +1693,6 @@
 
             <div class="config-divisor"></div>
 
-            <!-- Seção Velocidade Média -->
             <div class="config-section-title">🚗 Velocidade média</div>
             <div class="config-section-desc">Velocidade média estimada para deslocamento entre paradas</div>
 
@@ -1306,7 +1712,7 @@
     <div id="modalEdit" class="modal-overlay">
         <div class="modal-body">
             <h3 style="margin-top:0;" id="modalEditTitulo">Editar Parada</h3>
-            
+
             <label style="font-size: 12px; color: var(--texto-secundario); font-weight: 600;">Endereço:</label>
             <input type="text" id="inputEditEndereco" class="input-dark">
 
@@ -1332,7 +1738,7 @@
             <h3 style="margin-top:0; color:var(--cor-laranja);">Resumo dos Dias de Trabalho</h3>
             <label style="font-size:12px; color:var(--texto-secundario);">Filtrar por Data:</label>
             <input type="date" id="filtroDataResumo" class="input-dark" onchange="filtrarResumoPorData()">
-            
+
             <div id="conteudoResumo"></div>
 
             <button class="btn-sheet-action destaque" style="width:100%; margin-top:15px;" onclick="fecharModalResumo()">Fechar</button>
@@ -1344,7 +1750,7 @@
         <div class="scanner-header">
             <button class="scanner-btn-close" onclick="fecharScanner()">✕</button>
             <div class="scanner-header-badge" id="scanner-topo-badge">📦 0 de 0</div>
-            <button class="scanner-btn-close" onclick="abrirMenuLateral()">☰</button>
+            <button class="scanner-btn-close" onclick="abrirMenuLateralEx()">☰</button>
         </div>
 
         <div class="scanner-viewport-container">
@@ -1368,7 +1774,7 @@
             </div>
 
             <div style="display: flex; gap: 8px; width: 100%; margin-bottom: 4px;">
-                <div class="scanner-stat-card active" style="padding: 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <div class="scanner-stat-card active" style="padding: 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" id="cardParadaEncontrada">
                     <div style="font-size: 16px;">📍</div>
                     <div style="text-align: left;">
                         <div class="scanner-stat-label" style="font-size: 10px;">Parada Encontrada:</div>
@@ -1407,9 +1813,11 @@
     </div>
 
     <script>
+        /* ============================================================
+           ESTADO GLOBAL DO APP
+        ============================================================ */
         let bdRotas = JSON.parse(localStorage.getItem('appegg_db_oficial')) || [];
         let historicoDias = JSON.parse(localStorage.getItem('appegg_historico')) || [];
-        let modoNavegacao = localStorage.getItem('appegg_modo_nav') || 'maps';
         let temaAtual = localStorage.getItem('appegg_tema') || 'dark';
 
         let configRotaData = JSON.parse(localStorage.getItem('appegg_config')) || {
@@ -1435,14 +1843,46 @@
         let listaBipados = new Set();
         let pdfTabelaCorrespondencia = {};
 
+        /* ============================================================
+           SISTEMA DE NAVEGAÇÃO INTERNA TURN-BY-TURN
+        ============================================================ */
+        let modoNavegacao = 'interna'; // Sempre interna ao iniciar navegação
+        let navegacaoAtiva = false;
+        let indiceParadaAtual = 0;
+        let entregaAtiva = null;
+        let ultimaPosicao = null;
+        let ultimoHeading = 0;
+        let instrucoesRota = [];
+        let pontosRota = [];
+        let distanciaRestanteMetro = 0;
+        let tempoRestanteSegundos = 0;
+        let linhaRotaNav = null;
+        let marcadorMotorista = null;
+        let watchIdGPS = null;
+        let recalculandoRota = false;
+        let vozHabilitada = true;
+        let ultimaInstrucaoFalou = "";
+        let paradaJaOferecida = false;
+
+        const DISTANCIA_CHEGADA = 30; // metros
+        const DISTANCIA_RECALCULO = 80; // metros - se afastar mais que isso da rota, recalcula
+        const DISTANCIA_AVISO_MANOBRA = 30; // metros antes da manobra
+
+        // Ícone do veículo (seta)
+        const iconeVeiculo = L.divIcon({
+            className: 'icone-veiculo',
+            html: '<div class="seta-veiculo">▲</div>',
+            iconSize: [40, 40],
+            iconAnchor: [20, 22]
+        });
+
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         window.onload = () => {
             aplicarTema(temaAtual);
-            atualizarLabelNavegacao();
             inicializarMapa();
-            inicializarSortable(); 
-            configurarGestoBottomSheet(); 
+            inicializarSortable();
+            configurarGestoBottomSheet();
             obterLocalizacaoAtual();
 
             if (bdRotas.length > 0) {
@@ -1452,13 +1892,45 @@
                 atualizarContador();
                 plotarNoMapa();
                 calcularEstatisticasEAtualizarUI();
+                mostrarBotoesNavegacao();
             } else {
                 atualizarStatusHome();
             }
+
+            restaurarEstadoNavegacao();
         };
+
+        /* ============================================================
+           FUNÇÃO: Mostrar/Esconder botões de navegação
+        ============================================================ */
+        function mostrarBotoesNavegacao(){
+            const btnHome = document.getElementById('btnIniciarNavegacaoHome');
+            const btnSheet = document.getElementById('btnIniciarNavegacaoSheet');
+            const menuItem = document.getElementById('menuItemNavegacao');
+            const menuTxt = document.getElementById('menuItemNavegacaoTxt');
+
+            const temPendentes = bdRotas.some(r => r.status === 'pendente');
+
+            if (bdRotas.length > 0) {
+                if (btnHome) btnHome.style.display = 'block';
+                if (btnSheet) btnSheet.style.display = 'flex';
+
+                if (navegacaoAtiva) {
+                    if (menuTxt) menuTxt.innerText = "Encerrar Navegação";
+                    if (menuItem) menuItem.querySelector('svg').innerHTML = '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+                } else {
+                    if (menuTxt) menuTxt.innerText = "Iniciar Navegação";
+                    if (menuItem) menuItem.querySelector('svg').innerHTML = '<polygon points="3 11 22 2 13 21 11 13 3 11"/>';
+                }
+            } else {
+                if (btnHome) btnHome.style.display = 'none';
+                if (btnSheet) btnSheet.style.display = 'none';
+            }
+        }
 
         function salvarBD() {
             localStorage.setItem('appegg_db_oficial', JSON.stringify(bdRotas));
+            mostrarBotoesNavegacao();
         }
 
         function atualizarContador() {
@@ -1552,7 +2024,7 @@
             document.getElementById('cfgVoltaInicio').checked = !!configRotaData.voltaInicio;
             document.getElementById('cfgEnderecoSaidaInput').value = configRotaData.enderecoManualSaida || '';
             document.getElementById('cfgEnderecoVoltaInput').value = configRotaData.enderecoManualVolta || '';
-            
+
             selecionarPontoSaida(configRotaData.pontoSaida || 'primeira');
             definirTempoParada(configRotaData.tempoParada || 3);
             definirVelocidade(configRotaData.velocidadeMedia || 30);
@@ -1612,7 +2084,7 @@
             configRotaData.enderecoManualVolta = document.getElementById('cfgEnderecoVoltaInput').value.trim();
             localStorage.setItem('appegg_config', JSON.stringify(configRotaData));
             fecharConfigRota();
-            
+
             if (bdRotas.length > 0) {
                 await executarOtimizacaoOSRM(configRotaData.fixarExtremos);
             } else {
@@ -1630,27 +2102,9 @@
             document.documentElement.setAttribute('data-theme', tema);
         }
 
-        function alternarModoNavegacao() {
-            if (modoNavegacao === 'interna') modoNavegacao = 'maps';
-            else if (modoNavegacao === 'maps') modoNavegacao = 'waze';
-            else modoNavegacao = 'interna';
-            
-            localStorage.setItem('appegg_modo_nav', modoNavegacao);
-            atualizarLabelNavegacao();
-        }
-
-        function atualizarLabelNavegacao() {
-            const el = document.getElementById('label-gps-preferido');
-            if (el) {
-                if (modoNavegacao === 'interna') el.innerText = 'Interna';
-                else if (modoNavegacao === 'maps') el.innerText = 'Google Maps';
-                else if (modoNavegacao === 'waze') el.innerText = 'Waze';
-            }
-        }
-
         function inicializarMapa() {
             map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
-            
+
             L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
                 maxZoom: 20,
                 subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
@@ -1658,7 +2112,9 @@
             }).addTo(map);
 
             map.on('zoomend', atualizarEstiloRotaERotulos);
-            map.on('click', () => recolherBottomSheet());
+            map.on('click', () => {
+                if(!navegacaoAtiva) recolherBottomSheet();
+            });
 
             atualizarEstiloRotaERotulos();
         }
@@ -1671,20 +2127,25 @@
                 let novoPeso = currentZoom >= 16 ? 3 : (currentZoom >= 14 ? 5 : 7);
                 mapPolyline.setStyle({ weight: novoPeso });
             }
+
+            if (linhaRotaNav) {
+                let pesoNav = currentZoom >= 16 ? 5 : 7;
+                linhaRotaNav.setStyle({ weight: pesoNav });
+            }
         }
 
-        function abrirMenuLateral() {
+        function abrirMenuLateralEx() {
             document.getElementById('menu-lateral-overlay').style.display = 'block';
             document.getElementById('menu-lateral').classList.add('aberto');
         }
 
-        function fecharMenuLateral() {
+        function fecharMenuLateralEx() {
             document.getElementById('menu-lateral-overlay').style.display = 'none';
             document.getElementById('menu-lateral').classList.remove('aberto');
         }
 
         function abrirTelaInicial() {
-            fecharMenuLateral();
+            fecharMenuLateralEx();
             document.getElementById('fluxo-inicial-container').style.display = 'flex';
         }
 
@@ -1740,13 +2201,13 @@
                 if (response.ok) {
                     let data = await response.json();
                     if (data && data.length > 0) {
-                        return { 
-                            lat: parseFloat(data[0].lat), 
-                            lon: parseFloat(data[0].lon) 
+                        return {
+                            lat: parseFloat(data[0].lat),
+                            lon: parseFloat(data[0].lon)
                         };
                     }
                 }
-            } catch (e) { 
+            } catch (e) {
                 console.error("Erro na busca de endereço real:", e);
             }
             return null;
@@ -1794,7 +2255,7 @@
                 const workbook = XLSX.read(data, {type: 'array'});
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
                 const jsonObjetos = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-                
+
                 let itensPlanilha = [];
 
                 jsonObjetos.forEach((row, idx) => {
@@ -1810,7 +2271,7 @@
                     let lat = latKey ? parseFloat(row[latKey]) : null;
                     let lon = lonKey ? parseFloat(row[lonKey]) : null;
                     let codigo = codKey && row[codKey] ? cleanAddressString(String(row[codKey])).toUpperCase() : '';
-                    
+
                     let partesEndereco = [];
                     if (endKey && row[endKey]) partesEndereco.push(cleanAddressString(String(row[endKey])));
                     if (bairroKey && row[bairroKey]) partesEndereco.push(cleanAddressString(String(row[bairroKey])));
@@ -1856,16 +2317,16 @@
         async function lerArquivoPdfLogica(arquivo) {
             try {
                 const pdf = await pdfjsLib.getDocument(new Uint8Array(await arquivo.arrayBuffer())).promise;
-                pdfTabelaCorrespondencia = {}; 
+                pdfTabelaCorrespondencia = {};
                 let ultimaParadaDetectada = "Parada 1";
 
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
-                    
+
                     let linhasPorY = {};
                     textContent.items.forEach(item => {
-                        let y = Math.round(item.transform[5] / 6) * 6; 
+                        let y = Math.round(item.transform[5] / 6) * 6;
                         if (!linhasPorY[y]) linhasPorY[y] = [];
                         linhasPorY[y].push({ x: item.transform[4], str: item.str });
                     });
@@ -1950,6 +2411,7 @@
                 atualizarContador();
                 plotarNoMapa();
                 await calcularEstatisticasEAtualizarUI();
+                mostrarBotoesNavegacao();
             } else {
                 alert("Nenhuma parada válida foi estruturada.");
             }
@@ -1963,13 +2425,13 @@
         function renderizarLista() {
             const container = document.getElementById('lista-paradas');
             container.innerHTML = '';
-           
+
             bdRotas.forEach((e, idx) => {
                 const qtdNoLocal = contarPacotesNoMesmoEndereco(e.endereco);
 
                 const card = document.createElement('div');
                 card.className = 'card-parada';
-               
+
                 card.innerHTML = `
                     <div class="handle-drag">☰</div>
                     <div class="badge-numero-parada" onclick="abrirCardParada(${idx})" style="background:${e.status==='entregue'?'var(--cor-verde)':(e.status==='falhou'?'var(--cor-vermelho)':'var(--cor-laranja)')}" title="Ações da Parada">${idx + 1}</div>
@@ -1990,6 +2452,7 @@
         }
 
         function abrirCardParada(idx) {
+            if (navegacaoAtiva) return; // Bloqueado durante navegação
             cardParadaIndexAtivo = idx;
             const p = bdRotas[idx];
             if (!p) return;
@@ -2011,25 +2474,26 @@
             const p = bdRotas[cardParadaIndexAtivo];
             fecharModalCardParada();
 
-            if (modoNavegacao === 'interna') {
-                document.getElementById('fluxo-inicial-container').style.display = 'none';
-                map.flyTo([p.lat, p.lon], 18);
-                recolherBottomSheet();
-            } else if (modoNavegacao === 'maps') {
-                let url = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}`;
-                window.open(url, '_blank');
-            } else if (modoNavegacao === 'waze') {
-                let url = `https://waze.com/ul?ll=${p.lat},${p.lon}&navigate=yes`;
-                window.open(url, '_blank');
-            }
+            // No modo "interna" agora inicia sistema turn-by-turn começando da parada atual
+            abrirTelaInicial();
+            document.getElementById('fluxo-inicial-container').style.display = 'none';
+
+            // Move a parada para primeiro lugar e inicia navegação
+            let idx = cardParadaIndexAtivo;
+            bdRotas.splice(idx, 1);
+            bdRotas.unshift(p);
+            salvarBD();
+            renderizarLista();
+
+            iniciarNavegacaoInterna();
         }
 
         function marcarStatusParadaCard(novoStatus) {
             if (cardParadaIndexAtivo === null) return;
-            
+
             bdRotas[cardParadaIndexAtivo].status = novoStatus;
             bdRotas[cardParadaIndexAtivo].timestamp = new Date().toISOString();
-            
+
             salvarBD();
             renderizarLista();
             atualizarContador();
@@ -2085,6 +2549,10 @@
         }
 
         function excluirParada(idx) {
+            if (navegacaoAtiva) {
+                alert("Encerre a navegação antes de excluir paradas.");
+                return;
+            }
             if (confirm(`Deseja realmente remover a parada #${idx + 1}?`)) {
                 bdRotas.splice(idx, 1);
                 salvarBD();
@@ -2096,11 +2564,12 @@
         }
 
         function selecionarParadaEVerificarAgrupamento(idx) {
+            if (navegacaoAtiva) return;
             indexAtivo = idx;
             const alvo = bdRotas[idx];
 
             grupoAtual = bdRotas.filter(r => r.endereco.trim().toLowerCase() === alvo.endereco.trim().toLowerCase());
-            
+
             if (grupoAtual.length > 1) {
                 indexAgrupadoInterno = grupoAtual.findIndex(r => r.codigo === alvo.codigo);
                 exibirWidgetAgrupado();
@@ -2115,11 +2584,11 @@
         function exibirWidgetAgrupado() {
             const widget = document.getElementById('widget-agrupado');
             const item = grupoAtual[indexAgrupadoInterno];
-            
+
             document.getElementById('agrupado-index-txt').innerText = `Pacote ${indexAgrupadoInterno + 1} de ${grupoAtual.length}`;
             document.getElementById('agrupado-rua').innerText = item.endereco;
             document.getElementById('agrupado-codigo').innerText = item.codigo;
-            
+
             widget.style.display = 'block';
         }
 
@@ -2127,13 +2596,15 @@
             indexAgrupadoInterno += direcao;
             if (indexAgrupadoInterno < 0) indexAgrupadoInterno = grupoAtual.length - 1;
             if (indexAgrupadoInterno >= grupoAtual.length) indexAgrupadoInterno = 0;
-            
+
             const item = grupoAtual[indexAgrupadoInterno];
             indexAtivo = bdRotas.findIndex(r => r.codigo === item.codigo);
             exibirWidgetAgrupado();
         }
 
         async function plotarNoMapa() {
+            if (navegacaoAtiva) return; // Não redesenha durante navegação
+
             layerMarkers.forEach(m => map.removeLayer(m));
             layerMarkers = [];
 
@@ -2183,9 +2654,9 @@
                     iconAnchor: [14, 14]
                 });
                 let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
-                
+
                 marker.on('click', () => abrirCardParada(idx));
-                
+
                 layerMarkers.push(marker);
                 bounds.push([e.lat, e.lon]);
             });
@@ -2208,8 +2679,8 @@
             modal.style.display = 'flex';
             barra.style.width = '0%';
 
-            const textoEtapa2 = aplicarFixarExtremos 
-                ? `Fixando Parada 1 e Parada ${totalParadas}...` 
+            const textoEtapa2 = aplicarFixarExtremos
+                ? `Fixando Parada 1 e Parada ${totalParadas}...`
                 : "Encontrando a melhor ordem...";
 
             const etapas = [
@@ -2238,6 +2709,7 @@
         }
 
         function desenharRotaComSetas(routeCoords) {
+            if (navegacaoAtiva) return; // Não desenha rota decorada durante navegação
             if (mapPolyline) map.removeLayer(mapPolyline);
             if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
 
@@ -2348,7 +2820,7 @@
                             let ptAnterior = (i === 0) ? pontoInicial : otimizado[i-1];
                             let distAtual = calcularDistanciaKM(ptAnterior.lat, ptAnterior.lon, otimizado[i].lat, otimizado[i].lon) +
                                             calcularDistanciaKM(otimizado[j].lat, otimizado[j].lon, otimizado[j+1].lat, otimizado[j+1].lon);
-                            
+
                             let distNova = calcularDistanciaKM(ptAnterior.lat, ptAnterior.lon, otimizado[j].lat, otimizado[j].lon) +
                                            calcularDistanciaKM(otimizado[i].lat, otimizado[i].lon, otimizado[j+1].lat, otimizado[j+1].lon);
 
@@ -2390,7 +2862,7 @@
 
                             let distAtual = calcularDistanciaKM(ptAnterior.lat, ptAnterior.lon, otimizado[i].lat, otimizado[i].lon) +
                                             (ptProximo ? calcularDistanciaKM(otimizado[j].lat, otimizado[j].lon, ptProximo.lat, ptProximo.lon) : 0);
-                            
+
                             let distNova = calcularDistanciaKM(ptAnterior.lat, ptAnterior.lon, otimizado[j].lat, otimizado[j].lon) +
                                            (ptProximo ? calcularDistanciaKM(otimizado[i].lat, otimizado[i].lon, ptProximo.lat, ptProximo.lon) : 0);
 
@@ -2503,6 +2975,10 @@
         }
 
         function inverterOrdemParadas() {
+            if (navegacaoAtiva) {
+                alert("Encerre a navegação antes de inverter a ordem.");
+                return;
+            }
             if (bdRotas.length <= 1) return;
             bdRotas.reverse();
             salvarBD();
@@ -2514,23 +2990,23 @@
         function abrirScanner() {
             document.getElementById('modalScanner').style.display = 'flex';
             atualizarEstatisticasScanner();
-            
+
             if (!html5QrcodeScanner) {
                 html5QrcodeScanner = new Html5Qrcode("reader");
             }
-            
+
             const qrCodeSuccessCallback = (decodedText, decodedResult) => {
                 let codigoLido = cleanAddressString(decodedText).toUpperCase();
                 processarLeituraScanner(codigoLido);
             };
-            
+
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            
+
             html5QrcodeScanner.start({ facingMode: "environment" }, config, qrCodeSuccessCallback)
                 .catch(err => {
                     console.warn("Erro ao iniciar camera traseira, tentando padrao...", err);
                     html5QrcodeScanner.start({ facingMode: "user" }, config, qrCodeSuccessCallback)
-                        .catch(e => alert("Não foi possível acessar a câmera do dispositivo. Verifique as permissões."));
+                        .catch(e => console.error("Não foi possível acessar a câmera:", e));
                 });
         }
 
@@ -2577,17 +3053,27 @@
 
                 const toast = document.getElementById('scanner-bip-toast');
                 toast.innerText = `Parada #${indexEncontrado + 1} (${codigoUpper}) - OK!`;
+                toast.style.background = 'var(--cor-verde)';
                 toast.style.display = 'block';
                 setTimeout(() => { toast.style.display = 'none'; }, 2500);
 
-                document.getElementById('scanner-parada-encontrada-txt').innerText = `Parada #${indexEncontrado + 1} - ${bdRotas[indexEncontrado].endereco}`;
+                const el = document.getElementById('scanner-parada-encontrada-txt');
+                if (el) el.innerText = `Parada #${indexEncontrado + 1} - ${bdRotas[indexEncontrado].endereco}`;
+
+                // Avança navegação automaticamente
+                if (navegacaoAtiva && indexEncontrado === indiceParadaAtual) {
+                    setTimeout(() => {
+                        fecharScanner();
+                        avancarProximaParadaNav();
+                    }, 1200);
+                }
             } else {
                 const toast = document.getElementById('scanner-bip-toast');
                 toast.style.background = 'var(--cor-vermelho)';
                 toast.innerText = `Código não encontrado: ${codigoUpper}`;
                 toast.style.display = 'block';
-                setTimeout(() => { 
-                    toast.style.display = 'none'; 
+                setTimeout(() => {
+                    toast.style.display = 'none';
                     toast.style.background = 'var(--cor-verde)';
                 }, 3000);
             }
@@ -2687,15 +3173,15 @@
             }
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            
+
             doc.setFontSize(18);
             doc.setTextColor(255, 87, 34);
-            doc.text("Rota+Rápida - Relatório de Entrega", 14, 20);
-            
+            doc.text("Rota+Rapida - Relatorio de Entrega", 14, 20);
+
             doc.setFontSize(11);
             doc.setTextColor(100, 100, 100);
             doc.text(`Data: ${new Date().toLocaleDateString()} | Total de Paradas: ${bdRotas.length}`, 14, 28);
-            
+
             let yPos = 38;
             doc.setFontSize(10);
             doc.setTextColor(0, 0, 0);
@@ -2714,6 +3200,10 @@
         }
 
         function novaRota() {
+            if (navegacaoAtiva) {
+                alert("Encerre a navegação antes de iniciar uma nova rota.");
+                return;
+            }
             if (confirm("Deseja apagar a rota atual e iniciar uma nova?")) {
                 bdRotas = [];
                 pdfTabelaCorrespondencia = {};
@@ -2723,6 +3213,10 @@
         }
 
         function encerrarESalvarRota() {
+            if (navegacaoAtiva) {
+                alert("Encerre a navegação antes de salvar a rota.");
+                return;
+            }
             if (bdRotas.length === 0) {
                 alert("Nenhuma rota ativa para encerrar.");
                 return;
@@ -2744,6 +3238,742 @@
             localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
             alert("Rota encerrada e salva no histórico com sucesso!");
             novaRota();
+        }
+
+        /* ============================================================
+           SISTEMA DE NAVEGAÇÃO INTERNA - TURN BY TURN
+           (Estilo Circuit Route Planner / Waze)
+        ============================================================ */
+
+        function salvarEstadoNavegacao(){
+            const estado = {
+                parada: indiceParadaAtual,
+                ativa: navegacaoAtiva,
+                ultimaPosicao: ultimaPosicao
+            };
+            localStorage.setItem("rotaRapidaNavegacao", JSON.stringify(estado));
+        }
+
+        function restaurarEstadoNavegacao(){
+            const salvo = localStorage.getItem("rotaRapidaNavegacao");
+            if(!salvo) return;
+            const estado = JSON.parse(salvo);
+            indiceParadaAtual = estado.parada || 0;
+            if(estado.ativa && bdRotas.length > 0) {
+                // Recuperação automática - oferecer retomar
+                setTimeout(() => {
+                    if (confirm("Você tinha uma navegação em andamento. Deseja retomar?")) {
+                        ultimaPosicao = estado.ultimaPosicao;
+                        iniciarNavegacaoInterna(true); // retoma
+                    }
+                }, 500);
+            }
+        }
+
+        async function iniciarNavegacaoInterna(retomandoDoEstado = false){
+            if (!bdRotas || bdRotas.length === 0){
+                alert("Nenhuma rota carregada.");
+                return;
+            }
+
+            // Se já está ativa, encerra primeiro
+            if (navegacaoAtiva && !retomandoDoEstado) {
+                confirmarSaidaNavegacao();
+                return;
+            }
+
+            if (!retomandoDoEstado) {
+                indiceParadaAtual = 0;
+                navegacaoAtiva = true;
+            }
+
+            const primeiraParada = bdRotas[indiceParadaAtual] || bdRotas[0];
+            if(!primeiraParada.lat || !primeiraParada.lon){
+                alert("As entregas precisam possuir coordenadas.");
+                navegacaoAtiva = false;
+                return;
+            }
+
+            // Esconde menu lateral se aberto
+            fecharMenuLateralEx();
+
+            // Mostra interface de navegação
+            ativarModoTelaNavegacao();
+            mostrarBotoesNavegacao();
+
+            // Esconde fluxo inicial
+            document.getElementById('fluxo-inicial-container').style.display = 'none';
+
+            // Esconde polyline decorado antigo
+            if (mapPolyline) { map.removeLayer(mapPolyline); mapPolyline = null; }
+            if (mapPolylineDecorator) { map.removeLayer(mapPolylineDecorator); mapPolylineDecorator = null; }
+
+            // Pega posição atual
+            const origem = ultimaPosicao || await obterLocalizacaoAtual();
+            if(!origem) {
+                alert("Não foi possível obter sua localização. Verifique o GPS.");
+                navegacaoAtiva = false;
+                desativarModoTelaNavegacao();
+                return;
+            }
+
+            // Calcula rota
+            const destinos = montarDestinosParaRotaNav();
+            const rota = await obterRotaOSRM(origem, destinos);
+            if(!rota) {
+                navegacaoAtiva = false;
+                desativarModoTelaNavegacao();
+                return;
+            }
+
+            desenharRotaOSRM(rota);
+            pontosRota = converterGeometriaOSRM(rota);
+            distanciaRestanteMetro = rota.distance;
+            tempoRestanteSegundos = rota.duration;
+
+            // Carrega entrega atual
+            carregarEntregaAtual();
+
+            // Inicia GPS continuo
+            iniciarNavegacaoGPS();
+
+            // Atualiza UI
+            atualizarPainelNavegacaoInferior();
+            atualizarPainelNavegacaoTopo();
+
+            // Centraliza mapa na posição
+            map.setView([origem.lat, origem.lon], 17);
+
+            salvarEstadoNavegacao();
+        }
+
+        function montarDestinosParaRotaNav(){
+            // Pega todas as paradas PENDENTES a partir do índice atual
+            let destinos = [];
+            for (let i = indiceParadaAtual; i < bdRotas.length; i++) {
+                if (bdRotas[i].status === 'pendente') {
+                    destinos.push({ lat: bdRotas[i].lat, lng: bdRotas[i].lon });
+                }
+            }
+            if (destinos.length === 0 && bdRotas[indiceParadaAtual]) {
+                destinos.push({ lat: bdRotas[indiceParadaAtual].lat, lng: bdRotas[indiceParadaAtual].lon });
+            }
+            return destinos;
+        }
+
+        function desativarModoTelaNavegacao(){
+            document.body.classList.remove("modo-navegacao");
+            document.getElementById('painel-navegacao-topo').style.display = 'none';
+            document.getElementById('painel-navegacao-inferior').style.display = 'none';
+            document.querySelectorAll('.botoes-navegacao-flutuantes').forEach(el => el.style.display = 'none');
+            document.getElementById('modal-chegada-confirm').style.display = 'none';
+            navegacaoAtiva = false;
+        }
+
+        function confirmarSaidaNavegacao(){
+            if (!confirm("Deseja encerrar a navegação?")) return;
+            pararNavegacaoGPS();
+            if(linhaRotaNav){
+                map.removeLayer(linhaRotaNav);
+                linhaRotaNav = null;
+            }
+            if(marcadorMotorista){
+                map.removeLayer(marcadorMotorista);
+                marcadorMotorista = null;
+            }
+            pararVoz();
+            desativarModoTelaNavegacao();
+            ultimaInstrucaoFalou = "";
+            localStorage.removeItem("rotaRapidaNavegacao");
+            mostrarBotoesNavegacao();
+        }
+
+        function ativarModoTelaNavegacao(){
+            document.body.classList.add("modo-navegacao");
+            document.getElementById('painel-navegacao-topo').style.display = 'block';
+            document.getElementById('painel-navegacao-inferior').style.display = 'block';
+            document.querySelectorAll('.botoes-navegacao-flutuantes').forEach(el => el.style.display = 'flex');
+        }
+
+        async function obterRotaOSRM(origem, destinos){
+            if (!destinos || destinos.length === 0) return null;
+            let coordenadasStr = `${origem.lon},${origem.lat}`;
+            destinos.forEach(d => {
+                coordenadasStr += `;${d.lng},${d.lat}`;
+            });
+
+            const url = `https://router.project-osrm.org/route/v1/driving/${coordenadasStr}?overview=full&geometries=geojson&steps=true`;
+
+            try {
+                const resposta = await fetch(url);
+                const dados = await resposta.json();
+
+                if(dados.code !== "Ok" || !dados.routes || dados.routes.length === 0){
+                    alert("Não foi possível calcular a rota pelas ruas. Verifique sua conexão.");
+                    return null;
+                }
+
+                const rota = dados.routes[0];
+                instrucoesRota = [];
+                if (rota.legs) {
+                    rota.legs.forEach(leg => {
+                        if (leg.steps) {
+                            instrucoesRota = instrucoesRota.concat(leg.steps);
+                        }
+                    });
+                }
+                return rota;
+            } catch(e){
+                console.error("Erro ao consultar OSRM:", e);
+                alert("Erro de conexão ao calcular rota.");
+                return null;
+            }
+        }
+
+        function desenharRotaOSRM(rota){
+            if(linhaRotaNav) {
+                map.removeLayer(linhaRotaNav);
+                linhaRotaNav = null;
+            }
+
+            const coordenadas = rota.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+
+            let peso = map.getZoom() >= 16 ? 5 : 7;
+            linhaRotaNav = L.polyline(coordenadas, {
+                color: '#2563eb',
+                weight: peso,
+                opacity: 0.85,
+                lineJoin: 'round'
+            }).addTo(map);
+
+            // Ajusta bounds para ver toda rota e motorista
+            if (ultimaPosicao) {
+                let allBounds = [...coordenadas, [ultimaPosicao.lat, ultimaPosicao.lon]];
+                map.fitBounds(allBounds, { padding: [120, 80] });
+            } else {
+                map.fitBounds(linhaRotaNav.getBounds(), { padding: [50, 50] });
+            }
+        }
+
+        function converterGeometriaOSRM(rota){
+            return rota.geometry.coordinates.map(coord => ({
+                lat: coord[1],
+                lng: coord[0]
+            }));
+        }
+
+        async function recalcularRotaAtual(){
+            if(!ultimaPosicao || indiceParadaAtual >= bdRotas.length) return;
+
+            const destinosRestantes = montarDestinosParaRotaNav();
+            if(destinosRestantes.length === 0) return;
+
+            const novaRota = await obterRotaOSRM(ultimaPosicao, destinosRestantes);
+            if(novaRota){
+                desenharRotaOSRM(novaRota);
+                pontosRota = converterGeometriaOSRM(novaRota);
+                distanciaRestanteMetro = novaRota.distance;
+                tempoRestanteSegundos = novaRota.duration;
+            }
+        }
+
+        function iniciarNavegacaoGPS(){
+            if(navigator.geolocation){
+                if (watchIdGPS !== null) {
+                    navigator.geolocation.clearWatch(watchIdGPS);
+                }
+                watchIdGPS = navigator.geolocation.watchPosition(
+                    atualizarPosicaoMotorista,
+                    function(erro){
+                        console.error("Erro no GPS:", erro);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        maximumAge: 0,
+                        timeout: 5000
+                    }
+                );
+            } else {
+                alert("Seu navegador não suporta GPS.");
+            }
+        }
+
+        function pararNavegacaoGPS(){
+            if(watchIdGPS !== null){
+                navigator.geolocation.clearWatch(watchIdGPS);
+                watchIdGPS = null;
+            }
+        }
+
+        function atualizarPosicaoMotorista(posicao){
+            const lat = posicao.coords.latitude;
+            const lng = posicao.coords.longitude;
+            const heading = posicao.coords.heading || ultimoHeading || 0;
+            const speed = posicao.coords.speed || 0; // m/s
+
+            ultimaPosicao = { lat, lng };
+            ultimoHeading = heading;
+
+            atualizarMarcadorMotorista(lat, lng);
+            rotacionarVeiculo(heading);
+
+            // Atualiza stats em tempo real
+            if (entregaAtiva) {
+                const distParaParada = calcularDistanciaMetros(lat, lng, entregaAtiva.lat, entregaAtiva.lon);
+                document.getElementById('nav-distancia-restante').innerText = formatarDistancia(distParaParada, true);
+                document.getElementById('nav-tempo-restante').innerText = formatarTempo(Math.round(distParaParada / (configRotaData.velocidadeMedia * 1000 / 3600) * 60));
+            }
+
+            // Verifica chegada na parada
+            if (entregaAtiva) {
+                verificarChegadaParada();
+            }
+
+            // Atualiza instrução contínua
+            if(instrucoesRota.length > 0){
+                atualizarInstrucaoNavegacao();
+            }
+
+            // Recálculo automático se desviou da rota
+            if (linhaRotaNav && !recalculandoRota) {
+                let distDaRota = calcularDistanciaPontoParaLinha(lat, lng, linhaRotaNav);
+                if (distDaRota > DISTANCIA_RECALCULO) {
+                    solicitarRecalculoAutomatico();
+                }
+            }
+
+            salvarEstadoNavegacao();
+        }
+
+        function calcularDistanciaPontoParaLinha(lat, lng, polyline){
+            if (!polyline || !polyline.getLatLngs) return 0;
+            const latlngs = polyline.getLatLngs();
+            let menor = Infinity;
+            for (let i = 0; i < latlngs.length; i++) {
+                let p = latlngs[i];
+                let d = calcularDistanciaMetros(lat, lng, p.lat, p.lng);
+                if (d < menor) menor = d;
+            }
+            return menor;
+        }
+
+        function atualizarMarcadorMotorista(lat, lng){
+            if(!marcadorMotorista){
+                marcadorMotorista = L.marker([lat, lng], {
+                    icon: iconeVeiculo,
+                    zIndexOffset: 1500
+                }).addTo(map);
+            } else {
+                marcadorMotorista.setLatLng([lat, lng]);
+            }
+
+            // Sempre centraliza no motorista (modo navegação)
+            if (navegacaoAtiva) {
+                map.setView([lat, lng], map.getZoom(), {
+                    animate: true,
+                    duration: 0.6
+                });
+            }
+        }
+
+        function rotacionarVeiculo(angulo){
+            const seta = document.querySelector(".seta-veiculo");
+            if(!seta) return;
+            seta.style.transform = `rotate(${angulo}deg)`;
+        }
+
+        /* ============================================================
+           INSTRUÇÕES DE NAVEGAÇÃO (TURN BY TURN)
+        ============================================================ */
+
+        function atualizarInstrucaoNavegacao(){
+            if (!ultimaPosicao || instrucoesRota.length === 0) return;
+
+            // Acha o step atual mais próximo
+            let stepAtual = null;
+            let menorDist = Infinity;
+
+            for (let i = 0; i < Math.min(instrucoesRota.length, 15); i++) {
+                let step = instrucoesRota[i];
+                if (!step.maneuver || !step.maneuver.location) continue;
+                let d = calcularDistanciaMetros(
+                    ultimaPosicao.lat, ultimaPosicao.lng,
+                    step.maneuver.location[1], step.maneuver.location[0]
+                );
+                if (d < menorDist) {
+                    menorDist = d;
+                    stepAtual = step;
+                }
+            }
+
+            if (!stepAtual) return;
+
+            let distancia = calcularDistanciaMetros(
+                ultimaPosicao.lat, ultimaPosicao.lng,
+                stepAtual.maneuver.location[1], stepAtual.maneuver.location[0]
+            );
+
+            let textoInfo = traduzirInstrucao(stepAtual);
+            let iconeManobra = obterIconeManobra(stepAtual);
+            let nomeRua = stepAtual.name || stepAtual.ref || "Próxima rua";
+
+            // Atualiza painel topo
+            const elDist = document.getElementById('nav-distancia-manobra');
+            const elTexto = document.getElementById('nav-texto-manobra');
+            const elIco = document.getElementById('nav-icone-manobra');
+            const elRua = document.getElementById('nav-rua-proxima');
+
+            if (elDist) elDist.innerText = formatarDistancia(distancia, true);
+            if (elTexto) elTexto.innerText = textoInfo;
+            if (elIco) elIco.innerText = iconeManobra;
+            if (elRua) elRua.innerText = nomeRua.length > 35 ? nomeRua.substring(0, 35) + "..." : nomeRua;
+
+            // Quando se aproxima muito, fala a instrução
+            if (distancia < DISTANCIA_AVISO_MANOBRA) {
+                falarNavegacao(textoInfo + " " + nomeRua);
+            }
+        }
+
+        function traduzirInstrucao(step){
+            const tipo = step.maneuver.type;
+            const modificador = step.maneuver.modifier || "";
+            const exit = step.maneuver.exit || "";
+
+            // Chegada
+            if (tipo === "arrive") {
+                return "📍 Você chegou ao destino";
+            }
+            // Saiu do ponto de partida
+            if (tipo === "depart") {
+                return "🚗 Inicie o trajeto";
+            }
+
+            // Conversões
+            if (tipo === "turn" || tipo === "new name" || tipo === "continue") {
+                if (modificador.includes("right")) {
+                    return "Vire à direita";
+                }
+                if (modificador.includes("left")) {
+                    return "Vire à esquerda";
+                }
+                if (modificador.includes("sharp right")) {
+                    return "Curva acentuada à direita";
+                }
+                if (modificador.includes("sharp left")) {
+                    return "Curva acentuada à esquerda";
+                }
+                if (modificador.includes("slight right")) {
+                    return "Curva suave à direita";
+                }
+                if (modificador.includes("slight left")) {
+                    return "Curva suave à esquerda";
+                }
+                if (modificador.includes("straight") || tipo === "continue") {
+                    return "Siga em frente";
+                }
+                return "Faça a conversão";
+            }
+
+            // Rotatória
+            if (tipo === "roundabout" || tipo === "rotary") {
+                if (exit) {
+                    return `Entre na rotatória, saia na ${exit}ª saída`;
+                }
+                return "Entre na rotatória";
+            }
+
+            if (tipo === "merge") {
+                return "Converja para a rua";
+            }
+
+            if (tipo === "fork") {
+                if (modificador.includes("left")) return "Mantenha-se à esquerda";
+                if (modificador.includes("right")) return "Mantenha-se à direita";
+                return "Siga pelo entroncamento";
+            }
+
+            if (tipo === "end of road") {
+                if (modificador.includes("left")) return "No fim da rua, vire à esquerda";
+                if (modificador.includes("right")) return "No fim da rua, vire à direita";
+                return "No fim da rua";
+            }
+
+            return "Siga o trajeto";
+        }
+
+        function obterIconeManobra(step){
+            const tipo = step.maneuver.type;
+            const mod = step.maneuver.modifier || "";
+
+            if (tipo === "arrive") return "🏁";
+            if (tipo === "depart") return "🚦";
+
+            if (mod.includes("sharp right")) return "↗️";
+            if (mod.includes("sharp left")) return "↖️";
+            if (mod.includes("slight right")) return "↪️";
+            if (mod.includes("slight left")) return "↩️";
+            if (mod.includes("right")) return "➡️";
+            if (mod.includes("left")) return "⬅️";
+            if (mod.includes("straight") || tipo === "continue") return "⬆️";
+            if (tipo === "roundabout" || tipo === "rotary") return "🔄";
+            if (tipo === "merge") return "🔀";
+            if (tipo === "fork") return "⑂";
+            if (tipo === "end of road") return "🛑";
+
+            return "⬆️";
+        }
+
+        function falarNavegacao(texto){
+            if(!("speechSynthesis" in window)) return;
+            if(!vozHabilitada) return;
+            if(texto === ultimaInstrucaoFalou) return;
+            ultimaInstrucaoFalou = texto;
+
+            try {
+                speechSynthesis.cancel();
+                const fala = new SpeechSynthesisUtterance(texto);
+                fala.lang = "pt-BR";
+                fala.rate = 1.05;
+                fala.pitch = 1;
+                fala.volume = 1;
+                speechSynthesis.speak(fala);
+            } catch(e) {
+                console.warn("Erro ao falar:", e);
+            }
+        }
+
+        function pararVoz(){
+            if (speechSynthesis) {
+                try { speechSynthesis.cancel(); } catch(e){}
+            }
+        }
+
+        function alternarVoz(){
+            vozHabilitada = !vozHabilitada;
+            const btn = document.querySelector('.botoes-navegacao-flutuantes .btn-nav-flutuante');
+            if (btn) btn.innerText = vozHabilitada ? "🔊" : "🔇";
+            if (!vozHabilitada) pararVoz();
+            else ultimaInstrucaoFalou = ""; // forçar próxima fala
+        }
+
+        async function solicitarRecalculoAutomatico(){
+            if(recalculandoRota) return;
+            recalculandoRota = true;
+            document.getElementById('overlay-recalculando').style.display = 'flex';
+            falarNavegacao("Recalculando rota");
+            try {
+                await recalcularRotaAtual();
+            } catch(e){
+                console.error(e);
+            } finally {
+                recalculandoRota = false;
+                document.getElementById('overlay-recalculando').style.display = 'none';
+            }
+        }
+
+        /* ============================================================
+           INTEGRAÇÃO COM ENTREGAS
+        ============================================================ */
+
+        function carregarEntregaAtual(){
+            // Encontra próxima entrega pendente a partir do índice
+            while (indiceParadaAtual < bdRotas.length && bdRotas[indiceParadaAtual].status !== 'pendente') {
+                indiceParadaAtual++;
+            }
+
+            if(indiceParadaAtual >= bdRotas.length){
+                entregaAtiva = null;
+                finalizarNavegacaoCompleta();
+                return;
+            }
+            entregaAtiva = bdRotas[indiceParadaAtual];
+            paradaJaOferecida = false;
+            atualizarPainelNavegacaoInferior();
+        }
+
+        function atualizarPainelNavegacaoInferior(){
+            const elBadge = document.getElementById('nav-badge-parada');
+            const elCod = document.getElementById('nav-entrega-codigo');
+            const elEnd = document.getElementById('nav-entrega-end');
+            const elRestantes = document.getElementById('nav-paradas-restantes');
+
+            if (!entregaAtiva) {
+                if (elBadge) elBadge.innerText = "✓";
+                if (elCod) elCod.innerText = "Todas concluídas!";
+                if (elEnd) elEnd.innerText = "Parabéns!";
+                if (elRestantes) elRestantes.innerText = "0 restantes";
+                return;
+            }
+
+            let pos = indiceParadaAtual + 1;
+            let totalPendentes = bdRotas.filter(r => r.status === 'pendente').length;
+
+            if (elBadge) elBadge.innerText = pos;
+            if (elCod) elCod.innerText = entregaAtiva.codigo || "—" ;
+            if (elEnd) elEnd.innerText = entregaAtiva.endereco || "—";
+            if (elRestantes) elRestantes.innerText = `${totalPendentes} restantes`;
+        }
+
+        function atualizarPainelNavegacaoTopo(){
+            // Inicial vazio, atualizado em tempo real pelo GPS
+        }
+
+        function verificarChegadaParada(){
+            if(!entregaAtiva || !ultimaPosicao) return;
+
+            const dist = calcularDistanciaMetros(
+                ultimaPosicao.lat, ultimaPosicao.lng,
+                entregaAtiva.lat, entregaAtiva.lon
+            );
+
+            if (dist <= DISTANCIA_CHEGADA && !paradaJaOferecida) {
+                paradaJaOferecida = true;
+                oferecerConfirmacaoChegada();
+            }
+        }
+
+        function oferecerConfirmacaoChegada(){
+            // Vibração se disponível
+            if (navigator.vibrate) {
+                try { navigator.vibrate([200, 100, 200]); } catch(e){}
+            }
+
+            falarNavegacao("Você chegou à parada " + (indiceParadaAtual + 1) + ". Confirme a entrega.");
+
+            const modal = document.getElementById('modal-chegada-confirm');
+            const titulo = document.getElementById('chegada-titulo');
+            const msg = document.getElementById('chegada-msg');
+
+            if (titulo) titulo.innerText = `📍 Você chegou à Parada #${indiceParadaAtual + 1}`;
+            if (msg) msg.innerText = `Código: ${entregaAtiva.codigo}\n${entregaAtiva.endereco}`;
+            if (modal) modal.style.display = 'block';
+        }
+
+        function confirmarChegadaParada(){
+            biparEAvanpar();
+        }
+
+        function confirmarFalhaParada(){
+            falharEAvanpar();
+        }
+
+        function biparEAvanpar(){
+            if (!entregaAtiva) return;
+            // Marca como entregue e avança
+            entregaAtiva.status = 'entregue';
+            entregaAtiva.timestamp = new Date().toISOString();
+            listaBipados.add(entregaAtiva.codigo.toUpperCase());
+            salvarBD();
+            renderizarLista();
+            atualizarContador();
+
+            document.getElementById('modal-chegada-confirm').style.display = 'none';
+            falarNavegacao("Entrega confirmada. Indo para a próxima.");
+
+            // Avança para próxima parada
+            indiceParadaAtual++;
+            carregarEntregaAtual();
+            if (navegacaoAtiva && entregaAtiva) {
+                recalcularRotaAtual();
+            }
+        }
+
+        function falharEAvanpar(){
+            if (!entregaAtiva) return;
+            entregaAtiva.status = 'falhou';
+            entregaAtiva.timestamp = new Date().toISOString();
+            salvarBD();
+            renderizarLista();
+            atualizarContador();
+
+            document.getElementById('modal-chegada-confirm').style.display = 'none';
+            falarNavegacao("Entrega marcada como falha. Indo para a próxima.");
+
+            indiceParadaAtual++;
+            carregarEntregaAtual();
+            if (navegacaoAtiva && entregaAtiva) {
+                recalcularRotaAtual();
+            }
+        }
+
+        function lembrarDepois(){
+            document.getElementById('modal-chegada-confirm').style.display = 'none';
+            paradaJaOferecida = false;
+            // Permite passar pelo local sem confirmar agora
+            // Após 5 minutos reoferece
+            setTimeout(() => {
+                if (navegacaoAtiva && entregaAtiva) {
+                    let dist = calcularDistanciaMetros(
+                        ultimaPosicao?.lat || 0, ultimaPosicao?.lng || 0,
+                        entregaAtiva.lat, entregaAtiva.lon
+                    );
+                    if (dist <= DISTANCIA_CHEGADA * 2) {
+                        paradaJaOferecida = false;
+                        oferecerConfirmacaoChegada();
+                    }
+                }
+            }, 5 * 60 * 1000);
+        }
+
+        function avancarProximaParadaNav(){
+            // Avança direto
+            indiceParadaAtual++;
+            carregarEntregaAtual();
+            if (navegacaoAtiva && entregaAtiva) {
+                recalcularRotaAtual();
+            }
+        }
+
+        function finalizarNavegacaoCompleta(){
+            falarNavegacao("Parabéns! Todas as entregas foram concluídas.");
+
+            setTimeout(() => {
+                alert("🎉 Todas as entregas da rota foram concluídas!");
+                // Mantém na tela mas com mensagem de parabéns
+                if (linhaRotaNav) { map.removeLayer(linhaRotaNav); linhaRotaNav = null; }
+                document.getElementById('painel-navegacao-inferior').style.display = 'none';
+                document.getElementById('painel-navegacao-topo').style.display = 'none';
+
+                setTimeout(() => {
+                    pararNavegacaoGPS();
+                    if (marcadorMotorista) { map.removeLayer(marcadorMotorista); marcadorMotorista = null; }
+                    desativarModoTelaNavegacao();
+                    localStorage.removeItem("rotaRapidaNavegacao");
+                    mostrarBotoesNavegacao();
+                }, 4000);
+            }, 1500);
+        }
+
+        /* ============================================================
+           UTILITÁRIOS AUXILIARES
+        ============================================================ */
+
+        function calcularDistanciaMetros(lat1, lon1, lat2, lon2){
+            const R = 6371e3;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function formatarDistancia(metros, mostrarCurto = false){
+            if(mostrarCurto) {
+                if (metros < 1000) return Math.round(metros) + " m";
+                return (metros / 1000).toFixed(1) + " km";
+            }
+            if(metros < 1000) return Math.round(metros) + " m";
+            return (metros / 1000).toFixed(1) + " km";
+        }
+
+        function formatarTempo(segundos){
+            const minutos = Math.round(segundos / 60);
+            if(minutos < 60) return Math.max(1, minutos) + " min";
+            const horas = Math.floor(minutos / 60);
+            const minsRestantes = minutos % 60;
+            return `${horas}h ${minsRestantes}min`;
         }
     </script>
 </body>
