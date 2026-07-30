@@ -2519,41 +2519,91 @@
                 html5QrcodeScanner = new Html5Qrcode("reader");
             }
             
+            const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+                let codigoLido = cleanAddressString(decodedText).toUpperCase();
+                processarLeituraScanner(codigoLido);
+            };
+            
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            html5QrcodeScanner.start(
-                { facingMode: "environment" },
-                config,
-                onScanSuccess,
-                (errorMessage) => {}
-            ).catch(err => {
-                console.error("Erro ao iniciar o scanner:", err);
-                alert("Não foi possível acessar a câmera do dispositivo.");
-            });
+            
+            html5QrcodeScanner.start({ facingMode: "environment" }, config, qrCodeSuccessCallback)
+                .catch(err => {
+                    console.warn("Erro ao iniciar camera traseira, tentando padrao...", err);
+                    html5QrcodeScanner.start({ facingMode: "user" }, config, qrCodeSuccessCallback)
+                        .catch(e => alert("Não foi possível acessar a câmera do dispositivo. Verifique as permissões."));
+                });
         }
 
         function fecharScanner() {
             if (html5QrcodeScanner) {
                 html5QrcodeScanner.stop().then(() => {
-                    html5QrcodeScanner.clear();
-                    html5QrcodeScanner = null;
+                    document.getElementById('modalScanner').style.display = 'none';
                 }).catch(err => {
-                    console.error("Erro ao parar o scanner:", err);
-                    html5QrcodeScanner = null;
+                    document.getElementById('modalScanner').style.display = 'none';
                 });
+            } else {
+                document.getElementById('modalScanner').style.display = 'none';
             }
-            document.getElementById('modalScanner').style.display = 'none';
+        }
+
+        function processarLeituraScanner(codigo) {
+            let codigoUpper = codigo.toUpperCase();
+            let paradaCorrespondente = pdfTabelaCorrespondencia[codigoUpper];
+
+            let indexEncontrado = -1;
+            if (paradaCorrespondente) {
+                let numMatch = paradaCorrespondente.match(/\d+/);
+                if (numMatch) {
+                    let numParada = parseInt(numMatch[0]) - 1;
+                    if (numParada >= 0 && numParada < bdRotas.length) {
+                        indexEncontrado = numParada;
+                    }
+                }
+            }
+
+            if (indexEncontrado === -1) {
+                indexEncontrado = bdRotas.findIndex(r => r.codigo.toUpperCase() === codigoUpper);
+            }
+
+            if (indexEncontrado !== -1) {
+                listaBipados.add(codigoUpper);
+                bdRotas[indexEncontrado].status = 'entregue';
+                bdRotas[indexEncontrado].timestamp = new Date().toISOString();
+                salvarBD();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+                calcularEstatisticasEAtualizarUI();
+
+                const toast = document.getElementById('scanner-bip-toast');
+                toast.innerText = `Parada #${indexEncontrado + 1} (${codigoUpper}) - OK!`;
+                toast.style.display = 'block';
+                setTimeout(() => { toast.style.display = 'none'; }, 2500);
+
+                document.getElementById('scanner-parada-encontrada-txt').innerText = `Parada #${indexEncontrado + 1} - ${bdRotas[indexEncontrado].endereco}`;
+            } else {
+                const toast = document.getElementById('scanner-bip-toast');
+                toast.style.background = 'var(--cor-vermelho)';
+                toast.innerText = `Código não encontrado: ${codigoUpper}`;
+                toast.style.display = 'block';
+                setTimeout(() => { 
+                    toast.style.display = 'none'; 
+                    toast.style.background = 'var(--cor-verde)';
+                }, 3000);
+            }
+            atualizarEstatisticasScanner();
         }
 
         function atualizarEstatisticasScanner() {
             let total = bdRotas.length;
-            let bipados = listaBipados.size;
-            let faltam = Math.max(0, total - bipados);
+            let entregues = bdRotas.filter(r => r.status === 'entregue').length;
+            let faltam = total - entregues;
 
-            const badge = document.getElementById('scanner-topo-badge');
-            if (badge) badge.innerText = `📦 ${bipados} de ${total}`;
+            const topoBadge = document.getElementById('scanner-topo-badge');
+            if (topoBadge) topoBadge.innerText = `📦 ${entregues} de ${total}`;
 
             const statBipados = document.getElementById('scanner-stat-bipados');
-            if (statBipados) statBipados.innerText = bipados;
+            if (statBipados) statBipados.innerText = entregues;
 
             const statFaltam = document.getElementById('scanner-stat-faltam');
             if (statFaltam) statFaltam.innerText = faltam;
@@ -2562,114 +2612,64 @@
             if (statTotal) statTotal.innerText = total;
         }
 
-        function onScanSuccess(decodedText, decodedResult) {
-            let codigoLido = cleanAddressString(decodedText).toUpperCase();
-            
-            let paradaEncontrada = bdRotas.find(r => r.codigo.toUpperCase() === codigoLido);
-            
-            if (!paradaEncontrada && pdfTabelaCorrespondencia[codigoLido]) {
-                let nomeParadaPDF = pdfTabelaCorrespondencia[codigoLido];
-                paradaEncontrada = bdRotas.find(r => `Parada ${r.id}`.toLowerCase() === nomeParadaPDF.toLowerCase() || r.codigo.toLowerCase().includes(nomeParadaPDF.toLowerCase()));
-            }
-
-            const toast = document.getElementById('scanner-bip-toast');
-            const txtEncontrada = document.getElementById('scanner-parada-encontrada-txt');
-
-            if (paradaEncontrada) {
-                listaBipados.add(paradaEncontrada.codigo);
-                let idx = bdRotas.findIndex(r => r.codigo === paradaEncontrada.codigo);
-                
-                if (txtEncontrada) txtEncontrada.innerText = `#${idx + 1} - ${paradaEncontrada.codigo}`;
-                
-                if (toast) {
-                    toast.style.display = 'block';
-                    toast.style.background = 'var(--cor-verde)';
-                    toast.innerText = `✅ Parada #${idx + 1} (${paradaEncontrada.codigo})`;
-                    setTimeout(() => { toast.style.display = 'none'; }, 2500);
-                }
-
-                tocarBiBipSonoro();
-                atualizarEstatisticasScanner();
-            } else {
-                if (txtEncontrada) txtEncontrada.innerText = `Não mapeado: ${codigoLido}`;
-                if (toast) {
-                    toast.style.display = 'block';
-                    toast.style.background = 'var(--cor-vermelho)';
-                    toast.innerText = `❌ Código não encontrado: ${codigoLido}`;
-                    setTimeout(() => { toast.style.display = 'none'; }, 2500);
-                }
-            }
-        }
-
-        function tocarBiBipSonoro() {
-            try {
-                let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                let osc = audioCtx.createOscillator();
-                let gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.value = 800;
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.15);
-            } catch(e) {}
-        }
-
         function inserirCodigoManual() {
-            let codigo = prompt("Digite ou escaneie o código do pacote manualmente:");
-            if (!codigo) return;
-            onScanSuccess(codigo, null);
+            let codigo = prompt("Digite ou escaneie o código do pacote:");
+            if (codigo && codigo.trim() !== '') {
+                processarLeituraScanner(codigo.trim().toUpperCase());
+            }
         }
 
         function abrirResumo() {
+            let dataFiltro = document.getElementById('filtroDataResumo').value;
+            renderizarConteudoResumo(dataFiltro);
             document.getElementById('modalResumo').style.display = 'flex';
-            renderizarConteudoResumo();
         }
 
         function fecharModalResumo() {
             document.getElementById('modalResumo').style.display = 'none';
         }
 
-        function renderizarConteudoResumo(filtroData = '') {
+        function filtrarResumoPorData() {
+            let dataFiltro = document.getElementById('filtroDataResumo').value;
+            renderizarConteudoResumo(dataFiltro);
+        }
+
+        function renderizarConteudoResumo(dataFiltro) {
             const container = document.getElementById('conteudoResumo');
-            let filtrados = historicoDias;
-            if (filtroData) {
-                filtrados = historicoDias.filter(h => h.data === filtroData);
+            let lista = historicoDias;
+
+            if (dataFiltro) {
+                lista = historicoDias.filter(h => h.data === dataFiltro);
             }
 
-            if (filtrados.length === 0) {
-                container.innerHTML = `<p style="text-align:center; color:var(--texto-secundario); padding:20px;">Nenhum histórico de rota salvo ainda.</p>`;
+            if (lista.length === 0) {
+                container.innerHTML = `<p style="color: var(--texto-secundario); text-align: center; padding: 20px;">Nenhum registro encontrado para este período.</p>`;
                 return;
             }
 
             let html = '';
-            filtrados.forEach(h => {
+            lista.forEach(h => {
                 html += `
-                    <div style="background:var(--bg-input); border-radius:10px; padding:12px; margin-bottom:10px;">
-                        <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--cor-laranja);">
-                            <span>📅 ${h.data}</span>
-                            <span>${h.totalParadas} paradas</span>
-                        </div>
-                        <div style="font-size:12px; color:var(--texto-secundario); margin-top:4px;">
-                            Entregues: ${h.entregues} | Falhadas: ${h.falhadas}
-                        </div>
+                    <div style="background: var(--bg-input); padding: 12px; border-radius: 10px; margin-bottom: 10px;">
+                        <div style="font-weight: bold; color: var(--cor-laranja); margin-bottom: 4px;">Data: ${h.data}</div>
+                        <div style="font-size: 13px; color: var(--texto-principal);">Total de Paradas: ${h.total}</div>
+                        <div style="font-size: 13px; color: var(--cor-verde);">Entregues: ${h.entregues}</div>
+                        <div style="font-size: 13px; color: var(--cor-vermelho);">Falhas: ${h.falhas}</div>
                     </div>
                 `;
             });
             container.innerHTML = html;
         }
 
-        function filtrarResumoPorData() {
-            let val = document.getElementById('filtroDataResumo').value;
-            renderizarConteudoResumo(val);
-        }
-
         function exportarRelatorioCSV() {
-            if (bdRotas.length === 0) return alert("Nenhuma rota para exportar.");
-            let csvContent = "data:text/csv;charset=utf-8,ID,Codigo,Endereco,Status,Timestamp\n";
+            if (bdRotas.length === 0) {
+                alert("Nenhuma rota para exportar.");
+                return;
+            }
+            let csvContent = "data:text/csv;charset=utf-8,ID,Codigo,Endereco,Status,Timestamp\r\n";
             bdRotas.forEach(r => {
-                csvContent += `"${r.id}","${r.codigo}","${r.endereco}","${r.status}","${r.timestamp || ''}"\n`;
+                let linha = `${r.id},"${r.codigo}","${r.endereco}","${r.status}","${r.timestamp || ''}"\r\n`;
+                csvContent += linha;
             });
             let encodedUri = encodeURI(csvContent);
             let link = document.createElement("a");
@@ -2681,8 +2681,8 @@
         }
 
         function gerarPDFRota() {
-            if (typeof window.jspdf === 'undefined') {
-                alert("Biblioteca jsPDF não carregada.");
+            if (bdRotas.length === 0) {
+                alert("Nenhuma rota para gerar PDF.");
                 return;
             }
             const { jsPDF } = window.jspdf;
@@ -2690,21 +2690,24 @@
             
             doc.setFontSize(18);
             doc.setTextColor(255, 87, 34);
-            doc.text("Relatório de Rota - Rota+Rápida", 14, 20);
+            doc.text("Rota+Rápida - Relatório de Entrega", 14, 20);
             
             doc.setFontSize(11);
-            doc.setTextColor(100);
-            doc.text(`Gerado em: ${new Date().toLocaleString()}`, 14, 28);
-
-            let y = 38;
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Data: ${new Date().toLocaleDateString()} | Total de Paradas: ${bdRotas.length}`, 14, 28);
+            
+            let yPos = 38;
             doc.setFontSize(10);
-            bdRotas.forEach((r, i) => {
-                if (y > 270) {
+            doc.setTextColor(0, 0, 0);
+
+            bdRotas.forEach((r, idx) => {
+                if (yPos > 270) {
                     doc.addPage();
-                    y = 20;
+                    yPos = 20;
                 }
-                doc.text(`${i + 1}. [${r.status.toUpperCase()}] ${r.codigo} - ${r.endereco}`, 14, y);
-                y += 8;
+                let texto = `${idx + 1}. [${r.status.toUpperCase()}] ${r.codigo} - ${r.endereco}`;
+                doc.text(texto, 14, yPos);
+                yPos += 8;
             });
 
             doc.save("rota_appegg.pdf");
@@ -2713,27 +2716,33 @@
         function novaRota() {
             if (confirm("Deseja apagar a rota atual e iniciar uma nova?")) {
                 bdRotas = [];
+                pdfTabelaCorrespondencia = {};
                 localStorage.removeItem('appegg_db_oficial');
                 location.reload();
             }
         }
 
         function encerrarESalvarRota() {
-            if (bdRotas.length === 0) return alert("Nenhuma rota ativa para encerrar.");
-            
+            if (bdRotas.length === 0) {
+                alert("Nenhuma rota ativa para encerrar.");
+                return;
+            }
+
             let hoje = new Date().toISOString().split('T')[0];
             let entregues = bdRotas.filter(r => r.status === 'entregue').length;
-            let falhadas = bdRotas.filter(r => r.status === 'falhou').length;
+            let falhas = bdRotas.filter(r => r.status === 'falhou').length;
+            let total = bdRotas.length;
 
             historicoDias.push({
                 data: hoje,
-                totalParadas: bdRotas.length,
+                total: total,
                 entregues: entregues,
-                falhadas: falhadas
+                falhas: falhas,
+                paradas: [...bdRotas]
             });
-            localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
 
-            alert("Rota encerrada e salva com sucesso no histórico!");
+            localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
+            alert("Rota encerrada e salva no histórico com sucesso!");
             novaRota();
         }
     </script>
