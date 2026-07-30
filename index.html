@@ -2540,106 +2540,105 @@
             let hist = historicoDias.filter(h => h.data === dataSel);
 
             container.innerHTML = `
-                <div style="margin-top:15px; background:var(--bg-input); padding:12px; border-radius:10px;">
-                    <p style="margin:4px 0;"><b>Total na Rota Atual:</b> ${total}</p>
-                    <p style="margin:4px 0; color:var(--cor-verde);"><b>Entregues:</b> ${entregues}</p>
-                    <p style="margin:4px 0; color:var(--cor-laranja);"><b>Pendentes:</b> ${pendentes}</p>
+                <div style="background: var(--bg-input); padding: 15px; border-radius: 12px; margin-top: 10px; border: 1px solid var(--border-color);">
+                    <p style="margin: 0 0 8px 0; font-size: 14px;"><b>Data Selecionada:</b> ${dataSel}</p>
+                    <p style="margin: 4px 0; font-size: 13px;">📦 <b>Total de Paradas da Rota:</b> ${total}</p>
+                    <p style="margin: 4px 0; font-size: 13px; color: var(--cor-verde);">✅ <b>Entregues:</b> ${entregues}</p>
+                    <p style="margin: 4px 0; font-size: 13px; color: var(--cor-laranja);">⏳ <b>Pendentes:</b> ${pendentes}</p>
                 </div>
-                ${hist.length > 0 ? `
-                    <h4 style="margin-top:15px; margin-bottom:5px;">Histórico do Dia (${dataSel}):</h4>
-                    ${hist.map(h => `
-                        <div style="font-size:12px; border-bottom:1px solid var(--border-color); padding:8px 0;">
-                            <b>Finalizado em:</b> ${h.dataHora}<br>
-                            <b>Progresso:</b> ${h.entregues}/${h.total} entregues
-                        </div>
-                    `).join('')}
-                ` : '<p style="font-size:12px; color:var(--texto-secundario); margin-top:10px;">Nenhum histórico encerrado para esta data.</p>'}
             `;
         }
 
         function gerarPDFRota() {
-            if (bdRotas.length === 0) return alert("Sem rota ativa para gerar PDF.");
+            if (bdRotas.length === 0) return alert("Nenhuma rota carregada para gerar PDF.");
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            doc.setFontSize(16);
-            doc.text("Rota+Rápida - Relatório de Entregas", 14, 20);
-            doc.setFontSize(10);
-            doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
-            doc.text(`Total de Paradas: ${bdRotas.length}`, 14, 34);
+            doc.setFontSize(18);
+            doc.text("AppEgg - Relatório da Rota", 14, 20);
 
-            let y = 44;
-            bdRotas.forEach((p, idx) => {
+            doc.setFontSize(12);
+            doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
+            doc.text(`Total de Paradas: ${bdRotas.length}`, 14, 38);
+
+            let y = 50;
+            doc.setFontSize(10);
+            doc.text("Nº", 14, y);
+            doc.text("Código", 26, y);
+            doc.text("Endereço", 75, y);
+            doc.text("Status", 170, y);
+            doc.line(14, y + 2, 196, y + 2);
+
+            y += 8;
+
+            bdRotas.forEach((item, index) => {
                 if (y > 270) {
                     doc.addPage();
                     y = 20;
                 }
-                doc.setFontSize(10);
-                doc.text(`${idx + 1}. [${p.codigo}] - Status: ${p.status.toUpperCase()}`, 14, y);
-                y += 5;
-                doc.setFontSize(8);
-                let splitEnd = doc.splitTextToSize(p.endereco, 180);
-                doc.text(splitEnd, 14, y);
-                y += (splitEnd.length * 4) + 4;
+                doc.text(String(index + 1), 14, y);
+                doc.text(String(item.codigo).substring(0, 20), 26, y);
+                doc.text(String(item.endereco).substring(0, 45), 75, y);
+                doc.text(String(item.status), 170, y);
+                y += 7;
             });
 
-            doc.save(`rota_entregas_${new Date().toISOString().slice(0,10)}.pdf`);
+            doc.save(`rota_appegg_${new Date().toISOString().slice(0, 10)}.pdf`);
         }
 
         function novaRota() {
-            if (bdRotas.length > 0 && !confirm("Deseja iniciar uma nova rota? Os dados não salvos no histórico serão limpos.")) {
-                return;
+            if (confirm("Deseja iniciar uma nova rota? Os dados não salvos da rota atual serão limpos.")) {
+                bdRotas = [];
+                pdfTabelaCorrespondencia = {};
+                listaBipados.clear();
+                salvarBD();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+                atualizarStatusHome();
+                if (mapPolyline) map.removeLayer(mapPolyline);
+                if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
+                const elInfo = document.getElementById('info-tempo-estimado');
+                if (elInfo) elInfo.innerText = '🏁 Término: --:--';
+                abrirTelaInicial();
             }
-            bdRotas = [];
-            pdfTabelaCorrespondencia = {};
-            listaBipados.clear();
-            salvarBD();
-            renderizarLista();
-            atualizarContador();
-            if (mapPolyline) map.removeLayer(mapPolyline);
-            if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
-            plotarNoMapa();
-            atualizarStatusHome();
-            calcularEstatisticasEAtualizarUI();
-            abrirTelaInicial();
-            alert("Nova rota iniciada!");
         }
 
         function encerrarESalvarRota() {
             if (bdRotas.length === 0) return alert("Nenhuma rota ativa para encerrar.");
-            if (!confirm("Deseja encerrar e salvar esta rota no histórico?")) return;
+            if (confirm("Tem certeza de que deseja encerrar e salvar a rota atual no histórico?")) {
+                let hoje = new Date().toISOString().slice(0, 10);
+                let resumoDia = {
+                    id: Date.now(),
+                    data: hoje,
+                    totalParadas: bdRotas.length,
+                    entregues: bdRotas.filter(r => r.status === 'entregue').length,
+                    falhas: bdRotas.filter(r => r.status === 'falhou').length,
+                    pendentes: bdRotas.filter(r => r.status === 'pendente').length,
+                    detalhes: [...bdRotas]
+                };
 
-            let entregues = bdRotas.filter(r => r.status === 'entregue').length;
-            let registro = {
-                id: Date.now(),
-                data: new Date().toISOString().slice(0, 10),
-                dataHora: new Date().toLocaleString('pt-BR'),
-                total: bdRotas.length,
-                entregues: entregues,
-                pendentes: bdRotas.length - entregues,
-                detalhes: bdRotas
-            };
+                historicoDias.push(resumoDia);
+                localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
 
-            historicoDias.push(registro);
-            localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
+                bdRotas = [];
+                pdfTabelaCorrespondencia = {};
+                listaBipados.clear();
+                salvarBD();
 
-            bdRotas = [];
-            pdfTabelaCorrespondencia = {};
-            listaBipados.clear();
-            salvarBD();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+                atualizarStatusHome();
+                if (mapPolyline) map.removeLayer(mapPolyline);
+                if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
+                const elInfo = document.getElementById('info-tempo-estimado');
+                if (elInfo) elInfo.innerText = '🏁 Término: --:--';
 
-            renderizarLista();
-            atualizarContador();
-            if (mapPolyline) map.removeLayer(mapPolyline);
-            if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
-            plotarNoMapa();
-            atualizarStatusHome();
-            calcularEstatisticasEAtualizarUI();
-
-            alert(`Rota encerrada e salva com sucesso! (${entregues} pacotes entregues de ${registro.total})`);
-            abrirTelaInicial();
+                alert("Rota encerrada e salva no histórico com sucesso!");
+                abrirTelaInicial();
+            }
         }
     </script>
 </body>
 </html>
-
