@@ -2523,220 +2523,218 @@
             html5QrcodeScanner.start(
                 { facingMode: "environment" },
                 config,
-                (decodedText) => {
-                    processarBipScanner(decodedText);
-                },
-                (errorMessage) => {
-                    // ignorar erros contínuos de varredura
-                }
+                onScanSuccess,
+                (errorMessage) => {}
             ).catch(err => {
-                console.error("Erro ao iniciar câmera: ", err);
+                console.error("Erro ao iniciar o scanner:", err);
+                alert("Não foi possível acessar a câmera do dispositivo.");
             });
         }
 
         function fecharScanner() {
             if (html5QrcodeScanner) {
                 html5QrcodeScanner.stop().then(() => {
-                    document.getElementById('modalScanner').style.display = 'none';
-                }).catch(() => {
-                    document.getElementById('modalScanner').style.display = 'none';
+                    html5QrcodeScanner.clear();
+                    html5QrcodeScanner = null;
+                }).catch(err => {
+                    console.error("Erro ao parar o scanner:", err);
+                    html5QrcodeScanner = null;
                 });
-            } else {
-                document.getElementById('modalScanner').style.display = 'none';
             }
+            document.getElementById('modalScanner').style.display = 'none';
         }
 
         function atualizarEstatisticasScanner() {
             let total = bdRotas.length;
             let bipados = listaBipados.size;
-            let faltam = total - bipados;
+            let faltam = Math.max(0, total - bipados);
 
-            document.getElementById('scanner-stat-total').innerText = total;
-            document.getElementById('scanner-stat-bipados').innerText = bipados;
-            document.getElementById('scanner-stat-faltam').innerText = faltam < 0 ? 0 : faltam;
-            document.getElementById('scanner-topo-badge').innerText = `📦 ${bipados} de ${total}`;
+            const badge = document.getElementById('scanner-topo-badge');
+            if (badge) badge.innerText = `📦 ${bipados} de ${total}`;
+
+            const statBipados = document.getElementById('scanner-stat-bipados');
+            if (statBipados) statBipados.innerText = bipados;
+
+            const statFaltam = document.getElementById('scanner-stat-faltam');
+            if (statFaltam) statFaltam.innerText = faltam;
+
+            const statTotal = document.getElementById('scanner-stat-total');
+            if (statTotal) statTotal.innerText = total;
         }
 
-        function processarBipScanner(codigoBipado) {
-            let codUpper = codigoBipado.trim().toUpperCase();
-            listaBipados.add(codUpper);
+        function onScanSuccess(decodedText, decodedResult) {
+            let codigoLido = cleanAddressString(decodedText).toUpperCase();
             
-            let paradaEncontrada = null;
-            let indexEncontrado = -1;
-
-            indexEncontrado = bdRotas.findIndex(r => r.codigo.toUpperCase() === codUpper);
-            if (indexEncontrado !== -1) {
-                paradaEncontrada = bdRotas[indexEncontrado];
-            } else if (pdfTabelaCorrespondencia[codUpper]) {
-                let nomeParada = pdfTabelaCorrespondencia[codUpper];
-                let numParada = parseInt(nomeParada.replace(/\D/g, ''));
-                if (!isNaN(numParada) && numParada > 0 && numParada <= bdRotas.length) {
-                    indexEncontrado = numParada - 1;
-                    paradaEncontrada = bdRotas[indexEncontrado];
-                }
+            let paradaEncontrada = bdRotas.find(r => r.codigo.toUpperCase() === codigoLido);
+            
+            if (!paradaEncontrada && pdfTabelaCorrespondencia[codigoLido]) {
+                let nomeParadaPDF = pdfTabelaCorrespondencia[codigoLido];
+                paradaEncontrada = bdRotas.find(r => `Parada ${r.id}`.toLowerCase() === nomeParadaPDF.toLowerCase() || r.codigo.toLowerCase().includes(nomeParadaPDF.toLowerCase()));
             }
 
             const toast = document.getElementById('scanner-bip-toast');
             const txtEncontrada = document.getElementById('scanner-parada-encontrada-txt');
 
-            if (paradaEncontrada && indexEncontrado !== -1) {
-                let num = indexEncontrado + 1;
-                let qtdLocal = contarPacotesNoMesmoEndereco(paradaEncontrada.endereco);
-                toast.innerText = `Parada #${num} (${qtdLocal}x)`;
-                toast.style.background = 'var(--cor-verde)';
-                txtEncontrada.innerText = `Parada #${num} - ${paradaEncontrada.codigo}`;
-                tocarBip();
+            if (paradaEncontrada) {
+                listaBipados.add(paradaEncontrada.codigo);
+                let idx = bdRotas.findIndex(r => r.codigo === paradaEncontrada.codigo);
+                
+                if (txtEncontrada) txtEncontrada.innerText = `#${idx + 1} - ${paradaEncontrada.codigo}`;
+                
+                if (toast) {
+                    toast.style.display = 'block';
+                    toast.style.background = 'var(--cor-verde)';
+                    toast.innerText = `✅ Parada #${idx + 1} (${paradaEncontrada.codigo})`;
+                    setTimeout(() => { toast.style.display = 'none'; }, 2500);
+                }
+
+                tocarBiBipSonoro();
+                atualizarEstatisticasScanner();
             } else {
-                toast.innerText = `Código não encontrado!`;
-                toast.style.background = 'var(--cor-vermelho)';
-                txtEncontrada.innerText = `Não localizado: ${codUpper}`;
+                if (txtEncontrada) txtEncontrada.innerText = `Não mapeado: ${codigoLido}`;
+                if (toast) {
+                    toast.style.display = 'block';
+                    toast.style.background = 'var(--cor-vermelho)';
+                    toast.innerText = `❌ Código não encontrado: ${codigoLido}`;
+                    setTimeout(() => { toast.style.display = 'none'; }, 2500);
+                }
             }
-
-            toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 2500);
-
-            atualizarEstatisticasScanner();
         }
 
-        function tocarBip() {
+        function tocarBiBipSonoro() {
             try {
-                let ctx = new (window.AudioContext || window.webkitAudioContext)();
-                let osc = ctx.createOscillator();
-                let gain = ctx.createGain();
+                let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, ctx.currentTime);
-                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.frequency.value = 800;
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
                 osc.connect(gain);
-                gain.connect(ctx.destination);
+                gain.connect(audioCtx.destination);
                 osc.start();
-                osc.stop(ctx.currentTime + 0.15);
+                osc.stop(audioCtx.currentTime + 0.15);
             } catch(e) {}
         }
 
         function inserirCodigoManual() {
-            let codigo = prompt("Digite o código de rastreio ou número da encomenda:");
-            if (codigo && codigo.trim()) {
-                processarBipScanner(codigo.trim());
-            }
+            let codigo = prompt("Digite ou escaneie o código do pacote manualmente:");
+            if (!codigo) return;
+            onScanSuccess(codigo, null);
         }
 
         function abrirResumo() {
             document.getElementById('modalResumo').style.display = 'flex';
-            const inputData = document.getElementById('filtroDataResumo');
-            if (!inputData.value) {
-                inputData.value = new Date().toISOString().split('T')[0];
-            }
-            filtrarResumoPorData();
+            renderizarConteudoResumo();
         }
 
         function fecharModalResumo() {
             document.getElementById('modalResumo').style.display = 'none';
         }
 
-        function filtrarResumoPorData() {
-            const dataSel = document.getElementById('filtroDataResumo').value;
+        function renderizarConteudoResumo(filtroData = '') {
             const container = document.getElementById('conteudoResumo');
-            
-            let entregues = bdRotas.filter(r => r.status === 'entregue' && (!r.timestamp || r.timestamp.startsWith(dataSel))).length;
-            let falhas = bdRotas.filter(r => r.status === 'falhou' && (!r.timestamp || r.timestamp.startsWith(dataSel))).length;
-            let pendentes = bdRotas.filter(r => r.status === 'pendente').length;
-            let total = bdRotas.length;
+            let filtrados = historicoDias;
+            if (filtroData) {
+                filtrados = historicoDias.filter(h => h.data === filtroData);
+            }
 
-            container.innerHTML = `
-                <div style="background: var(--bg-input); padding: 15px; border-radius: 12px; margin-top: 10px;">
-                    <p style="margin: 5px 0; font-size: 14px;"><strong>Total de Paradas:</strong> ${total}</p>
-                    <p style="margin: 5px 0; font-size: 14px; color: var(--cor-verde);"><strong>Entregues:</strong> ${entregues}</p>
-                    <p style="margin: 5px 0; font-size: 14px; color: var(--cor-vermelho);"><strong>Falhas:</strong> ${falhas}</p>
-                    <p style="margin: 5px 0; font-size: 14px; color: var(--cor-laranja);"><strong>Pendentes:</strong> ${pendentes}</p>
-                </div>
-            `;
+            if (filtrados.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color:var(--texto-secundario); padding:20px;">Nenhum histórico de rota salvo ainda.</p>`;
+                return;
+            }
+
+            let html = '';
+            filtrados.forEach(h => {
+                html += `
+                    <div style="background:var(--bg-input); border-radius:10px; padding:12px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--cor-laranja);">
+                            <span>📅 ${h.data}</span>
+                            <span>${h.totalParadas} paradas</span>
+                        </div>
+                        <div style="font-size:12px; color:var(--texto-secundario); margin-top:4px;">
+                            Entregues: ${h.entregues} | Falhadas: ${h.falhadas}
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function filtrarResumoPorData() {
+            let val = document.getElementById('filtroDataResumo').value;
+            renderizarConteudoResumo(val);
         }
 
         function exportarRelatorioCSV() {
             if (bdRotas.length === 0) return alert("Nenhuma rota para exportar.");
-            let csvContent = "data:text/csv;charset=utf-8,Parada,Codigo,Endereco,Status,DataHora\n";
-            
-            bdRotas.forEach((r, idx) => {
-                let dt = r.timestamp ? new Date(r.timestamp).toLocaleString('pt-BR') : '';
-                csvContent += `"${idx + 1}","${r.codigo}","${r.endereco.replace(/"/g, '""')}","${r.status}","${dt}"\n`;
+            let csvContent = "data:text/csv;charset=utf-8,ID,Codigo,Endereco,Status,Timestamp\n";
+            bdRotas.forEach(r => {
+                csvContent += `"${r.id}","${r.codigo}","${r.endereco}","${r.status}","${r.timestamp || ''}"\n`;
             });
-
             let encodedUri = encodeURI(csvContent);
             let link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Relatorio_Rota_${new Date().toISOString().slice(0,10)}.csv`);
+            link.setAttribute("download", "relatorio_rota_appegg.csv");
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
 
         function gerarPDFRota() {
-            if (bdRotas.length === 0) return alert("Nenhuma rota carregada.");
+            if (typeof window.jspdf === 'undefined') {
+                alert("Biblioteca jsPDF não carregada.");
+                return;
+            }
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-
-            doc.setFontSize(16);
+            
+            doc.setFontSize(18);
+            doc.setTextColor(255, 87, 34);
             doc.text("Relatório de Rota - Rota+Rápida", 14, 20);
             
-            doc.setFontSize(10);
-            doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
-            doc.text(`Total de Paradas: ${bdRotas.length}`, 14, 34);
+            doc.setFontSize(11);
+            doc.setTextColor(100);
+            doc.text(`Gerado em: ${new Date().toLocaleString()}`, 14, 28);
 
-            let y = 45;
-            bdRotas.forEach((r, idx) => {
+            let y = 38;
+            doc.setFontSize(10);
+            bdRotas.forEach((r, i) => {
                 if (y > 270) {
                     doc.addPage();
                     y = 20;
                 }
-                let st = r.status.toUpperCase();
-                doc.text(`#${idx + 1} [${st}] ${r.codigo} - ${r.endereco.substring(0, 50)}`, 14, y);
-                y += 7;
+                doc.text(`${i + 1}. [${r.status.toUpperCase()}] ${r.codigo} - ${r.endereco}`, 14, y);
+                y += 8;
             });
 
-            doc.save(`Rota_${new Date().toISOString().slice(0,10)}.pdf`);
+            doc.save("rota_appegg.pdf");
         }
 
         function novaRota() {
-            if (confirm("Deseja iniciar uma nova rota? Todas as paradas atuais serão limpas.")) {
+            if (confirm("Deseja apagar a rota atual e iniciar uma nova?")) {
                 bdRotas = [];
-                listaBipados.clear();
-                pdfTabelaCorrespondencia = {};
-                salvarBD();
-                renderizarLista();
-                atualizarContador();
-                plotarNoMapa();
-                if (mapPolyline) map.removeLayer(mapPolyline);
-                if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
-                atualizarStatusHome();
-                abrirTelaInicial();
+                localStorage.removeItem('appegg_db_oficial');
+                location.reload();
             }
         }
 
         function encerrarESalvarRota() {
-            if (confirm("Deseja encerrar e salvar esta rota no histórico?")) {
-                let registro = {
-                    data: new Date().toISOString(),
-                    total: bdRotas.length,
-                    entregues: bdRotas.filter(r => r.status === 'entregue').length,
-                    falhas: bdRotas.filter(r => r.status === 'falhou').length,
-                    paradas: bdRotas
-                };
-                historicoDias.push(registro);
-                localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
-                
-                bdRotas = [];
-                listaBipados.clear();
-                pdfTabelaCorrespondencia = {};
-                salvarBD();
-                renderizarLista();
-                atualizarContador();
-                plotarNoMapa();
-                if (mapPolyline) map.removeLayer(mapPolyline);
-                if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
-                atualizarStatusHome();
-                alert("Rota encerrada e salva no histórico com sucesso!");
-                abrirTelaInicial();
-            }
+            if (bdRotas.length === 0) return alert("Nenhuma rota ativa para encerrar.");
+            
+            let hoje = new Date().toISOString().split('T')[0];
+            let entregues = bdRotas.filter(r => r.status === 'entregue').length;
+            let falhadas = bdRotas.filter(r => r.status === 'falhou').length;
+
+            historicoDias.push({
+                data: hoje,
+                totalParadas: bdRotas.length,
+                entregues: entregues,
+                falhadas: falhadas
+            });
+            localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
+
+            alert("Rota encerrada e salva com sucesso no histórico!");
+            novaRota();
         }
     </script>
 </body>
