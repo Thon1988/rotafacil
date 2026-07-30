@@ -1409,7 +1409,7 @@
     <script>
         let bdRotas = JSON.parse(localStorage.getItem('appegg_db_oficial')) || [];
         let historicoDias = JSON.parse(localStorage.getItem('appegg_historico')) || [];
-        let modoNavegacao = localStorage.getItem('appegg_modo_nav') || 'maps'; // 'interna', 'maps', 'waze'
+        let modoNavegacao = localStorage.getItem('appegg_modo_nav') || 'maps';
         let temaAtual = localStorage.getItem('appegg_tema') || 'dark';
 
         let configRotaData = JSON.parse(localStorage.getItem('appegg_config')) || {
@@ -1989,7 +1989,6 @@
             });
         }
 
-        /* CARD DE AÇÕES DA PARADA (AO CLICAR NO NÚMERO) */
         function abrirCardParada(idx) {
             cardParadaIndexAtivo = idx;
             const p = bdRotas[idx];
@@ -2480,12 +2479,114 @@
                 csv += `"${idx + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.lat}","${p.lon}","${p.status}"\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `rota_${new Date().toISOString().slice(0,10)}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Rota_Rapida_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function gerarPDFRota() {
+            if (bdRotas.length === 0) return alert("Nenhuma rota disponível para gerar PDF.");
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(18);
+            doc.setTextColor(255, 87, 34);
+            doc.text("Rota+Rápida - Relatório de Entregas", 14, 20);
+
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')} | Total de Paradas: ${bdRotas.length}`, 14, 28);
+
+            doc.setDrawColor(200);
+            doc.line(14, 32, 196, 32);
+
+            let y = 40;
+
+            bdRotas.forEach((item, index) => {
+                if (y > 270) {
+                    doc.addPage();
+                    y = 20;
+                }
+                let statusTxt = item.status === 'entregue' ? '[ENTREGUE]' : (item.status === 'falhou' ? '[FALHOU]' : '[PENDENTE]');
+                
+                if (item.status === 'entregue') {
+                    doc.setTextColor(16, 185, 129);
+                } else if (item.status === 'falhou') {
+                    doc.setTextColor(239, 68, 68);
+                } else {
+                    doc.setTextColor(255, 87, 34);
+                }
+
+                doc.setFont("helvetica", "bold");
+                doc.text(`#${index + 1} ${statusTxt} - Código: ${item.codigo}`, 14, y);
+                
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(50);
+                let endLinhas = doc.splitTextToSize(`Endereço: ${item.endereco}`, 180);
+                doc.text(endLinhas, 14, y + 6);
+                
+                y += 8 + (endLinhas.length * 5);
+            });
+
+            doc.save(`Rota_Rapida_${new Date().toISOString().slice(0,10)}.pdf`);
+        }
+
+        function novaRota() {
+            if (bdRotas.length > 0) {
+                if (!confirm("Deseja realmente iniciar uma nova rota? A rota atual não salva será limpa.")) {
+                    return;
+                }
+            }
+            bdRotas = [];
+            listaBipados.clear();
+            salvarBD();
+            renderizarLista();
+            atualizarContador();
+            plotarNoMapa();
+            if (mapPolyline) map.removeLayer(mapPolyline);
+            if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
+            atualizarStatusHome();
+            calcularEstatisticasEAtualizarUI();
+            alert("Nova rota iniciada.");
+        }
+
+        function encerrarESalvarRota() {
+            if (bdRotas.length === 0) return alert("Nenhuma rota para encerrar.");
+            if (!confirm("Deseja encerrar e salvar esta rota no histórico?")) return;
+
+            let dataHoje = new Date().toISOString().slice(0, 10);
+            let entregues = bdRotas.filter(r => r.status === 'entregue').length;
+            let falhas = bdRotas.filter(r => r.status === 'falhou').length;
+            let pendentes = bdRotas.filter(r => r.status === 'pendente').length;
+
+            historicoDias.push({
+                id: Date.now(),
+                data: dataHoje,
+                total: bdRotas.length,
+                entregues: entregues,
+                falhas: falhas,
+                pendentes: pendentes,
+                itens: [...bdRotas]
+            });
+
+            localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
+            
+            bdRotas = [];
+            listaBipados.clear();
+            salvarBD();
+            renderizarLista();
+            atualizarContador();
+            plotarNoMapa();
+            if (mapPolyline) map.removeLayer(mapPolyline);
+            if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
+            atualizarStatusHome();
+            calcularEstatisticasEAtualizarUI();
+
+            alert("Rota encerrada e salva no histórico com sucesso!");
         }
 
         function fecharModalEdit() {
@@ -2494,155 +2595,176 @@
         }
 
         async function salvarEdicaoEndereco() {
-            if(editIndexTarget !== null) {
-                let novoEnd = document.getElementById('inputEditEndereco').value;
-                bdRotas[editIndexTarget].endereco = novoEnd;
+            if (editIndexTarget === null || !bdRotas[editIndexTarget]) return;
 
-                const containerStatus = document.getElementById('containerEditStatus');
-                if (containerStatus && containerStatus.style.display !== 'none') {
-                    let novoStatus = document.getElementById('selectEditStatus').value;
-                    bdRotas[editIndexTarget].status = novoStatus;
-                    if (novoStatus === 'pendente') {
-                        bdRotas[editIndexTarget].timestamp = null;
-                    }
-                }
+            let novoEnd = document.getElementById('inputEditEndereco').value.trim();
+            if (!novoEnd) return alert("O endereço não pode ser vazio.");
 
-                let coords = await buscarGeocodingBackend(novoEnd);
-                if (coords) {
-                    bdRotas[editIndexTarget].lat = coords.lat;
-                    bdRotas[editIndexTarget].lon = coords.lon;
+            bdRotas[editIndexTarget].endereco = novoEnd;
+
+            if (bdRotas[editIndexTarget].status !== 'pendente') {
+                let novoStatus = document.getElementById('selectEditStatus').value;
+                bdRotas[editIndexTarget].status = novoStatus;
+                if (novoStatus === 'pendente') {
+                    bdRotas[editIndexTarget].timestamp = null;
                 }
-                salvarBD();
-                renderizarLista();
-                plotarNoMapa();
-                atualizarContador();
-                fecharModalEdit();
-                await calcularEstatisticasEAtualizarUI();
             }
+
+            let coords = await buscarGeocodingBackend(novoEnd);
+            if (coords) {
+                bdRotas[editIndexTarget].lat = coords.lat;
+                bdRotas[editIndexTarget].lon = coords.lon;
+            }
+
+            salvarBD();
+            renderizarLista();
+            plotarNoMapa();
+            await calcularEstatisticasEAtualizarUI();
+            fecharModalEdit();
         }
 
         function excluirParada(idx) {
-            if(confirm('Tem certeza que deseja excluir esta parada?')) {
-                bdRotas.splice(idx, 1);
-                salvarBD();
-                renderizarLista();
-                atualizarContador();
-                plotarNoMapa();
-                atualizarStatusHome();
-                calcularEstatisticasEAtualizarUI();
+            if (!confirm(`Excluir parada #${idx + 1}?`)) return;
+            bdRotas.splice(idx, 1);
+            salvarBD();
+            renderizarLista();
+            atualizarContador();
+            plotarNoMapa();
+            calcularEstatisticasEAtualizarUI();
+        }
+
+        function inserirCodigoManual() {
+            let cod = prompt("Digite ou cole o código de rastreio/pacote:");
+            if (!cod) return;
+            cod = cod.trim().toUpperCase();
+            processarBipCodigo(cod);
+        }
+
+        function tocarSomBip() {
+            try {
+                let ctx = new (window.AudioContext || window.webkitAudioContext)();
+                let osc = ctx.createOscillator();
+                let gain = ctx.createGain();
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+            } catch (e) {
+                console.log("Erro ao tocar som de bip", e);
             }
         }
 
         function abrirScanner() {
             document.getElementById('modalScanner').style.display = 'flex';
-            document.getElementById('fluxo-inicial-container').style.display = 'none';
+            atualizarEstatisticasScanner();
+
             if (!html5QrcodeScanner) {
                 html5QrcodeScanner = new Html5Qrcode("reader");
             }
-            
-            Html5Qrcode.getCameras().then(devices => {
-                if (devices && devices.length) {
-                    html5QrcodeScanner.start(
-                        { facingMode: "environment" },
-                        { fps: 10, qrbox: { width: 250, height: 250 } },
-                        (decodedText, decodedResult) => {
-                            processarBipagem(decodedText);
-                        },
-                        (errorMessage) => {}
-                    ).catch((err) => {
-                        console.log(err);
-                        alert("Erro ao iniciar a câmera. Verifique as permissões.");
-                    });
-                }
-            }).catch(err => {
-                alert("Erro ao acessar as câmeras: " + err);
-            });
 
-            atualizarEstatisticasScanner();
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                (decodedText) => {
+                    let cod = decodedText.trim().toUpperCase();
+                    processarBipCodigo(cod);
+                },
+                (errorMessage) => {
+                    // Leitura contínua
+                }
+            ).catch(err => {
+                console.error("Erro ao iniciar câmera:", err);
+            });
         }
 
         function fecharScanner() {
             if (html5QrcodeScanner) {
-                try {
-                    html5QrcodeScanner.stop().then(() => {
-                        html5QrcodeScanner.clear();
-                    }).catch(err => console.log("Erro ao parar câmera:", err));
-                } catch(e) {}
-            }
-            document.getElementById('modalScanner').style.display = 'none';
-        }
-
-        function atualizarEstatisticasScanner() {
-            let total = bdRotas.length > 0 ? bdRotas.length : Object.keys(pdfTabelaCorrespondencia).length;
-            let bipados = listaBipados.size;
-            let faltam = total - bipados;
-            
-            document.getElementById('scanner-stat-total').innerText = total;
-            document.getElementById('scanner-stat-bipados').innerText = bipados;
-            document.getElementById('scanner-stat-faltam').innerText = faltam >= 0 ? faltam : 0;
-            document.getElementById('scanner-topo-badge').innerText = `📦 ${bipados} de ${total}`;
-        }
-
-        function processarBipagem(codigoRaw) {
-            let codigo = codigoRaw.trim().toUpperCase();
-            if (listaBipados.has(codigo)) return;
-            
-            listaBipados.add(codigo);
-            atualizarEstatisticasScanner();
-
-            try {
-                let ctx = new (window.AudioContext || window.webkitAudioContext)();
-                let osc = ctx.createOscillator();
-                osc.connect(ctx.destination);
-                osc.frequency.value = 800;
-                osc.start();
-                setTimeout(() => { osc.stop(); }, 150);
-            } catch(e) {}
-
-            let txtParada = "Desconhecida";
-            
-            if (pdfTabelaCorrespondencia[codigo]) {
-                txtParada = pdfTabelaCorrespondencia[codigo];
+                html5QrcodeScanner.stop().then(() => {
+                    document.getElementById('modalScanner').style.display = 'none';
+                }).catch(err => {
+                    document.getElementById('modalScanner').style.display = 'none';
+                });
             } else {
-                let idx = bdRotas.findIndex(r => r.codigo === codigo);
-                if (idx !== -1) {
-                    txtParada = `Parada ${idx + 1}`;
-                    bdRotas[idx].status = 'entregue';
-                    bdRotas[idx].timestamp = new Date().toISOString();
-                    salvarBD();
-                    renderizarLista();
-                    atualizarContador();
-                    plotarNoMapa();
-                    calcularEstatisticasEAtualizarUI();
+                document.getElementById('modalScanner').style.display = 'none';
+            }
+        }
+
+        function processarBipCodigo(codigo) {
+            tocarSomBip();
+            listaBipados.add(codigo);
+
+            let idx = bdRotas.findIndex(r => r.codigo === codigo);
+            let paradaEncontradaTxt = document.getElementById('scanner-parada-encontrada-txt');
+            let toast = document.getElementById('scanner-bip-toast');
+
+            if (idx !== -1) {
+                let parada = bdRotas[idx];
+                parada.status = 'entregue';
+                parada.timestamp = new Date().toISOString();
+                salvarBD();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+                calcularEstatisticasEAtualizarUI();
+
+                if (paradaEncontradaTxt) {
+                    paradaEncontradaTxt.innerText = `Parada #${idx + 1}`;
+                }
+
+                if (toast) {
+                    toast.innerText = `✅ Parada #${idx + 1} (${codigo})`;
+                    toast.style.display = 'block';
+                    setTimeout(() => { toast.style.display = 'none'; }, 2000);
+                }
+            } else if (pdfTabelaCorrespondencia[codigo]) {
+                let paradaInfo = pdfTabelaCorrespondencia[codigo];
+                if (paradaEncontradaTxt) {
+                    paradaEncontradaTxt.innerText = `${paradaInfo}`;
+                }
+                if (toast) {
+                    toast.innerText = `📄 ${paradaInfo} (${codigo})`;
+                    toast.style.display = 'block';
+                    setTimeout(() => { toast.style.display = 'none'; }, 2000);
+                }
+            } else {
+                if (paradaEncontradaTxt) {
+                    paradaEncontradaTxt.innerText = "Não encontrada";
+                }
+                if (toast) {
+                    toast.innerText = `⚠️ Código não cadastrado: ${codigo}`;
+                    toast.style.display = 'block';
+                    setTimeout(() => { toast.style.display = 'none'; }, 2000);
                 }
             }
 
-            document.getElementById('scanner-parada-encontrada-txt').innerText = txtParada;
-            
-            if ('speechSynthesis' in window) {
-                let msg = new SpeechSynthesisUtterance(txtParada);
-                msg.lang = 'pt-BR';
-                window.speechSynthesis.speak(msg);
-            }
-
-            let toast = document.getElementById('scanner-bip-toast');
-            toast.innerText = `${txtParada} Registrada!`;
-            toast.style.display = 'block';
-            setTimeout(() => toast.style.display = 'none', 2500);
+            atualizarEstatisticasScanner();
         }
 
-        function inserirCodigoManual() {
-            let cod = prompt("Digite o código de rastreio ou número do pacote:");
-            if (cod && cod.trim()) {
-                processarBipagem(cod.trim());
-            }
+        function atualizarEstatisticasScanner() {
+            let total = bdRotas.length;
+            let entregues = bdRotas.filter(r => r.status === 'entregue').length;
+            let faltam = bdRotas.filter(r => r.status === 'pendente').length;
+
+            const elBipados = document.getElementById('scanner-stat-bipados');
+            const elFaltam = document.getElementById('scanner-stat-faltam');
+            const elTotal = document.getElementById('scanner-stat-total');
+            const elBadge = document.getElementById('scanner-topo-badge');
+
+            if (elBipados) elBipados.innerText = entregues;
+            if (elFaltam) elFaltam.innerText = faltam;
+            if (elTotal) elTotal.innerText = total;
+            if (elBadge) elBadge.innerText = `📦 ${entregues} de ${total}`;
         }
 
         function abrirResumo() {
-            let hoje = new Date().toISOString().slice(0, 10);
-            document.getElementById('filtroDataResumo').value = hoje;
-            filtrarResumoPorData();
             document.getElementById('modalResumo').style.display = 'flex';
+            filtrarResumoPorData();
         }
 
         function fecharModalResumo() {
@@ -2650,70 +2772,36 @@
         }
 
         function filtrarResumoPorData() {
-            let dataSel = document.getElementById('filtroDataResumo').value;
+            let filtroData = document.getElementById('filtroDataResumo').value;
             let container = document.getElementById('conteudoResumo');
-            
-            let filtrados = bdRotas.filter(r => r.timestamp && r.timestamp.slice(0, 10) === dataSel);
-            let entregues = filtrados.filter(r => r.status === 'entregue').length;
-            let falhas = filtrados.filter(r => r.status === 'falhou').length;
+            container.innerHTML = '';
 
-            container.innerHTML = `
-                <div style="background: var(--bg-input); padding: 15px; border-radius: 12px; margin-top: 10px;">
-                    <p style="margin: 5px 0;"><b>Data selecionada:</b> ${dataSel}</p>
-                    <p style="margin: 5px 0; color: var(--cor-verde);"><b>Entregues:</b> ${entregues}</p>
-                    <p style="margin: 5px 0; color: var(--cor-vermelho);"><b>Falhas:</b> ${falhas}</p>
-                    <p style="margin: 5px 0;"><b>Total baixados:</b> ${filtrados.length}</p>
-                </div>
-            `;
-        }
-
-        function novaRota() {
-            if (confirm("Deseja iniciar uma nova rota? Os dados atuais serão apagados.")) {
-                bdRotas = [];
-                salvarBD();
-                location.reload();
+            let historicoFiltrado = historicoDias;
+            if (filtroData) {
+                historicoFiltrado = historicoDias.filter(h => h.data === filtroData);
             }
-        }
 
-        function encerrarESalvarRota() {
-            if (confirm("Deseja encerrar e salvar o histórico da rota atual?")) {
-                let hoje = new Date().toISOString().slice(0, 10);
-                let resumoHoje = {
-                    data: hoje,
-                    total: bdRotas.length,
-                    entregues: bdRotas.filter(r => r.status === 'entregue').length,
-                    falhas: bdRotas.filter(r => r.status === 'falhou').length
-                };
-                historicoDias.push(resumoHoje);
-                localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
-                bdRotas = [];
-                salvarBD();
-                alert("Rota encerrada e salva com sucesso!");
-                location.reload();
+            if (historicoFiltrado.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:var(--texto-secundario); margin-top:20px;">Nenhum histórico encontrado para esta data.</p>';
+                return;
             }
-        }
 
-        function gerarPDFRota() {
-            if (bdRotas.length === 0) return alert("Nenhuma rota para gerar PDF.");
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            historicoFiltrado.forEach(h => {
+                let card = document.createElement('div');
+                card.style.background = 'var(--bg-input)';
+                card.style.borderRadius = '12px';
+                card.style.padding = '14px';
+                card.style.marginBottom = '10px';
+                card.style.border = '1px solid var(--border-color)';
 
-            doc.setFontSize(16);
-            doc.text("Relatório de Rota - Rota+Rápida", 14, 20);
-            doc.setFontSize(10);
-            doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
-
-            let y = 38;
-            bdRotas.forEach((p, i) => {
-                if (y > 270) {
-                    doc.addPage();
-                    y = 20;
-                }
-                doc.text(`${i + 1}. [${p.codigo}] - ${p.endereco} (${p.status.toUpperCase()})`, 14, y);
-                y += 8;
+                card.innerHTML = `
+                    <div style="font-size:14px; font-weight:bold; color:var(--cor-laranja); margin-bottom:6px;">📅 ${h.data}</div>
+                    <div style="font-size:13px; color:var(--texto-principal);">
+                        📦 Total: <b>${h.total}</b> | ✅ Entregues: <b style="color:var(--cor-verde);">${h.entregues}</b> | ❌ Falhas: <b style="color:var(--cor-vermelho);">${h.falhas}</b>
+                    </div>
+                `;
+                container.appendChild(card);
             });
-
-            doc.save(`rota_${new Date().toISOString().slice(0,10)}.pdf`);
         }
     </script>
 </body>
