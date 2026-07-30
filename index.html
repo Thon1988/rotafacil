@@ -1088,12 +1088,12 @@
         </div>
 
         <div class="menu-item" onclick="exportarRelatorioCSV(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y3="3"/></svg>
             Exportar CSV
         </div>
 
         <div class="menu-item" onclick="gerarPDFRota(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             Gerar PDF da Rota
         </div>
 
@@ -2539,145 +2539,92 @@
             let total = bdRotas.length;
             let percentual = total > 0 ? Math.round((entregues / total) * 100) : 0;
 
-            let hist = historicoDias.filter(h => h.data === dataSel);
-
-            let html = `
-                <div style="background: var(--bg-input); border-radius: 12px; padding: 14px; margin-top: 10px; margin-bottom: 15px;">
-                    <div style="font-weight: 800; font-size: 14px; color: var(--texto-principal); margin-bottom: 8px;">Rota Atual (${new Date().toLocaleDateString('pt-BR')})</div>
-                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
-                        <span>Total de Entregas:</span> <b>${total}</b>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; color: var(--cor-verde);">
-                        <span>Entregues:</span> <b>${entregues} (${percentual}%)</b>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; color: var(--cor-laranja);">
-                        <span>Pendentes:</span> <b>${pendentes}</b>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--cor-vermelho);">
-                        <span>Com Falha:</span> <b>${falhas}</b>
-                    </div>
+            container.innerHTML = `
+                <div style="background:var(--bg-input); padding:15px; border-radius:12px; margin-top:10px; border:1px solid var(--border-color);">
+                    <p style="margin:5px 0;">📦 <b>Total de Pacotes:</b> ${total}</p>
+                    <p style="margin:5px 0; color:var(--cor-verde);">✅ <b>Entregues:</b> ${entregues}</p>
+                    <p style="margin:5px 0; color:var(--cor-laranja);">⏳ <b>Pendentes:</b> ${pendentes}</p>
+                    <p style="margin:5px 0; color:var(--cor-vermelho);">❌ <b>Falhas:</b> ${falhas}</p>
+                    <p style="margin:5px 0;">📊 <b>Conclusão:</b> ${percentual}%</p>
                 </div>
             `;
-
-            if (hist.length > 0) {
-                html += `<div style="font-weight: 800; font-size: 14px; color: var(--texto-principal); margin-bottom: 8px;">Histórico Encerrado nesta Data</div>`;
-                hist.forEach((h, i) => {
-                    html += `
-                        <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px; margin-bottom: 8px;">
-                            <div style="font-size: 12px; font-weight: 700; color: var(--cor-laranja);">Sessão ${i + 1} - ${h.hora || '--:--'}</div>
-                            <div style="font-size: 12px; color: var(--texto-secundario); margin-top: 2px;">Total: ${h.total} | Entregues: ${h.entregues} | Taxa: ${h.taxa}%</div>
-                        </div>
-                    `;
-                });
-            } else {
-                html += `<div style="font-size: 12px; color: var(--texto-secundario); text-align: center; margin-top: 10px;">Nenhum histórico encerrado salvo para este dia (${dataSel}).</div>`;
-            }
-
-            container.innerHTML = html;
         }
 
         function gerarPDFRota() {
-            if (bdRotas.length === 0) return alert("Não há rota para gerar PDF.");
-            try {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-                
-                doc.setFontSize(18);
-                doc.setTextColor(255, 87, 34);
-                doc.text("Rota+Rápida - Relatório de Rota", 14, 20);
+            if (bdRotas.length === 0) return alert("Nenhuma rota carregada para gerar PDF.");
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
 
+            doc.setFontSize(16);
+            doc.text("Rota+Rápida - Relatório de Rota", 14, 20);
+            
+            doc.setFontSize(10);
+            doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
+            doc.text(`Total de Paradas: ${bdRotas.length}`, 14, 34);
+
+            let y = 44;
+            bdRotas.forEach((p, idx) => {
+                if (y > 280) {
+                    doc.addPage();
+                    y = 20;
+                }
                 doc.setFontSize(10);
-                doc.setTextColor(100, 100, 100);
-                doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')} | Total: ${bdRotas.length} paradas`, 14, 28);
-                doc.setLineWidth(0.5);
-                doc.setDrawColor(200, 200, 200);
-                doc.line(14, 32, 196, 32);
+                doc.text(`${idx + 1}. [${p.codigo}] ${p.endereco.substring(0, 50)}`, 14, y);
+                doc.setFontSize(8);
+                doc.text(`Status: ${p.status.toUpperCase()}`, 14, y + 4);
+                y += 10;
+            });
 
-                let y = 40;
-                bdRotas.forEach((p, idx) => {
-                    if (y > 270) {
-                        doc.addPage();
-                        y = 20;
-                    }
-                    doc.setFontSize(11);
-                    doc.setFont("helvetica", "bold");
-                    doc.setTextColor(0, 0, 0);
-                    doc.text(`#${idx + 1} - ${p.codigo}`, 14, y);
-
-                    doc.setFont("helvetica", "normal");
-                    doc.setFontSize(9);
-                    doc.setTextColor(80, 80, 80);
-                    doc.text(`Endereço: ${p.endereco}`, 14, y + 5);
-                    doc.text(`Status: ${p.status.toUpperCase()}`, 14, y + 10);
-
-                    doc.setDrawColor(230, 230, 230);
-                    doc.line(14, y + 13, 196, y + 13);
-                    y += 18;
-                });
-
-                doc.save(`rota_${new Date().toISOString().slice(0, 10)}.pdf`);
-            } catch (err) {
-                console.error(err);
-                alert("Erro ao gerar PDF da rota.");
-            }
+            doc.save(`relatorio_rota_${new Date().toISOString().slice(0, 10)}.pdf`);
         }
 
         function novaRota() {
-            if (confirm("Deseja criar uma nova rota? A rota atual não salva no histórico será apagada.")) {
-                bdRotas = [];
-                pdfTabelaCorrespondencia = {};
-                listaBipados.clear();
-                salvarBD();
-                if (mapPolyline) map.removeLayer(mapPolyline);
-                if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
-                layerMarkers.forEach(m => map.removeLayer(m));
-                layerMarkers = [];
-                renderizarLista();
-                atualizarContador();
-                atualizarStatusHome();
-                calcularEstatisticasEAtualizarUI();
-                abrirTelaInicial();
+            if (bdRotas.length > 0 && !confirm("Deseja iniciar uma nova rota? Os dados não salvos da rota atual serão limpos.")) {
+                return;
             }
+            bdRotas = [];
+            pdfTabelaCorrespondencia = {};
+            listaBipados.clear();
+            salvarBD();
+            renderizarLista();
+            atualizarContador();
+            plotarNoMapa();
+            if (mapPolyline) map.removeLayer(mapPolyline);
+            if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
+            atualizarStatusHome();
+            abrirTelaInicial();
+            alert("Nova rota iniciada com sucesso!");
         }
 
         function encerrarESalvarRota() {
-            if (bdRotas.length === 0) return alert("Não há rota ativa para encerrar.");
-            if (confirm("Tem certeza que deseja encerrar e salvar esta rota no histórico?")) {
-                let hoje = new Date().toISOString().slice(0, 10);
-                let hora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                let entregues = bdRotas.filter(r => r.status === 'entregue').length;
-                let total = bdRotas.length;
-                let taxa = total > 0 ? Math.round((entregues / total) * 100) : 0;
+            if (bdRotas.length === 0) return alert("Nenhuma rota ativa para encerrar.");
+            
+            if (confirm("Deseja encerrar e salvar esta rota no histórico?")) {
+                let resumoDia = {
+                    data: new Date().toISOString(),
+                    total: bdRotas.length,
+                    entregues: bdRotas.filter(r => r.status === 'entregue').length,
+                    pendentes: bdRotas.filter(r => r.status === 'pendente').length,
+                    falhas: bdRotas.filter(r => r.status === 'falhou').length,
+                    paradas: [...bdRotas]
+                };
 
-                historicoDias.push({
-                    id: Date.now(),
-                    data: hoje,
-                    hora: hora,
-                    total: total,
-                    entregues: entregues,
-                    taxa: taxa,
-                    itens: [...bdRotas]
-                });
-
+                historicoDias.push(resumoDia);
                 localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
 
                 bdRotas = [];
                 pdfTabelaCorrespondencia = {};
                 listaBipados.clear();
                 salvarBD();
-
-                if (mapPolyline) map.removeLayer(mapPolyline);
-                if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
-                layerMarkers.forEach(m => map.removeLayer(m));
-                layerMarkers = [];
-
                 renderizarLista();
                 atualizarContador();
+                plotarNoMapa();
+                if (mapPolyline) map.removeLayer(mapPolyline);
+                if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
                 atualizarStatusHome();
-                calcularEstatisticasEAtualizarUI();
-
-                alert("Rota encerrada e arquivada no histórico com sucesso!");
                 abrirTelaInicial();
+
+                alert("Rota encerrada e salva no histórico com sucesso!");
             }
         }
     </script>
