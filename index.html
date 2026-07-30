@@ -461,11 +461,19 @@
             font-weight: 800;
             font-size: 14px;
             flex-shrink: 0;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+
+        .badge-numero-parada:active {
+            transform: scale(0.9);
         }
 
         .parada-info {
             flex: 1;
             overflow: hidden;
+            cursor: pointer;
         }
 
         .parada-codigo {
@@ -1041,9 +1049,9 @@
             Alternar Tema (Claro/Escuro)
         </div>
 
-        <div class="menu-item" onclick="alternarGPSPreferido()">
+        <div class="menu-item" onclick="alternarModoNavegacao()">
             <svg viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-            GPS: <span id="label-gps-preferido" style="margin-left: 5px; color: var(--cor-laranja);">Google Maps</span>
+            Navegação: <span id="label-gps-preferido" style="margin-left: 5px; color: var(--cor-laranja);">Google Maps</span>
         </div>
 
         <div class="divisor-menu"></div>
@@ -1157,6 +1165,24 @@
         </div>
 
         <div id="lista-paradas"></div>
+    </div>
+
+    <!-- MODAL CARD AÇÕES DA PARADA -->
+    <div id="modalCardParada" class="modal-overlay">
+        <div class="modal-body" style="text-align: center;">
+            <h3 id="cardParadaTitulo" style="margin-top:0; color:var(--cor-laranja); font-size: 22px;">Parada #1</h3>
+            <p id="cardParadaCodigo" style="font-weight:bold; font-size: 15px; margin: 6px 0; color: var(--texto-principal);"></p>
+            <p id="cardParadaEndereco" style="font-size:13px; color:var(--texto-secundario); margin-bottom: 20px; line-height: 1.4;"></p>
+
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="btn-sheet-action destaque" onclick="executarNavegacaoCard()" style="padding:14px; font-size:16px; border-radius: 12px;">🧭 Navegar</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-sheet-action" style="background:var(--cor-verde); color:white; border:none; padding:12px; font-size: 15px;" onclick="marcarStatusParadaCard('entregue')">✅ Entregue</button>
+                    <button class="btn-sheet-action" style="background:var(--cor-vermelho); color:white; border:none; padding:12px; font-size: 15px;" onclick="marcarStatusParadaCard('falhou')">❌ Falhou</button>
+                </div>
+                <button class="btn-sheet-action" style="margin-top:5px; padding: 10px;" onclick="fecharModalCardParada()">Fechar</button>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL CONFIGURAR ROTA (Circuit) -->
@@ -1276,11 +1302,23 @@
         </div>
     </div>
 
-    <!-- MODAL EDITAR ENDEREÇO -->
+    <!-- MODAL EDITAR PARADA E EDITAR STATUS -->
     <div id="modalEdit" class="modal-overlay">
         <div class="modal-body">
-            <h3 style="margin-top:0;">Editar Endereço</h3>
+            <h3 style="margin-top:0;" id="modalEditTitulo">Editar Parada</h3>
+            
+            <label style="font-size: 12px; color: var(--texto-secundario); font-weight: 600;">Endereço:</label>
             <input type="text" id="inputEditEndereco" class="input-dark">
+
+            <div id="containerEditStatus" style="display: none; margin-bottom: 15px;">
+                <label style="font-size: 12px; color: var(--texto-secundario); font-weight: 600;">Status da Parada / Baixa:</label>
+                <select id="selectEditStatus" class="input-dark" style="margin-top: 4px; margin-bottom: 0;">
+                    <option value="pendente">⏳ Pendente (Reabrir)</option>
+                    <option value="entregue">✅ Entregue</option>
+                    <option value="falhou">❌ Falhou</option>
+                </select>
+            </div>
+
             <div style="display:flex; gap:10px;">
                 <button class="btn-sheet-action" onclick="fecharModalEdit()">Cancelar</button>
                 <button class="btn-sheet-action destaque" onclick="salvarEdicaoEndereco()">Salvar</button>
@@ -1371,7 +1409,7 @@
     <script>
         let bdRotas = JSON.parse(localStorage.getItem('appegg_db_oficial')) || [];
         let historicoDias = JSON.parse(localStorage.getItem('appegg_historico')) || [];
-        let gpsPreferido = localStorage.getItem('appegg_gps') || 'maps';
+        let modoNavegacao = localStorage.getItem('appegg_modo_nav') || 'maps'; // 'interna', 'maps', 'waze'
         let temaAtual = localStorage.getItem('appegg_tema') || 'dark';
 
         let configRotaData = JSON.parse(localStorage.getItem('appegg_config')) || {
@@ -1386,6 +1424,7 @@
 
         let html5QrcodeScanner = null;
         let indexAtivo = 0;
+        let cardParadaIndexAtivo = null;
         let editIndexTarget = null;
         let sortableInstance = null;
         let map, layerMarkers = [], mapPolyline = null, mapPolylineDecorator = null;
@@ -1400,7 +1439,7 @@
 
         window.onload = () => {
             aplicarTema(temaAtual);
-            atualizarLabelGPS();
+            atualizarLabelNavegacao();
             inicializarMapa();
             inicializarSortable(); 
             configurarGestoBottomSheet(); 
@@ -1591,14 +1630,22 @@
             document.documentElement.setAttribute('data-theme', tema);
         }
 
-        function alternarGPSPreferido() {
-            gpsPreferido = gpsPreferido === 'maps' ? 'waze' : 'maps';
-            localStorage.setItem('appegg_gps', gpsPreferido);
-            atualizarLabelGPS();
+        function alternarModoNavegacao() {
+            if (modoNavegacao === 'interna') modoNavegacao = 'maps';
+            else if (modoNavegacao === 'maps') modoNavegacao = 'waze';
+            else modoNavegacao = 'interna';
+            
+            localStorage.setItem('appegg_modo_nav', modoNavegacao);
+            atualizarLabelNavegacao();
         }
 
-        function atualizarLabelGPS() {
-            document.getElementById('label-gps-preferido').innerText = gpsPreferido === 'maps' ? 'Google Maps' : 'Waze';
+        function atualizarLabelNavegacao() {
+            const el = document.getElementById('label-gps-preferido');
+            if (el) {
+                if (modoNavegacao === 'interna') el.innerText = 'Interna';
+                else if (modoNavegacao === 'maps') el.innerText = 'Google Maps';
+                else if (modoNavegacao === 'waze') el.innerText = 'Waze';
+            }
         }
 
         function inicializarMapa() {
@@ -1925,7 +1972,7 @@
                
                 card.innerHTML = `
                     <div class="handle-drag">☰</div>
-                    <div class="badge-numero-parada" style="background:${e.status==='entregue'?'var(--cor-verde)':(e.status==='falhou'?'var(--cor-vermelho)':'var(--cor-laranja)')}">${idx + 1}</div>
+                    <div class="badge-numero-parada" onclick="abrirCardParada(${idx})" style="background:${e.status==='entregue'?'var(--cor-verde)':(e.status==='falhou'?'var(--cor-vermelho)':'var(--cor-laranja)')}" title="Ações da Parada">${idx + 1}</div>
                     <div class="parada-info" onclick="selecionarParadaEVerificarAgrupamento(${idx})">
                         <div class="parada-codigo">
                             ${e.codigo}
@@ -1934,12 +1981,82 @@
                         <div class="parada-rua">${e.endereco}</div>
                     </div>
                     <div class="parada-acoes">
-                        <button class="btn-icon-acao" onclick="abrirModalEdit(${idx})" title="Editar Endereço">✎</button>
+                        <button class="btn-icon-acao" onclick="acionarLapisEditar(${idx})" title="${e.status === 'pendente' ? 'Editar Endereço' : 'Editar Baixa / Status'}">✎</button>
                         <button class="btn-icon-acao delete" onclick="excluirParada(${idx})" title="Excluir Parada">🗑</button>
                     </div>
                 `;
                 container.appendChild(card);
             });
+        }
+
+        /* CARD DE AÇÕES DA PARADA (AO CLICAR NO NÚMERO) */
+        function abrirCardParada(idx) {
+            cardParadaIndexAtivo = idx;
+            const p = bdRotas[idx];
+            if (!p) return;
+
+            document.getElementById('cardParadaTitulo').innerText = `Parada #${idx + 1}`;
+            document.getElementById('cardParadaCodigo').innerText = `Código: ${p.codigo}`;
+            document.getElementById('cardParadaEndereco').innerText = p.endereco;
+
+            document.getElementById('modalCardParada').style.display = 'flex';
+        }
+
+        function fecharModalCardParada() {
+            document.getElementById('modalCardParada').style.display = 'none';
+            cardParadaIndexAtivo = null;
+        }
+
+        function executarNavegacaoCard() {
+            if (cardParadaIndexAtivo === null) return;
+            const p = bdRotas[cardParadaIndexAtivo];
+            fecharModalCardParada();
+
+            if (modoNavegacao === 'interna') {
+                document.getElementById('fluxo-inicial-container').style.display = 'none';
+                map.flyTo([p.lat, p.lon], 18);
+                recolherBottomSheet();
+            } else if (modoNavegacao === 'maps') {
+                let url = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}`;
+                window.open(url, '_blank');
+            } else if (modoNavegacao === 'waze') {
+                let url = `https://waze.com/ul?ll=${p.lat},${p.lon}&navigate=yes`;
+                window.open(url, '_blank');
+            }
+        }
+
+        function marcarStatusParadaCard(novoStatus) {
+            if (cardParadaIndexAtivo === null) return;
+            
+            bdRotas[cardParadaIndexAtivo].status = novoStatus;
+            bdRotas[cardParadaIndexAtivo].timestamp = new Date().toISOString();
+            
+            salvarBD();
+            renderizarLista();
+            atualizarContador();
+            plotarNoMapa();
+            calcularEstatisticasEAtualizarUI();
+            fecharModalCardParada();
+        }
+
+        function acionarLapisEditar(idx) {
+            editIndexTarget = idx;
+            const p = bdRotas[idx];
+            document.getElementById('inputEditEndereco').value = p.endereco;
+
+            const containerStatus = document.getElementById('containerEditStatus');
+            const tituloModal = document.getElementById('modalEditTitulo');
+
+            if (p.status !== 'pendente') {
+                containerStatus.style.display = 'block';
+                document.getElementById('selectEditStatus').value = p.status;
+                tituloModal.innerText = 'Editar Parada / Alterar Baixa';
+            } else {
+                containerStatus.style.display = 'none';
+                tituloModal.innerText = 'Editar Endereço';
+            }
+
+            document.getElementById('modalEdit').style.display = 'flex';
         }
 
         function selecionarParadaEVerificarAgrupamento(idx) {
@@ -2031,7 +2148,7 @@
                 });
                 let marker = L.marker([e.lat, e.lon], { icon: customIcon }).addTo(map);
                 
-                marker.on('click', () => selecionarParadaEVerificarAgrupamento(idx));
+                marker.on('click', () => abrirCardParada(idx));
                 
                 layerMarkers.push(marker);
                 bounds.push([e.lat, e.lon]);
@@ -2371,12 +2488,6 @@
             URL.revokeObjectURL(url);
         }
 
-        function abrirModalEdit(idx) {
-            editIndexTarget = idx;
-            document.getElementById('inputEditEndereco').value = bdRotas[idx].endereco;
-            document.getElementById('modalEdit').style.display = 'flex';
-        }
-
         function fecharModalEdit() {
             document.getElementById('modalEdit').style.display = 'none';
             editIndexTarget = null;
@@ -2386,16 +2497,25 @@
             if(editIndexTarget !== null) {
                 let novoEnd = document.getElementById('inputEditEndereco').value;
                 bdRotas[editIndexTarget].endereco = novoEnd;
+
+                const containerStatus = document.getElementById('containerEditStatus');
+                if (containerStatus && containerStatus.style.display !== 'none') {
+                    let novoStatus = document.getElementById('selectEditStatus').value;
+                    bdRotas[editIndexTarget].status = novoStatus;
+                    if (novoStatus === 'pendente') {
+                        bdRotas[editIndexTarget].timestamp = null;
+                    }
+                }
+
                 let coords = await buscarGeocodingBackend(novoEnd);
                 if (coords) {
                     bdRotas[editIndexTarget].lat = coords.lat;
                     bdRotas[editIndexTarget].lon = coords.lon;
-                } else {
-                    alert("Não foi possível encontrar as coordenadas para o endereço digitado.");
                 }
                 salvarBD();
                 renderizarLista();
                 plotarNoMapa();
+                atualizarContador();
                 fecharModalEdit();
                 await calcularEstatisticasEAtualizarUI();
             }
@@ -2533,99 +2653,67 @@
             let dataSel = document.getElementById('filtroDataResumo').value;
             let container = document.getElementById('conteudoResumo');
             
-            let entregues = bdRotas.filter(r => r.status === 'entregue').length;
-            let pendentes = bdRotas.filter(r => r.status === 'pendente').length;
-            let falhas = bdRotas.filter(r => r.status === 'falhou').length;
-            let total = bdRotas.length;
-            let percentual = total > 0 ? Math.round((entregues / total) * 100) : 0;
+            let filtrados = bdRotas.filter(r => r.timestamp && r.timestamp.slice(0, 10) === dataSel);
+            let entregues = filtrados.filter(r => r.status === 'entregue').length;
+            let falhas = filtrados.filter(r => r.status === 'falhou').length;
 
             container.innerHTML = `
-                <div style="background:var(--bg-input); padding:15px; border-radius:12px; margin-top:10px; border:1px solid var(--border-color);">
-                    <p style="margin:5px 0;">📦 <b>Total de Pacotes:</b> ${total}</p>
-                    <p style="margin:5px 0; color:var(--cor-verde);">✅ <b>Entregues:</b> ${entregues}</p>
-                    <p style="margin:5px 0; color:var(--cor-laranja);">⏳ <b>Pendentes:</b> ${pendentes}</p>
-                    <p style="margin:5px 0; color:var(--cor-vermelho);">❌ <b>Falhas:</b> ${falhas}</p>
-                    <p style="margin:5px 0;">📊 <b>Conclusão:</b> ${percentual}%</p>
+                <div style="background: var(--bg-input); padding: 15px; border-radius: 12px; margin-top: 10px;">
+                    <p style="margin: 5px 0;"><b>Data selecionada:</b> ${dataSel}</p>
+                    <p style="margin: 5px 0; color: var(--cor-verde);"><b>Entregues:</b> ${entregues}</p>
+                    <p style="margin: 5px 0; color: var(--cor-vermelho);"><b>Falhas:</b> ${falhas}</p>
+                    <p style="margin: 5px 0;"><b>Total baixados:</b> ${filtrados.length}</p>
                 </div>
             `;
         }
 
+        function novaRota() {
+            if (confirm("Deseja iniciar uma nova rota? Os dados atuais serão apagados.")) {
+                bdRotas = [];
+                salvarBD();
+                location.reload();
+            }
+        }
+
+        function encerrarESalvarRota() {
+            if (confirm("Deseja encerrar e salvar o histórico da rota atual?")) {
+                let hoje = new Date().toISOString().slice(0, 10);
+                let resumoHoje = {
+                    data: hoje,
+                    total: bdRotas.length,
+                    entregues: bdRotas.filter(r => r.status === 'entregue').length,
+                    falhas: bdRotas.filter(r => r.status === 'falhou').length
+                };
+                historicoDias.push(resumoHoje);
+                localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
+                bdRotas = [];
+                salvarBD();
+                alert("Rota encerrada e salva com sucesso!");
+                location.reload();
+            }
+        }
+
         function gerarPDFRota() {
-            if (bdRotas.length === 0) return alert("Nenhuma rota carregada para gerar PDF.");
+            if (bdRotas.length === 0) return alert("Nenhuma rota para gerar PDF.");
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
             doc.setFontSize(16);
-            doc.text("Rota+Rápida - Relatório de Rota", 14, 20);
-            
+            doc.text("Relatório de Rota - Rota+Rápida", 14, 20);
             doc.setFontSize(10);
             doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
-            doc.text(`Total de Paradas: ${bdRotas.length}`, 14, 34);
 
-            let y = 44;
-            bdRotas.forEach((p, idx) => {
-                if (y > 280) {
+            let y = 38;
+            bdRotas.forEach((p, i) => {
+                if (y > 270) {
                     doc.addPage();
                     y = 20;
                 }
-                doc.setFontSize(10);
-                doc.text(`${idx + 1}. [${p.codigo}] ${p.endereco.substring(0, 50)}`, 14, y);
-                doc.setFontSize(8);
-                doc.text(`Status: ${p.status.toUpperCase()}`, 14, y + 4);
-                y += 10;
+                doc.text(`${i + 1}. [${p.codigo}] - ${p.endereco} (${p.status.toUpperCase()})`, 14, y);
+                y += 8;
             });
 
-            doc.save(`relatorio_rota_${new Date().toISOString().slice(0, 10)}.pdf`);
-        }
-
-        function novaRota() {
-            if (bdRotas.length > 0 && !confirm("Deseja iniciar uma nova rota? Os dados não salvos da rota atual serão limpos.")) {
-                return;
-            }
-            bdRotas = [];
-            pdfTabelaCorrespondencia = {};
-            listaBipados.clear();
-            salvarBD();
-            renderizarLista();
-            atualizarContador();
-            plotarNoMapa();
-            if (mapPolyline) map.removeLayer(mapPolyline);
-            if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
-            atualizarStatusHome();
-            abrirTelaInicial();
-            alert("Nova rota iniciada com sucesso!");
-        }
-
-        function encerrarESalvarRota() {
-            if (bdRotas.length === 0) return alert("Nenhuma rota ativa para encerrar.");
-            
-            if (confirm("Deseja encerrar e salvar esta rota no histórico?")) {
-                let resumoDia = {
-                    data: new Date().toISOString(),
-                    total: bdRotas.length,
-                    entregues: bdRotas.filter(r => r.status === 'entregue').length,
-                    pendentes: bdRotas.filter(r => r.status === 'pendente').length,
-                    falhas: bdRotas.filter(r => r.status === 'falhou').length,
-                    paradas: [...bdRotas]
-                };
-
-                historicoDias.push(resumoDia);
-                localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
-
-                bdRotas = [];
-                pdfTabelaCorrespondencia = {};
-                listaBipados.clear();
-                salvarBD();
-                renderizarLista();
-                atualizarContador();
-                plotarNoMapa();
-                if (mapPolyline) map.removeLayer(mapPolyline);
-                if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
-                atualizarStatusHome();
-                abrirTelaInicial();
-
-                alert("Rota encerrada e salva no histórico com sucesso!");
-            }
+            doc.save(`rota_${new Date().toISOString().slice(0,10)}.pdf`);
         }
     </script>
 </body>
