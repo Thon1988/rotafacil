@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Rota+Rápida V4</title>
+<title>Rota+Rápida V4 - AppEgg</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
@@ -119,17 +119,29 @@ button, input, select, textarea, h1, h2, h3, p, span, div, label {
 }
 .btn-round-top:active { transform: scale(0.94); }
 
-/* Única bolinha quando parado */
+/* MARCADOR DE LOCALIZAÇÃO DO USUÁRIO (BOLINHA PARADO) */
 .marker-user-location {
-    width: 20px; height: 20px; background: #2196F3;
+    width: 20px; height: 20px; background: #2563eb;
     border: 3px solid #fff; border-radius: 50%;
-    box-shadow: 0 0 12px rgba(33, 150, 243, 0.9);
+    box-shadow: 0 0 12px rgba(37, 99, 235, 0.9);
     animation: pulsarGps 2s infinite;
 }
 @keyframes pulsarGps {
-    0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7); }
-    70% { box-shadow: 0 0 0 14px rgba(33, 150, 243, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); }
+    70% { box-shadow: 0 0 0 14px rgba(37, 99, 235, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+
+/* MARCADOR DE NAVEGAÇÃO (TRIÂNGULO EM ROTA) */
+.icone-veiculo { position: relative; }
+.seta-veiculo {
+    width: 0; height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 24px solid #2563eb;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.6));
+    transform-origin: center 70%;
+    transition: transform 0.4s ease;
 }
 
 #fluxo-inicial-container {
@@ -342,10 +354,6 @@ button, input, select, textarea, h1, h2, h3, p, span, div, label {
 .card-info-texto { flex: 1; font-size: 13px; color: var(--texto-principal); line-height: 1.4; }
 .card-info-texto small { display: block; font-size: 11px; color: var(--texto-secundario); margin-top: 2px; }
 .card-info-chevron { color: var(--texto-secundario); font-size: 22px; font-weight: 400; }
-.card-info-label { font-size: 11px; color: var(--texto-secundario); font-weight: 700; text-transform: uppercase; min-width: 30px; }
-.card-info-valor { font-size: 13px; color: var(--texto-principal); }
-.card-info-valor strong { font-size: 15px; color: var(--texto-principal); margin-right: 6px; }
-.card-info-valor em { font-style: normal; color: var(--texto-secundario); font-weight: 600; }
 
 /* WIDGET DE AGRUPAMENTO */
 #widget-agrupado {
@@ -401,17 +409,7 @@ button, input, select, textarea, h1, h2, h3, p, span, div, label {
     padding: 0 20px;
 }
 
-/* NAVEGAÇÃO TURN-BY-TURN (Triângulo quando em rota) */
-.icone-veiculo { position: relative; }
-.seta-veiculo {
-    width: 0; height: 0;
-    border-left: 14px solid transparent;
-    border-right: 14px solid transparent;
-    border-bottom: 26px solid #2563eb;
-    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.6));
-    transform-origin: center 70%;
-    transition: transform 0.4s ease;
-}
+/* NAVEGAÇÃO TURN-BY-TURN */
 #painel-navegacao-topo {
     position: fixed; top: 0; left: 0; right: 0;
     z-index: 8000; background: var(--cor-azul); color: white;
@@ -449,22 +447,17 @@ button, input, select, textarea, h1, h2, h3, p, span, div, label {
     cursor: pointer;
 }
 .btn-nav-flutuante.sair { background: var(--cor-vermelho); color: white; border: none; }
-
-/* DEBUG OVERLAY (Ctrl+D) */
-#debug-overlay {
-    display: none; position: fixed; top: 0; right: 0; bottom: 0;
-    width: 420px; max-width: 95%;
-    background: rgba(8, 12, 18, 0.97);
-    z-index: 999999999;
-    color: #e5e7eb;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important;
-    font-size: 12px;
-    border-left: 1px solid #00d4ff;
+#overlay-recalculando {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 9000;
+    background: rgba(37, 99, 235, 0.95); color: white;
+    padding: 10px 22px; border-radius: 30px;
+    font-weight: 700; font-size: 14px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    display: none; align-items: center; gap: 8px;
 }
-#debug-overlay.visible { display: flex; flex-direction: column; }
-#debug-header { flex-shrink: 0; padding: 16px; background: #111827; border-bottom: 1px solid #1f2937; }
-#debug-title { font-size: 14px; font-weight: 800; color: #00d4ff; margin: 0 0 10px 0; }
-#debug-list { flex: 1; overflow-y: auto; padding: 10px 16px; }
+.pulse-recalc { width: 10px; height: 10px; background: white; border-radius: 50%; animation: pulseRecalc 1s infinite ease-in-out; }
+@keyframes pulseRecalc { 0%,100% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 1; } }
 
 body.modo-navegacao #bottom-sheet,
 body.modo-navegacao .top-bar-overlay,
@@ -483,13 +476,13 @@ body.modo-navegacao #fluxo-inicial-container { display: none !important; }
     <div class="wizard-header">
         <div class="wizard-user-info">
             <div class="wizard-avatar" id="wizardAvatarLetra">T</div>
-            <h1 class="wizard-greeting">Olá, <span id="wizardNome">Entregador</span></h1>
+            <h1 class="wizard-greeting">Olá, <span id="wizardNome">Thon</span></h1>
         </div>
         <button class="btn-round-top" data-action="abrir-menu" type="button" style="width: 38px; height: 38px; font-size: 16px;">☰</button>
     </div>
     <div class="home-logo-box">
-        <div class="home-logo-circle">🧭</div>
-        <h2 class="home-title">Rota+Rápida</h2>
+        <div class="home-logo-circle">🥚</div>
+        <h2 class="home-title">AppEgg / Rota+Rápida</h2>
         <p class="home-subtitle">Bipe, ouça a parada e entregue.</p>
     </div>
     <div class="home-status-badge"><span>🟢</span> <span id="home-status-texto">Nenhuma rota carregada</span></div>
@@ -498,7 +491,7 @@ body.modo-navegacao #fluxo-inicial-container { display: none !important; }
             <div class="home-card-icon">📊</div>
             <div>
                 <p class="home-card-title">Carregar Rota</p>
-                <p class="home-card-desc">Excel / CSV (Mapa)</p>
+                <p class="home-card-desc" id="desc-rota-excel">Excel / CSV (Mapa)</p>
             </div>
         </div>
         <input type="file" id="inputExcelUnico" accept=".csv, .xlsx, .xls, .json" style="display:none;">
@@ -506,7 +499,7 @@ body.modo-navegacao #fluxo-inicial-container { display: none !important; }
             <div class="home-card-icon">📄</div>
             <div>
                 <p class="home-card-title">Carregar PDF</p>
-                <p class="home-card-desc">Lista de entregas</p>
+                <p class="home-card-desc" id="desc-rota-pdf">Lista de entregas</p>
             </div>
         </div>
         <input type="file" id="inputPdfUnico" accept=".pdf" style="display:none;">
@@ -533,15 +526,19 @@ body.modo-navegacao #fluxo-inicial-container { display: none !important; }
 <div id="menu-lateral-overlay"></div>
 <div id="menu-lateral">
     <div class="menu-header">
-        <span>Rota+Rápida</span>
+        <span>AppEgg / Rota+Rápida</span>
         <button data-action="fechar-menu" type="button" style="background: var(--bg-input); color: var(--texto-principal); border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer;">✕</button>
     </div>
-    <div class="menu-item" data-action="abrir-tela-inicial">Tela Inicial</div>
-    <div class="menu-item destaque" data-action="iniciar-navegacao"><span id="menuItemNavegacaoTxt">Iniciar Navegação GPS</span></div>
-    <div class="menu-item" data-action="alternar-tema">Alternar Tema</div>
+    <div class="menu-item" data-action="abrir-tela-inicial">🏠 Tela Inicial</div>
+    <div class="menu-item destaque" data-action="iniciar-navegacao">🛰️ Iniciar Navegação GPS</div>
+    <div class="menu-item" data-action="alternar-tema">🌓 Alternar Tema</div>
     <div class="divisor-menu"></div>
-    <div class="menu-item" data-action="abrir-scanner">Abrir Scanner</div>
-    <div class="menu-item perigo" data-action="encerrar-rota">Encerrar e Salvar Rota</div>
+    <div class="menu-item" data-action="abrir-scanner">📦 Abrir Scanner</div>
+    <div class="menu-item" data-action="codigo-manual">⌨️ Inserir Código Manual</div>
+    <div class="divisor-menu"></div>
+    <div class="menu-item" data-action="roteirizar">⚡ Roteirizar</div>
+    <div class="menu-item" data-action="reotimizar">🔀 Reotimizar</div>
+    <div class="menu-item perigo" data-action="encerrar-rota">🛑 Encerrar e Salvar Rota</div>
 </div>
 
 <!-- MAPA -->
@@ -551,6 +548,21 @@ body.modo-navegacao #fluxo-inicial-container { display: none !important; }
         <button class="btn-round-top" data-action="abrir-menu" type="button">☰</button>
         <button class="btn-round-top" data-action="centralizar-gps" type="button" style="margin-left: auto;">🛰️</button>
         <button class="btn-round-top" data-action="abrir-tela-inicial" type="button" style="font-size: 16px;">🏠</button>
+    </div>
+</div>
+
+<!-- WIDGET AGRUPAMENTO -->
+<div id="widget-agrupado">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:12px; color:var(--cor-laranja); font-weight:700;">MÚLTIPLOS PACOTES</span>
+        <span style="font-size: 12px; color: var(--texto-secundario);" id="agrupado-index-txt">Pacote 1 de 2</span>
+    </div>
+    <div style="font-weight: bold; font-size: 15px; color: var(--texto-principal);" id="agrupado-rua">---</div>
+    <div style="font-size: 13px; color: var(--cor-laranja);" id="agrupado-codigo">---</div>
+    <div class="carrossel-controles">
+        <button class="btn-carrossel" data-action="carrossel-ant" type="button">◄ Anterior</button>
+        <span style="flex:1; text-align:center; font-size:12px; color:var(--texto-secundario);">Deslize para trocar</span>
+        <button class="btn-carrossel" data-action="carrossel-prox" type="button">Próximo ►</button>
     </div>
 </div>
 
@@ -577,14 +589,21 @@ body.modo-navegacao #fluxo-inicial-container { display: none !important; }
     <div class="topo-linha">
         <div class="icone-manobra" id="nav-icone-manobra">⬆️</div>
         <div class="info-manobra">
-            <div class="distancia-manobra" id="nav-distancia-manobra">250 m</div>
-            <div class="texto-manobra" id="nav-texto-manobra">Siga em frente</div>
-            <div class="rua-proxima" id="nav-rua-proxima">—</div>
+            <div class="distancia-manobra" id="nav-distancia-manobra" style="font-size: 20px; font-weight: 800;">250 m</div>
+            <div class="texto-manobra" id="nav-texto-manobra" style="font-size: 15px;">Siga em frente</div>
+            <div class="rua-proxima" id="nav-rua-proxima" style="font-size: 12px; opacity: 0.8;">—</div>
         </div>
     </div>
 </div>
 
 <div id="painel-navegacao-inferior">
+    <div style="display:flex; gap:10px; margin-bottom: 10px; align-items: center;">
+        <div id="nav-badge-parada" style="background:var(--cor-laranja); color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800;">1</div>
+        <div>
+            <div id="nav-entrega-codigo" style="font-weight:700; color:var(--cor-laranja); font-size:13px;">—</div>
+            <div id="nav-entrega-end" style="font-size:13px; color:var(--texto-principal);">—</div>
+        </div>
+    </div>
     <div style="display:flex; gap:10px;">
         <button class="btn-sheet-action destaque" style="flex: 2;" data-action="cheguei-bipar" type="button">✅ Cheguei / Bipar</button>
         <button class="btn-sheet-action" style="flex: 1; background: var(--cor-vermelho); color: white; border: none;" data-action="falhou-nav" type="button">❌ Falhou</button>
@@ -595,146 +614,196 @@ body.modo-navegacao #fluxo-inicial-container { display: none !important; }
     <button class="btn-nav-flutuante sair" data-action="sair-navegacao" title="Sair">✕</button>
 </div>
 
-<!-- CARD DETALHES DA PARADA -->
-<div id="modalCardParada">
-    <div class="card-parada-detalhes">
-        <div class="card-drag-handle" data-action="fechar-card-parada"></div>
-        <button class="card-fechar" data-action="fechar-card-parada" type="button">✕</button>
-        <h2 class="card-titulo-endereco" id="cardParadaTitulo">Endereço</h2>
-        <div class="card-botoes-acao">
-            <button class="card-btn card-btn-navegar" data-action="card-navegar" type="button">🧭 Navegar</button>
-            <button class="card-btn card-btn-entregue" data-action="card-entregue" type="button">📦✅ Entregue</button>
-        </div>
+<!-- MODAL SCANNER -->
+<div id="modalScanner">
+    <div class="scanner-header">
+        <div class="scanner-header-badge">Scanner AppEgg</div>
+        <button class="scanner-btn-close" data-action="fechar-scanner">✕</button>
     </div>
-</div>
-
-<div id="debug-overlay">
-    <div id="debug-header">
-        <div id="debug-title">Painel de Debug</div>
+    <div class="scanner-viewport-container">
+        <div id="reader"></div>
     </div>
-    <div id="debug-list"></div>
 </div>
 
 <script>
-let mapa = null;
-let marcadorUsuario = null;
-let paradas = [];
-let modoNavegacaoAtivo = false;
+// --- ESTADO GLOBAL DA APLICAÇÃO ---
+let appState = {
+    paradas: [],
+    rotaAtiva: false,
+    modoNav: false,
+    indiceAtual: 0,
+    vozAtivada: true,
+    tema: 'dark'
+};
 
-function logDebug(msg, level = 'INFO') {
-    const list = document.getElementById('debug-list');
-    if (!list) return;
-    const entry = document.createElement('div');
-    entry.className = `debug-entry level-${level}`;
-    entry.innerHTML = `<span class="ts">${new Date().toLocaleTimeString()}</span><span class="lvl">[${level}]</span>${msg}`;
-    list.prepend(entry);
-}
+let map, userMarker = null, routePolyline = null;
+let watchId = null;
 
+// Inicialização
 document.addEventListener('DOMContentLoaded', () => {
-    // Inicializar Mapa
-    mapa = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapa);
-
-    // Eventos Globais de Clique
-    document.addEventListener('click', (e) => {
-        const target = e.target.closest('[data-action]');
-        if (!target) return;
-        const acao = target.getAttribute('data-action');
-        
-        if (acao === 'abrir-menu') {
-            document.getElementById('menu-lateral').classList.add('aberto');
-            document.getElementById('menu-lateral-overlay').style.display = 'block';
-        } else if (acao === 'fechar-menu' || acao === 'abrir-tela-inicial') {
-            document.getElementById('menu-lateral').classList.remove('aberto');
-            document.getElementById('menu-lateral-overlay').style.display = 'none';
-            if (acao === 'abrir-tela-inicial') document.getElementById('fluxo-inicial-container').style.display = 'flex';
-        } else if (acao === 'abrir-mapa') {
-            document.getElementById('fluxo-inicial-container').style.display = 'none';
-        } else if (acao === 'iniciar-navegacao') {
-            alternarModoNavegacao(true);
-        } else if (acao === 'sair-navegacao') {
-            alternarModoNavegacao(false);
-        }
-    });
-
-    // Iniciar geolocalização com atualização dinâmica do marcador
-    if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(
-            (pos) => {
-                const { latitude, longitude, heading } = pos.coords;
-                atualizarMarcadorUsuario(latitude, longitude, heading || 0);
-            },
-            (err) => logDebug('Erro GPS: ' + err.message, 'WARN'),
-            { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
-        );
-    }
+    initMap();
+    setupEventListeners();
+    carregarDadosSalvos();
 });
 
-// Função centralizada para alternar entre Bolinha (Parado) e Triângulo (Em rota/navegação)
-function atualizarMarcadorUsuario(lat, lng, heading = 0) {
-    if (!mapa) return;
+function initMap() {
+    // Inicializa o mapa centrado em São Paulo ou posição padrão
+    map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-    let icone;
-    if (modoNavegacaoAtivo) {
-        // Triângulo de navegação quando em rota
-        icone = L.divIcon({
+    // Iniciar monitoramento de geolocalização SEM camadas duplicadas
+    iniciarGeolocalizacao();
+}
+
+// CORREÇÃO DA LOCALIZAÇÃO E MARCADOR ÚNICO / ÂNCORA
+function iniciarGeolocalizacao() {
+    if ('geolocation' in navigator) {
+        watchId = navigator.geolocation.watchPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const heading = position.coords.heading || 0;
+                const latLng = [lat, lng];
+
+                atualizarPosicaoUsuarioNoMapa(latLng, heading);
+            },
+            (error) => {
+                console.error("Erro GPS:", error);
+            },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+        );
+    }
+}
+
+function atualizarPosicaoUsuarioNoMapa(latLng, heading) {
+    if (!map) return;
+
+    if (appState.modoNav) {
+        // MODO NAVEGAÇÃO: Exibe apenas o Triângulo de Navegação com âncora correta
+        const triangleIcon = L.divIcon({
             className: 'icone-veiculo',
             html: `<div class="seta-veiculo" style="transform: rotate(${heading}deg);"></div>`,
             iconSize: [28, 28],
-            iconAnchor: [14, 14]
+            iconAnchor: [14, 20] // Âncora centralizada corretamente para evitar desalinhamento
         });
-        logDebug('Marcador atualizado: Triângulo (Em rota)', 'DEBUG');
-    } else {
-        // Única bolinha quando parado / fora de navegação
-        icone = L.divIcon({
-            className: 'marker-user-location',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
-        });
-        logDebug('Marcador atualizado: Bolinha única (Parado)', 'DEBUG');
-    }
 
-    const latLng = [lat, lng];
-    if (!marcadorUsuario) {
-        marcadorUsuario = L.marker(latLng, { icon: icone, zIndexOffset: 1000 }).addTo(mapa);
+        if (!userMarker) {
+            userMarker = L.marker(latLng, { icon: triangleIcon }).addTo(map);
+        } else {
+            userMarker.setIcon(triangleIcon);
+            userMarker.setLatLng(latLng);
+        }
+        map.setView(latLng, 17, { animate: true });
     } else {
-        marcadorUsuario.setLatLng(latLng);
-        marcadorUsuario.setIcon(icone);
+        // MODO NORMAL / PARADO: Exibe apenas a bolinha azul de localização com âncora correta
+        const dotIcon = L.divIcon({
+            className: '',
+            html: `<div class="marker-user-location"></div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10] // Âncora centralizada no meio da bolinha (20x20 / 2)
+        });
+
+        if (!userMarker) {
+            userMarker = L.marker(latLng, { icon: dotIcon }).addTo(map);
+        } else {
+            userMarker.setIcon(dotIcon);
+            userMarker.setLatLng(latLng);
+        }
     }
 }
 
-function alternarModoNavegacao(ativar) {
-    modoNavegacaoAtivo ativar;
-    if (modoNavegacaoAtivo) {
+function setupEventListeners() {
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        executarAcao(action);
+    });
+}
+
+function executarAcao(action) {
+    switch(action) {
+        case 'abrir-menu':
+            document.getElementById('menu-lateral').classList.add('aberto');
+            document.getElementById('menu-lateral-overlay').style.display = 'block';
+            break;
+        case 'fechar-menu':
+        case 'abrir-tela-inicial':
+            document.getElementById('menu-lateral').classList.remove('aberto');
+            document.getElementById('menu-lateral-overlay').style.display = 'none';
+            break;
+        case 'iniciar-navegacao':
+            ativarModoNavegacao(true);
+            break;
+        case 'sair-navegacao':
+            ativarModoNavegacao(false);
+            break;
+        case 'abrir-scanner':
+            document.getElementById('modalScanner').style.display = 'flex';
+            break;
+        case 'fechar-scanner':
+            document.getElementById('modalScanner').style.display = 'none';
+            break;
+        case 'alternar-tema':
+            alternarTema();
+            break;
+        case 'centralizar-gps':
+            if (userMarker) map.setView(userMarker.getLatLng(), 16);
+            break;
+    }
+}
+
+function ativarModoNavegacao(ativar) {
+    appState.modoNav = ativar;
+    if (ativar) {
         document.body.classList.add('modo-navegacao');
         document.getElementById('painel-navegacao-topo').style.display = 'block';
         document.getElementById('painel-navegacao-inferior').style.display = 'block';
         document.querySelector('.botoes-navegacao-flutuantes').style.display = 'flex';
-        document.getElementById('fluxo-inicial-container').style.display = 'none';
-        logDebug('Modo navegação ativado (Exibindo triângulo)', 'INFO');
     } else {
         document.body.classList.remove('modo-navegacao');
         document.getElementById('painel-navegacao-topo').style.display = 'none';
         document.getElementById('painel-navegacao-inferior').style.display = 'none';
         document.querySelector('.botoes-navegacao-flutuantes').style.display = 'none';
-        logDebug('Modo navegação encerrado (Exibindo bolinha única)', 'INFO');
-    }
-    // Força atualização imediata do ícone do marcador com base no novo estado
-    if (marcadorUsuario) {
-        const pos = marcadorUsuario.getLatLng();
-        atualizarMarcadorUsuario(pos.lat, pos.lng);
     }
 }
 
-// Atalho Ctrl+D para Debug
-window.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.key.toLowerCase() === 'd') {
-        e.preventDefault();
-        const dbg = document.getElementById('debug-overlay');
-        dbg.classList.toggle('visible');
+function alternarTema() {
+    const html = document.documentElement;
+    appState.tema = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', appState.tema);
+}
+
+function carregarDadosSalvos() {
+    const saved = localStorage.getItem('appegg_dados');
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            appState.paradas = data.paradas || [];
+            atualizarInterface();
+        } catch(e) {}
     }
-});
+}
+
+function salvarDados() {
+    localStorage.setItem('appegg_dados', JSON.stringify({ paradas: appState.paradas }));
+    const badge = document.getElementById('save-badge');
+    badge.classList.remove('saving');
+    document.getElementById('save-badge-txt').innerText = 'Salvo';
+}
+
+function atualizarInterface() {
+    const restantes = appState.paradas.filter(p => !p.entregue && !p.falhou).length;
+    document.getElementById('contador-restantes').innerText = restantes;
+    if (appState.paradas.length > 0) {
+        document.getElementById('home-status-texto').innerText = `${appState.paradas.length} paradas carregadas`;
+        document.getElementById('btnIniciarNavegacaoHome').style.display = 'block';
+        document.getElementById('btnIniciarNavegacaoSheet').style.display = 'flex';
+    }
+}
 </script>
 </body>
 </html>
-
