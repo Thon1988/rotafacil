@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>AppEgg</title>
+<title>Rota+Rápida V4</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
@@ -118,17 +118,16 @@ button, input, select, textarea, h1, h2, h3, p, span, div, label {
     pointer-events: auto;
 }
 .btn-round-top:active { transform: scale(0.94); }
-
-/* Ícone de Veículo / Triângulo Único de Localização */
-.icone-veiculo { position: relative; }
-.seta-veiculo {
-    width: 0; height: 0;
-    border-left: 14px solid transparent;
-    border-right: 14px solid transparent;
-    border-bottom: 26px solid #2563eb;
-    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.6));
-    transform-origin: center 70%;
-    transition: transform 0.4s ease;
+.marker-user-location {
+    width: 20px; height: 20px; background: #2196F3;
+    border: 3px solid #fff; border-radius: 50%;
+    box-shadow: 0 0 12px rgba(33, 150, 243, 0.9);
+    animation: pulsarGps 2s infinite;
+}
+@keyframes pulsarGps {
+    0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7); }
+    70% { box-shadow: 0 0 0 14px rgba(33, 150, 243, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
 }
 
 #fluxo-inicial-container {
@@ -340,6 +339,11 @@ button, input, select, textarea, h1, h2, h3, p, span, div, label {
 .card-info-icone { font-size: 20px; color: var(--texto-secundario); width: 24px; text-align: center; flex-shrink: 0; }
 .card-info-texto { flex: 1; font-size: 13px; color: var(--texto-principal); line-height: 1.4; }
 .card-info-texto small { display: block; font-size: 11px; color: var(--texto-secundario); margin-top: 2px; }
+.card-info-chevron { color: var(--texto-secundario); font-size: 22px; font-weight: 400; }
+.card-info-label { font-size: 11px; color: var(--texto-secundario); font-weight: 700; text-transform: uppercase; min-width: 30px; }
+.card-info-valor { font-size: 13px; color: var(--texto-principal); }
+.card-info-valor strong { font-size: 15px; color: var(--texto-principal); margin-right: 6px; }
+.card-info-valor em { font-style: normal; color: var(--texto-secundario); font-weight: 600; }
 
 /* WIDGET DE AGRUPAMENTO */
 #widget-agrupado {
@@ -471,6 +475,16 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 
 /* NAVEGAÇÃO TURN-BY-TURN */
+.icone-veiculo { position: relative; }
+.seta-veiculo {
+    width: 0; height: 0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-bottom: 26px solid #2563eb;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.6));
+    transform-origin: center 70%;
+    transition: transform 0.4s ease;
+}
 #painel-navegacao-topo {
     position: fixed; top: 0; left: 0; right: 0;
     z-index: 8000; background: var(--cor-azul); color: white;
@@ -519,8 +533,29 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 .pulse-recalc { width: 10px; height: 10px; background: white; border-radius: 50%; animation: pulseRecalc 1s infinite ease-in-out; }
 @keyframes pulseRecalc { 0%,100% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 1; } }
+#modal-chegada-confirm {
+    display: none; position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9500;
+    background: var(--bg-card);
+    border: 1px solid var(--cor-azul);
+    border-radius: 18px; padding: 22px;
+    width: 90%; max-width: 380px; text-align: center;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+}
+#modal-chegada-confirm h3 { margin: 0 0 4px 0; color: var(--cor-azul); font-size: 18px; }
+#modal-chegada-confirm p { margin: 0 0 16px 0; font-size: 13px; color: var(--texto-secundario); }
+#modal-chegada-confirm .botoes { display: flex; gap: 8px; margin-top: 12px; }
+#modal-chegada-confirm .botoes button {
+    flex: 1; padding: 12px; border-radius: 10px;
+    border: none; font-weight: 800; font-size: 14px;
+    cursor: pointer; color: white;
+}
+#modal-chegada-confirm .btn-bipar { background: var(--cor-laranja); }
+#modal-chegada-confirm .btn-falhou { background: var(--cor-vermelho); }
+#modal-chegada-confirm .btn-depois { background: var(--bg-input); color: var(--texto-principal); border: 1px solid var(--border-color); }
 
-/* DEBUG OVERLAY */
+/* DEBUG OVERLAY (Ctrl+D) */
 #debug-overlay {
     display: none; position: fixed; top: 0; right: 0; bottom: 0;
     width: 420px; max-width: 95%;
@@ -545,6 +580,38 @@ input:checked + .slider:before { transform: translateX(20px); }
 #debug-controls button.ativo { background: #00d4ff; color: #000; border-color: #00d4ff; }
 #debug-controls button.fechar { background: #ef4444; color: white; border-color: #ef4444; margin-left: auto; }
 #debug-list { flex: 1; overflow-y: auto; padding: 10px 16px; }
+.debug-entry {
+    padding: 6px 8px; margin-bottom: 4px;
+    border-radius: 4px; border-left: 3px solid #6b7280;
+    background: rgba(255,255,255,0.03);
+    font-size: 11px; line-height: 1.4; word-break: break-word;
+}
+.debug-entry.level-DEBUG { border-color: #6b7280; }
+.debug-entry.level-INFO  { border-color: #3b82f6; }
+.debug-entry.level-WARN  { border-color: #f59e0b; background: rgba(245,158,11,0.08); }
+.debug-entry.level-ERROR { border-color: #ef4444; background: rgba(239,68,68,0.08); }
+.debug-entry .ts { color: #6b7280; margin-right: 6px; font-size: 10px; }
+.debug-entry .lvl { font-weight: 800; margin-right: 6px; font-size: 10px; }
+.debug-entry.level-DEBUG .lvl { color: #9ca3af; }
+.debug-entry.level-INFO .lvl  { color: #60a5fa; }
+.debug-entry.level-WARN .lvl  { color: #fbbf24; }
+.debug-entry.level-ERROR .lvl { color: #f87171; }
+.debug-entry .ctx { color: #9ca3af; font-size: 10px; display: block; margin-top: 2px; font-style: italic; }
+
+.marker-pin-custom {
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid white; color: white;
+    font-weight: bold; font-size: 12px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+}
+.spinner-otimizacao {
+    width: 60px; height: 60px;
+    border: 5px solid rgba(255, 87, 34, 0.2);
+    border-top: 5px solid var(--cor-laranja);
+    border-radius: 50%; animation: girarCarregamento 1s linear infinite;
+}
+@keyframes girarCarregamento { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
 body.modo-navegacao #bottom-sheet,
 body.modo-navegacao .top-bar-overlay,
@@ -558,172 +625,1015 @@ body.modo-navegacao #fluxo-inicial-container { display: none !important; }
     <span id="save-badge-txt">Salvo</span>
 </div>
 
-<!-- TELA INICIAL / WIZARD -->
+<!-- TELA INICIAL -->
 <div id="fluxo-inicial-container">
     <div class="wizard-header">
         <div class="wizard-user-info">
-            <div class="wizard-avatar">AE</div>
-            <div>
-                <p class="wizard-greeting">Olá, Entregador</p>
-                <small style="color: var(--texto-secundario);">AppEgg v4.2</small>
-            </div>
+            <div class="wizard-avatar" id="wizardAvatarLetra">T</div>
+            <h1 class="wizard-greeting">Olá, <span id="wizardNome">Entregador</span></h1>
         </div>
+        <button class="btn-round-top" data-action="abrir-menu" type="button" style="width: 38px; height: 38px; font-size: 16px;">☰</button>
     </div>
     <div class="home-logo-box">
-        <div class="home-logo-circle">🥚</div>
-        <h1 class="home-title">AppEgg</h1>
-        <p class="home-subtitle">Otimização de Rotas Inteligentes</p>
+        <div class="home-logo-circle">🧭</div>
+        <h2 class="home-title">Rota+Rápida</h2>
+        <p class="home-subtitle">Bipe, ouça a parada e entregue.</p>
     </div>
-    <div class="home-status-badge">🟢 Pronto para navegar</div>
+    <div class="home-status-badge"><span>🟢</span> <span id="home-status-texto">Nenhuma rota carregada</span></div>
     <div class="home-grid">
-        <div class="home-card-acao" onclick="abrirScanner()">
-            <div class="home-card-icon">📷</div>
+        <div class="home-card-acao" data-action="input-excel">
+            <div class="home-card-icon">📊</div>
             <div>
-                <p class="home-card-title">Escanear</p>
-                <p class="home-card-desc">Códigos de barras</p>
+                <p class="home-card-title">Carregar Rota</p>
+                <p class="home-card-desc" id="desc-rota-excel">Excel / CSV (Mapa)</p>
             </div>
         </div>
-        <div class="home-card-acao" onclick="abrirConfigRota()">
-            <div class="home-card-icon">⚙️</div>
+        <input type="file" id="inputExcelUnico" accept=".csv, .xlsx, .xls, .json" style="display:none;">
+        <div class="home-card-acao" data-action="input-pdf">
+            <div class="home-card-icon">📄</div>
             <div>
-                <p class="home-card-title">Configurar</p>
-                <p class="home-card-desc">Parâmetros de rota</p>
+                <p class="home-card-title">Carregar PDF</p>
+                <p class="home-card-desc" id="desc-rota-pdf">Lista de entregas</p>
+            </div>
+        </div>
+        <input type="file" id="inputPdfUnico" accept=".pdf" style="display:none;">
+        <div class="home-card-acao" data-action="abrir-mapa">
+            <div class="home-card-icon">🗺️</div>
+            <div>
+                <p class="home-card-title">Mapa</p>
+                <p class="home-card-desc">Ver pontos</p>
+            </div>
+        </div>
+        <div class="home-card-acao" data-action="abrir-menu">
+            <div class="home-card-icon">📋</div>
+            <div>
+                <p class="home-card-title">Menu</p>
+                <p class="home-card-desc">Mais opções</p>
             </div>
         </div>
     </div>
-    <button class="home-btn-principal" onclick="iniciarRotaApp()">Iniciar Rota</button>
-    <button class="home-btn-principal secundario" onclick="alternarTemaApp()">Alternar Tema</button>
+    <button class="home-btn-principal" data-action="abrir-scanner">📦 Abrir Scanner</button>
+    <button class="home-btn-principal secundario" data-action="iniciar-navegacao" id="btnIniciarNavegacaoHome" style="display:none;">🛰️ Iniciar Navegação GPS</button>
+
+    <div style="margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <button class="home-btn-principal verde" data-action="abrir-backup" style="font-size: 13px; padding: 12px; box-shadow: 0 4px 12px rgba(16,185,129,0.3);">💾 Backup / Importar</button>
+        <button class="home-btn-principal roxo" data-action="exportar-direto" style="font-size: 13px; padding: 12px; box-shadow: 0 4px 12px rgba(139,92,246,0.3);">📤 Exportar JSON</button>
+    </div>
+
+    <div style="text-align: center; font-size: 11px; color: var(--texto-secundario); margin-top: 16px; opacity: 0.6;">
+        💡 <b>Ctrl+D</b> abre painel de debug · Voz automática ao bipar
+    </div>
 </div>
 
-<!-- MAPA E CONTROLES -->
+<!-- MENU LATERAL -->
+<div id="menu-lateral-overlay"></div>
+<div id="menu-lateral">
+    <div class="menu-header">
+        <span>Rota+Rápida</span>
+        <button id="btnFecharMenu" data-action="fechar-menu" type="button" style="background: var(--bg-input); color: var(--texto-principal); border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer;">✕</button>
+    </div>
+    <div class="menu-item" data-action="abrir-tela-inicial"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Tela Inicial</div>
+    <div class="menu-item destaque" data-action="iniciar-navegacao"><svg viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg><span id="menuItemNavegacaoTxt">Iniciar Navegação GPS</span></div>
+    <div class="menu-item" data-action="alternar-tema"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>Alternar Tema</div>
+    <div class="divisor-menu"></div>
+    <div class="menu-item" data-action="abrir-config"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>Configurar Rota</div>
+    <div class="menu-item" data-action="abrir-scanner"><svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2-2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>Abrir Scanner</div>
+    <div class="menu-item" data-action="codigo-manual"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Inserir Código Manual</div>
+    <div class="divisor-menu"></div>
+    <div class="menu-item" data-action="roteirizar"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Roteirizar (Padrão)</div>
+    <div class="menu-item" data-action="reotimizar"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg>Reotimizar</div>
+    <div class="menu-item" data-action="alternar-voz"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg><span id="menuVozTxt">Voz: Ativada</span></div>
+    <div class="divisor-menu"></div>
+    <div class="menu-item" data-action="abrir-backup"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Backup / Importar</div>
+    <div class="menu-item" data-action="exportar-direto"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y3="3"/></svg>Exportar JSON</div>
+    <div class="menu-item" data-action="abrir-resumo"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Ver Histórico</div>
+    <div class="menu-item" data-action="exportar-csv"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Exportar CSV</div>
+    <div class="divisor-menu"></div>
+    <div class="menu-item" data-action="nova-rota"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Nova Rota</div>
+    <div class="menu-item perigo" data-action="encerrar-rota"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Encerrar e Salvar Rota</div>
+</div>
+
+<!-- MAPA -->
 <div id="mapa-container">
     <div id="mapa"></div>
+    <div class="top-bar-overlay">
+        <button class="btn-round-top" data-action="abrir-menu" type="button">☰</button>
+        <button class="btn-round-top" data-action="centralizar-gps" type="button" style="margin-left: auto;">🛰️</button>
+        <button class="btn-round-top" data-action="abrir-tela-inicial" type="button" style="font-size: 16px;">🏠</button>
+    </div>
 </div>
 
-<div class="top-bar-overlay">
-    <div class="btn-round-top" onclick="abrirMenuLateral()">☰</div>
-    <div class="btn-round-top" onclick="centralizarUsuario()">📍</div>
+<!-- WIDGET AGRUPAMENTO -->
+<div id="widget-agrupado">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:12px; color:var(--cor-laranja); font-weight:700;">MÚLTIPLOS PACOTES</span>
+        <span style="font-size: 12px; color: var(--texto-secundario);" id="agrupado-index-txt">Pacote 1 de 2</span>
+    </div>
+    <div style="font-weight: bold; font-size: 15px; color: var(--texto-principal);" id="agrupado-rua">---</div>
+    <div style="font-size: 13px; color: var(--cor-laranja);" id="agrupado-codigo">---</div>
+    <div class="carrossel-controles">
+        <button class="btn-carrossel" data-action="carrossel-ant" type="button">◄ Anterior</button>
+        <span style="flex:1; text-align:center; font-size:12px; color:var(--texto-secundario);">Deslize para trocar</span>
+        <button class="btn-carrossel" data-action="carrossel-prox" type="button">Próximo ►</button>
+    </div>
 </div>
 
 <!-- BOTTOM SHEET -->
-<div id="bottom-sheet" class="recolhido">
-    <div class="sheet-handle" onclick="toggleBottomSheet()">
-        <div class="handle-bar"></div>
-    </div>
+<div id="bottom-sheet">
+    <div class="sheet-handle" id="handleTouch"><div class="handle-bar"></div></div>
     <div class="sheet-header">
         <div>
-            <h2 class="sheet-title">Paradas da Rota</h2>
-            <small style="color: var(--texto-secundario);" id="sheet-sub">0 paradas carregadas</small>
+            <h2 class="sheet-title">Paradas</h2>
+            <div id="info-tempo-estimado" style="font-size: 12px; font-weight: 700; color: var(--cor-laranja); margin-top: 2px;">🏁 Término: --:--</div>
         </div>
-        <div class="badge-restantes" id="badge-restantes">0 restantes</div>
+        <div class="badge-restantes">⚡ <span id="contador-restantes">0</span> restantes</div>
     </div>
     <div class="sheet-actions-row">
-        <button class="btn-sheet-action destaque" onclick="otimizarRota()">Otimizar</button>
-        <button class="btn-sheet-action navegar" onclick="iniciarNavegacaoTurnByTurn()">Navegar</button>
+        <button id="btnIniciarNavegacaoSheet" class="btn-sheet-action navegar" data-action="iniciar-navegacao" type="button" style="display:none;">🛰️ Navegar GPS</button>
+        <button class="btn-sheet-action destaque" data-action="roteirizar" type="button">⚡ Roteirizar</button>
+        <button class="btn-sheet-action" data-action="reotimizar" type="button">🔀 Reotimizar</button>
+        <button class="btn-sheet-action" data-action="abrir-scanner" type="button">📦 Scanner</button>
     </div>
     <div id="lista-paradas"></div>
 </div>
 
-<!-- SCRIPT DE INICIALIZAÇÃO E CORREÇÃO DE POSIÇÃO (TRIÂNGULO ÚNICO) -->
+<!-- PAINEL DE NAVEGAÇÃO -->
+<div id="painel-navegacao-topo">
+    <div class="topo-linha">
+        <div class="icone-manobra" id="nav-icone-manobra">⬆️</div>
+        <div class="info-manobra">
+            <div class="distancia-manobra" id="nav-distancia-manobra">250 m</div>
+            <div class="texto-manobra" id="nav-texto-manobra">Siga em frente</div>
+            <div class="rua-proxima" id="nav-rua-proxima">—</div>
+        </div>
+    </div>
+</div>
+
+<div id="painel-navegacao-inferior">
+    <div class="linha-entrega">
+        <div class="badge-parada-nav" id="nav-badge-parada">1</div>
+        <div class="entrega-info">
+            <p class="entrega-codigo" id="nav-entrega-codigo">—</p>
+            <p class="entrega-end" id="nav-entrega-end">—</p>
+        </div>
+    </div>
+    <div class="stats-row">
+        <div class="stat-bloco"><span>🕐</span><span id="nav-tempo-restante">-- min</span></div>
+        <div class="stat-separador"></div>
+        <div class="stat-bloco"><span>📏</span><span id="nav-distancia-restante">-- km</span></div>
+        <div class="stat-separador"></div>
+        <div class="stat-bloco"><span>📍</span><span id="nav-paradas-restantes">0 restantes</span></div>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <button class="btn-sheet-action destaque" style="flex: 2;" data-action="cheguei-bipar" type="button">✅ Cheguei / Bipar</button>
+        <button class="btn-sheet-action" style="flex: 1; background: var(--cor-vermelho); color: white; border: none;" data-action="falhou-nav" type="button">❌ Falhou</button>
+    </div>
+</div>
+
+<div class="botoes-navegacao-flutuantes">
+    <button class="btn-nav-flutuante" data-action="alternar-voz" title="Voz" id="btnAlternarVoz">🔊</button>
+    <button class="btn-nav-flutuante sair" data-action="sair-navegacao" title="Sair" id="btnSairNavegacao">✕</button>
+</div>
+
+<div id="overlay-recalculando">
+    <div class="pulse-recalc"></div>
+    <span>Recalculando rota...</span>
+</div>
+
+<div id="modal-chegada-confirm">
+    <h3 id="chegada-titulo">📍 Você chegou!</h3>
+    <p id="chegada-msg">Confirme a entrega</p>
+    <div class="botoes">
+        <button class="btn-bipar" data-action="bipar-avancar" type="button">📦 Bipar</button>
+        <button class="btn-falhou" data-action="falhar-avancar" type="button">❌ Falhou</button>
+    </div>
+    <div class="botoes">
+        <button class="btn-depois" data-action="lembrar-depois" type="button">⏰ Lembrar depois</button>
+    </div>
+</div>
+
+<!-- VOZ BANNER -->
+<div class="voice-banner" id="voice-banner">🔊 <span id="voice-banner-txt">Parada 1 confirmada</span></div>
+
+<!-- CARD DETALHES DA PARADA -->
+<div id="modalCardParada">
+    <div class="card-parada-detalhes">
+        <div class="card-drag-handle" data-action="fechar-card-parada"></div>
+        <button id="btnFecharCardParada" class="card-fechar" data-action="fechar-card-parada" type="button">✕</button>
+        <h2 class="card-titulo-endereco" id="cardParadaTitulo">Endereço</h2>
+        <div class="card-status-linha">
+            <span class="card-status-dot"></span>
+            <span id="cardParadaStatusTexto">1/1 · --:--</span>
+        </div>
+        <div class="card-botoes-acao">
+            <button class="card-btn card-btn-navegar" data-action="card-navegar" type="button">
+                <span class="card-btn-icone">🧭</span>
+                <span class="card-btn-texto">Navegar</span>
+            </button>
+            <button class="card-btn card-btn-nao-entregue" data-action="card-nao-entregue" type="button">
+                <span class="card-btn-icone">📦❌</span>
+                <span class="card-btn-texto">Não entregue</span>
+            </button>
+            <button class="card-btn card-btn-entregue" data-action="card-entregue" type="button">
+                <span class="card-btn-icone">📦✅</span>
+                <span class="card-btn-texto">Entregue</span>
+            </button>
+        </div>
+        <div class="card-info-linhas">
+            <div class="card-info-linha">
+                <span class="card-info-icone">📄</span>
+                <div class="card-info-texto">
+                    <div class="card-info-valor" id="cardInfoCodigoTxt">—</div>
+                    <small id="cardInfoCidadeCEP">—</small>
+                </div>
+                <span class="card-info-chevron">›</span>
+            </div>
+            <div class="card-info-linha">
+                <span class="card-info-icone">🗺️</span>
+                <div class="card-info-texto" id="cardInfoCidadeTxt">—</div>
+                <span class="card-info-chevron">›</span>
+            </div>
+            <div class="card-info-linha">
+                <span class="card-info-label">ID</span>
+                <div class="card-info-valor" id="cardInfoID">—</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONFIGURAR ROTA -->
+<div id="modalConfigRota" class="modal-overlay">
+    <div class="modal-body">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0; font-size:19px; font-weight:800; color: var(--texto-principal);">⚙️ Configurar Rota</h3>
+            <button data-action="fechar-config" type="button" style="background: var(--bg-input); color: var(--texto-principal); border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer;">✕</button>
+        </div>
+        <div class="config-section-title">🔒 Fixar Extremos</div>
+        <div class="config-switch-row">
+            <div>
+                <div class="config-box-title">Fixar 1ª e última parada</div>
+                <div class="config-box-desc">Mantém a 1ª e a última fixas na reotimização.</div>
+            </div>
+            <label class="switch"><input type="checkbox" id="cfgFixarExtremos"><span class="slider"></span></label>
+        </div>
+        <div class="config-divisor"></div>
+        <div class="config-section-title">📍 Ponto de Saída</div>
+        <div class="config-section-desc">De onde você vai começar?</div>
+        <div class="config-opcao-box ativo" data-action="cfg-saida-gps" id="boxSaidaGps">
+            <div class="config-box-icon">🛰️</div>
+            <div class="config-box-info">
+                <div class="config-box-title">Minha localização GPS atual</div>
+                <div class="config-box-desc">Usa o GPS do celular como partida.</div>
+            </div>
+            <div class="config-box-radio"></div>
+        </div>
+        <div class="config-opcao-box" data-action="cfg-saida-primeira" id="boxSaidaPrimeira">
+            <div class="config-box-icon">📍</div>
+            <div class="config-box-info">
+                <div class="config-box-title">Primeira parada da lista</div>
+                <div class="config-box-desc">Começa direto no primeiro endereço.</div>
+            </div>
+            <div class="config-box-radio"></div>
+        </div>
+        <button class="home-btn-principal" data-action="salvar-config" style="margin-top:16px;">Salvar Configurações</button>
+    </div>
+</div>
+
+<!-- MODAL SCANNER -->
+<div id="modalScanner">
+    <div class="scanner-header">
+        <div class="scanner-header-badge" id="scanner-status-badge">Pronto para escanear</div>
+        <button class="scanner-btn-close" data-action="fechar-scanner">✕</button>
+    </div>
+    <div class="scanner-viewport-container">
+        <div id="reader"></div>
+        <div class="scanner-instruction">Aponte para o código de barras ou QR Code do pacote</div>
+        <div id="scanner-bip-toast">📦 Parada Bipada!</div>
+    </div>
+    <div class="scanner-stats-bar">
+        <div class="scanner-stat-card" data-action="codigo-manual">
+            <div class="scanner-stat-num" id="scanner-total-lidos">0</div>
+            <div class="scanner-stat-label">Lidos nesta sessão (Toque para manual)</div>
+        </div>
+    </div>
+</div>
+
+<!-- DEBUG OVERLAY -->
+<div id="debug-overlay">
+    <div id="debug-header">
+        <div id="debug-title">🛠️ Painel de Diagnóstico (Debug)</div>
+        <div id="debug-meta" id="debugMetaInfo">Status: Inicializado | Paradas: 0</div>
+        <div id="debug-controls">
+            <button data-action="debug-filtrar" data-level="ALL" class="ativo">Todos</button>
+            <button data-action="debug-filtrar" data-level="INFO">Info</button>
+            <button data-action="debug-filtrar" data-level="WARN">Warn</button>
+            <button data-action="debug-filtrar" data-level="ERROR">Error</button>
+            <button data-action="debug-limpar">Limpar</button>
+            <button class="fechar" data-action="fechar-debug">Fechar</button>
+        </div>
+    </div>
+    <div id="debug-list"></div>
+</div>
+
 <script>
-let map;
-let markerUsuario = null;
-let watchId = null;
-let paradas = [];
+/* ==========================================================
+   ROTA+RÁPIDA V4 - SISTEMA DE ROTEIRIZAÇÃO E NAVEGAÇÃO GPS
+   ========================================================== */
+const AppV4 = {
+    state: {
+        paradas: [],
+        historico: [],
+        config: {
+            fixarExtremos: false,
+            pontoSaida: 'gps', // 'gps' ou 'primeira'
+            vozAtivada: true,
+            tema: 'dark'
+        },
+        rotaAtivaId: null,
+        indiceAtual: 0,
+        modoNavegacao: false,
+        gpsUser: { lat: -23.5505, lng: -46.6333 },
+        lidosSessao: 0,
+        filtroDebug: 'ALL',
+        logs: []
+    },
 
-document.addEventListener("DOMContentLoaded", () => {
-    inicializarMapa();
+    init() {
+        this.log('INFO', 'Inicializando Rota+Rápida V4...');
+        this.carregarDadosStorage();
+        this.initMapa();
+        this.initEventos();
+        this.atualizarInterface();
+        this.iniciarGpsWatch();
+    },
+
+    log(level, msg, ctx = '') {
+        const entry = { ts: new Date().toLocaleTimeString(), level, msg, ctx };
+        this.state.logs.unshift(entry);
+        console.log(`[${entry.ts}] [${level}] ${msg} ${ctx ? '('+ctx+')' : ''}`);
+        this.renderDebug();
+    },
+
+    renderDebug() {
+        const list = document.getElementById('debug-list');
+        if (!list) return;
+        const filtro = document.getElementById('debug-overlay').dataset.filtro || 'ALL';
+        list.innerHTML = this.state.logs
+            .filter(l => filtro === 'ALL' || l.level === filtro)
+            .map(l => `<div class="debug-entry level-${l.level}"><span class="ts">${l.ts}</span><span class="lvl">[${l.level}]</span>${l.msg}${l.ctx ? '<span class="ctx">'+l.ctx+'</span>' : ''}</div>`)
+            .join('');
+    },
+
+    salvarStorage(statusStr = 'Salvo') {
+        const badge = document.getElementById('save-badge');
+        const badgeTxt = document.getElementById('save-badge-txt');
+        badge.classList.add('saving');
+        badgeTxt.textContent = 'Salvando...';
+
+        try {
+            localStorage.setItem('rota_rapida_v4_state', JSON.stringify({
+                paradas: this.state.paradas,
+                historico: this.state.historico,
+                config: this.state.config
+            }));
+            setTimeout(() => {
+                badge.classList.remove('saving');
+                badgeTxt.textContent = statusStr;
+            }, 400);
+        } catch(e) {
+            this.log('ERROR', 'Falha ao salvar no localStorage', e.message);
+            badge.classList.remove('saving');
+            badgeTxt.textContent = 'Erro ao salvar';
+        }
+    },
+
+    carregarDadosStorage() {
+        try {
+            const salvo = localStorage.getItem('rota_rapida_v4_state');
+            if (salvo) {
+                const data = JSON.parse(salvo);
+                this.state.paradas = data.paradas || [];
+                this.state.historico = data.historico || [];
+                this.state.config = Object.assign(this.state.config, data.config || {});
+                this.log('INFO', `Dados carregados do storage: ${this.state.paradas.length} paradas.`);
+            }
+        } catch(e) {
+            this.log('ERROR', 'Erro ao carregar dados do storage', e.message);
+        }
+        document.documentElement.setAttribute('data-theme', this.state.config.tema);
+        const txtVoz = document.getElementById('menuVozTxt');
+        if (txtVoz) txtVoz.textContent = `Voz: ${this.state.config.vozAtivada ? 'Ativada' : 'Desativada'}`;
+        const chkFixar = document.getElementById('cfgFixarExtremos');
+        if (chkFixar) chkFixar.checked = this.state.config.fixarExtremos;
+    },
+
+    initMapa() {
+        this.mapa = L.map('mapa', { zoomControl: false }).setView([this.state.gpsUser.lat, this.state.gpsUser.lng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(this.mapa);
+
+        this.markersLayer = L.layerGroup().addTo(this.mapa);
+        this.polyLayer = L.layerGroup().addTo(this.mapa);
+    },
+
+    initEventos() {
+        // Delegação global de cliques baseada em data-action
+        document.addEventListener('click', e => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const action = btn.dataset.action;
+            this.executarAcao(action, btn, e);
+        });
+
+        // Atalho Ctrl+D para debug
+        window.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.key.toLowerCase() === 'd') {
+                e.preventDefault();
+                const dbg = document.getElementById('debug-overlay');
+                dbg.classList.toggle('visible');
+            }
+        });
+
+        // Input de arquivos
+        document.getElementById('inputExcelUnico').addEventListener('change', e => this.processarArquivoExcel(e.target.files[0]));
+        document.getElementById('inputPdfUnico').addEventListener('change', e => this.processarArquivoPdf(e.target.files[0]));
+    },
+
+    executarAcao(action, btn, event) {
+        this.log('DEBUG', `Ação acionada: ${action}`);
+        switch(action) {
+            case 'abrir-menu':
+                document.getElementById('menu-lateral').classList.add('aberto');
+                document.getElementById('menu-lateral-overlay').style.display = 'block';
+                break;
+            case 'fechar-menu':
+                document.getElementById('menu-lateral').classList.remove('aberto');
+                document.getElementById('menu-lateral-overlay').style.display = 'none';
+                break;
+            case 'abrir-tela-inicial':
+                document.getElementById('fluxo-inicial-container').style.display = 'flex';
+                break;
+            case 'fechar-config':
+                document.getElementById('modalConfigRota').style.display = 'none';
+                break;
+            case 'abrir-config':
+                document.getElementById('modalConfigRota').style.display = 'flex';
+                document.getElementById('menu-lateral').classList.remove('aberto');
+                document.getElementById('menu-lateral-overlay').style.display = 'none';
+                break;
+            case 'cfg-saida-gps':
+                this.state.config.pontoSaida = 'gps';
+                document.getElementById('boxSaidaGps').classList.add('ativo');
+                document.getElementById('boxSaidaPrimeira').classList.remove('ativo');
+                break;
+            case 'cfg-saida-primeira':
+                this.state.config.pontoSaida = 'primeira';
+                document.getElementById('boxSaidaPrimeira').classList.add('ativo');
+                document.getElementById('boxSaidaGps').classList.remove('ativo');
+                break;
+            case 'salvar-config':
+                this.state.config.fixarExtremos = document.getElementById('cfgFixarExtremos').checked;
+                document.getElementById('modalConfigRota').style.display = 'none';
+                this.salvarStorage('Configurações salvas');
+                this.falar('Configurações salvas com sucesso');
+                break;
+            case 'alternar-tema':
+                const novoTema = this.state.config.tema === 'dark' ? 'light' : 'dark';
+                this.state.config.tema = novoTema;
+                document.documentElement.setAttribute('data-theme', novoTema);
+                this.salvarStorage('Tema alterado');
+                break;
+            case 'alternar-voz':
+                this.state.config.vozAtivada = !this.state.config.vozAtivada;
+                const txtV = document.getElementById('menuVozTxt');
+                if (txtV) txtV.textContent = `Voz: ${this.state.config.vozAtivada ? 'Ativada' : 'Desativada'}`;
+                this.salvarStorage('Voz alterada');
+                break;
+            case 'input-excel':
+                document.getElementById('inputExcelUnico').click();
+                break;
+            case 'input-pdf':
+                document.getElementById('inputPdfUnico').click();
+                break;
+            case 'abrir-mapa':
+                document.getElementById('fluxo-inicial-container').style.display = 'none';
+                break;
+            case 'abrir-scanner':
+                this.abrirScannerCamera();
+                break;
+            case 'fechar-scanner':
+                this.fecharScannerCamera();
+                break;
+            case 'roteirizar':
+            case 'reotimizar':
+                this.otimizarRota();
+                break;
+            case 'iniciar-navegacao':
+                this.iniciarNavegacaoTurnByTurn();
+                break;
+            case 'sair-navegacao':
+                this.sairNavegacao();
+                break;
+            case 'centralizar-gps':
+                this.mapa.setView([this.state.gpsUser.lat, this.state.gpsUser.lng], 16);
+                break;
+            case 'codigo-manual':
+                const codigo = prompt('Digite o código ou ID do pacote:');
+                if (codigo) this.processarCodigoPacote(codigo.trim());
+                break;
+            case 'abrir-backup':
+                this.abrirBackupModal();
+                break;
+            case 'exportar-direto':
+                this.exportarJson();
+                break;
+            case 'exportar-csv':
+                this.exportarCsv();
+                break;
+            case 'abrir-resumo':
+                alert(`Histórico de entregas: ${this.state.historico.length} concluídas.`);
+                break;
+            case 'nova-rota':
+                if (confirm('Deseja limpar todas as paradas e iniciar uma nova rota?')) {
+                    this.state.paradas = [];
+                    this.salvarStorage('Nova rota iniciada');
+                    this.atualizarInterface();
+                }
+                break;
+            case 'encerrar-rota':
+                if (confirm('Deseja encerrar e salvar esta rota no histórico?')) {
+                    this.state.historico.push({ data: new Date().toISOString(), total: this.state.paradas.length });
+                    this.state.paradas = [];
+                    this.salvarStorage('Rota encerrada');
+                    this.atualizarInterface();
+                    document.getElementById('fluxo-inicial-container').style.display = 'flex';
+                }
+                break;
+            case 'fechar-card-parada':
+                document.getElementById('modalCardParada').style.display = 'none';
+                break;
+            case 'card-entregue':
+                this.marcarParadaStatus(this.state.indiceCardAtivo, 'entregue');
+                document.getElementById('modalCardParada').style.display = 'none';
+                break;
+            case 'card-nao-entregue':
+                this.marcarParadaStatus(this.state.indiceCardAtivo, 'falhou');
+                document.getElementById('modalCardParada').style.display = 'none';
+                break;
+            case 'card-navegar':
+                document.getElementById('modalCardParada').style.display = 'none';
+                this.iniciarNavegacaoTurnByTurn();
+                break;
+            case 'cheguei-bipar':
+                document.getElementById('modal-chegada-confirm').style.display = 'block';
+                break;
+            case 'bipar-avancar':
+                document.getElementById('modal-chegada-confirm').style.display = 'none';
+                this.marcarParadaStatus(this.state.indiceAtual, 'entregue');
+                this.state.indiceAtual = Math.min(this.state.indiceAtual + 1, this.state.paradas.length - 1);
+                this.atualizarInterface();
+                break;
+            case 'falhar-avancar':
+                document.getElementById('modal-chegada-confirm').style.display = 'none';
+                this.marcarParadaStatus(this.state.indiceAtual, 'falhou');
+                this.state.indiceAtual = Math.min(this.state.indiceAtual + 1, this.state.paradas.length - 1);
+                this.atualizarInterface();
+                break;
+            case 'lembrar-depois':
+                document.getElementById('modal-chegada-confirm').style.display = 'none';
+                break;
+            case 'debug-filtrar':
+                document.querySelectorAll('#debug-controls button[data-level]').forEach(b => b.classList.remove('ativo'));
+                btn.classList.add('ativo');
+                document.getElementById('debug-overlay').dataset.filtro = btn.dataset.level;
+                this.renderDebug();
+                break;
+            case 'debug-limpar':
+                this.state.logs = [];
+                this.renderDebug();
+                break;
+            case 'fechar-debug':
+                document.getElementById('debug-overlay').classList.remove('visible');
+                break;
+        }
+    },
+
+    falar(texto) {
+        if (!this.state.config.vozAtivada || !('speechSynthesis' in window)) return;
+        try {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(texto);
+            utterance.lang = 'pt-BR';
+            utterance.rate = 1.0;
+            window.speechSynthesis.speak(utterance);
+            
+            const banner = document.getElementById('voice-banner');
+            const bannerTxt = document.getElementById('voice-banner-txt');
+            if (banner && bannerTxt) {
+                bannerTxt.textContent = texto;
+                banner.style.display = 'block';
+                setTimeout(() => { banner.style.display = 'none'; }, 3000);
+            }
+        } catch(e) {
+            this.log('ERROR', 'Erro ao sintetizar voz', e.message);
+        }
+    },
+
+    iniciarGpsWatch() {
+        if ('geolocation' in navigator) {
+            navigator.geolocation.watchPosition(pos => {
+                this.state.gpsUser.lat = pos.coords.latitude;
+                this.state.gpsUser.lng = pos.coords.longitude;
+                this.atualizarMarcadorUsuario();
+            }, err => {
+                this.log('WARN', 'Erro ao obter GPS', err.message);
+            }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
+        }
+    },
+
+    atualizarMarcadorUsuario() {
+        if (!this.userMarker) {
+            const el = document.createElement('div');
+            el.className = 'marker-user-location';
+            const icon = L.divIcon({ html: el, className: '', iconSize: [20, 20], iconAnchor: [10, 10] });
+            this.userMarker = L.marker([this.state.gpsUser.lat, this.state.gpsUser.lng], { icon }).addTo(this.mapa);
+        } else {
+            this.userMarker.setLatLng([this.state.gpsUser.lat, this.state.gpsUser.lng]);
+        }
+    },
+
+    processarArquivoExcel(file) {
+        if (!file) return;
+        this.log('INFO', `Processando Excel/CSV: ${file.name}`);
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.SheetNames[0];
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet]);
+                
+                this.carregarParadasDeJson(json);
+            } catch(ex) {
+                this.log('ERROR', 'Erro ao ler arquivo Excel', ex.message);
+                alert('Erro ao processar arquivo Excel.');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    },
+
+    processarArquivoPdf(file) {
+        if (!file) return;
+        this.log('INFO', `Processando PDF: ${file.name}`);
+        const reader = new FileReader();
+        reader.onload = async e => {
+            try {
+                const typedarray = new Uint8Array(e.target.result);
+                const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                let textoCompleto = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    textoCompleto += textContent.items.map(item => item.str).join(' ') + '\n';
+                }
+                // Exemplo simples de extração de endereços do PDF
+                const linhas = textoCompleto.split('\n').filter(l => l.trim().length > 5);
+                const novasParadas = linhas.map((rua, idx) => ({
+                    id: 'PDF-' + (idx + 1),
+                    codigo: 'PC-' + (1000 + idx),
+                    rua: rua.trim(),
+                    lat: this.state.gpsUser.lat + (Math.random() - 0.5) * 0.05,
+                    lng: this.state.gpsUser.lng + (Math.random() - 0.5) * 0.05,
+                    status: 'pendente'
+                }));
+                this.state.paradas = novasParadas;
+                this.salvarStorage('PDF carregado');
+                this.atualizarInterface();
+                alert(`${novasParadas.length} paradas carregadas do PDF!`);
+            } catch(ex) {
+                this.log('ERROR', 'Erro ao ler PDF', ex.message);
+                alert('Erro ao processar PDF.');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    },
+
+    carregarParadasDeJson(json) {
+        const paradas = json.map((item, idx) => ({
+            id: String(item.ID || item.id || idx + 1),
+            codigo: String(item.Codigo || item.codigo || item.BARCODE || 'PC-' + (1000 + idx)),
+            rua: String(item.Rua || item.Endereco || item.address || 'Endereço ' + (idx + 1)),
+            cidade: String(item.Cidade || item.cidade || 'São Paulo'),
+            cep: String(item.CEP || item.cep || ''),
+            lat: parseFloat(item.Lat || item.lat) || (this.state.gpsUser.lat + (Math.random() - 0.5) * 0.04),
+            lng: parseFloat(item.Lng || item.lng) || (this.state.gpsUser.lng + (Math.random() - 0.5) * 0.04),
+            status: 'pendente'
+        }));
+        this.state.paradas = paradas;
+        this.salvarStorage('Rota carregada');
+        this.atualizarInterface();
+        document.getElementById('fluxo-inicial-container').style.display = 'none';
+        this.falar(`Rota carregada com ${paradas.length} paradas.`);
+    },
+
+    otimizarRota() {
+        if (this.state.paradas.length === 0) {
+            alert('Nenhuma parada para otimizar.');
+            return;
+        }
+        this.log('INFO', 'Otimizando rota...');
+        // Algoritmo guloso simples (Nearest Neighbor)
+        let naoVisitadas = [...this.state.paradas];
+        let atual = this.state.config.pontoSaida === 'gps' ? { lat: this.state.gpsUser.lat, lng: this.state.gpsUser.lng } : naoVisitadas.shift();
+        if (this.state.config.pontoSaida === 'primeira' && naoVisitadas.length > 0) {
+            // Mantém a primeira
+        }
+
+        const otimizadas = [];
+        if (this.state.config.pontoSaida === 'primeira' && this.state.paradas.length > 0) {
+            otimizadas.push(this.state.paradas[0]);
+            naoVisitadas = this.state.paradas.slice(1);
+            atual = otimizadas[0];
+        }
+
+        while (naoVisitadas.length > 0) {
+            let maisProximaIdx = 0;
+            let menorDist = Infinity;
+            naoVisitadas.forEach((p, idx) => {
+                const dist = Math.hypot(p.lat - atual.lat, p.lng - atual.lng);
+                if (dist < menorDist) {
+                    menorDist = dist;
+                    maisProximaIdx = idx;
+                }
+            });
+            const proxima = naoVisitadas.splice(maisProximaIdx, 1)[0];
+            otimizadas.push(proxima);
+            atual = proxima;
+        }
+
+        this.state.paradas = otimizadas;
+        this.salvarStorage('Rota otimizada');
+        this.atualizarInterface();
+        this.falar('Rota reotimizada com sucesso.');
+    },
+
+    atualizarInterface() {
+        const total = this.state.paradas.length;
+        const restantes = this.state.paradas.filter(p => p.status === 'pendente').length;
+
+        document.getElementById('contador-restantes').textContent = restantes;
+        document.getElementById('nav-paradas-restantes').textContent = `${restantes} restantes`;
+        
+        const statusTxt = document.getElementById('home-status-texto');
+        if (statusTxt) statusTxt.textContent = total > 0 ? `${total} paradas carregadas (${restantes} restantes)` : 'Nenhuma rota carregada';
+
+        const btnNavHome = document.getElementById('btnIniciarNavegacaoHome');
+        const btnNavSheet = document.getElementById('btnIniciarNavegacaoSheet');
+        const btnMenuNavTxt = document.getElementById('menuItemNavegacaoTxt');
+        if (total > 0) {
+            if (btnNavHome) btnNavHome.style.display = 'block';
+            if (btnNavSheet) btnNavSheet.style.display = 'flex';
+            if (btnMenuNavTxt) btnMenuNavTxt.textContent = 'Iniciar Navegação GPS';
+        }
+
+        this.renderListaParadas();
+        this.renderMapaMarkers();
+    },
+
+    renderListaParadas() {
+        const container = document.getElementById('lista-paradas');
+        if (!container) return;
+
+        if (this.state.paradas.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding: 30px; color: var(--texto-secundario);">Nenhuma parada na rota. Carregue um arquivo ou use o scanner.</div>';
+            return;
+        }
+
+        container.innerHTML = this.state.paradas.map((p, idx) => `
+            <div class="card-parada" data-idx="${idx}">
+                <button class="badge-numero-parada ${p.status}" data-action="abrir-card" data-idx="${idx}">${idx + 1}</button>
+                <div class="parada-info" data-action="abrir-card" data-idx="${idx}">
+                    <div class="parada-codigo">${p.codigo}</div>
+                    <p class="parada-rua">${p.rua}</p>
+                </div>
+                <div class="parada-acoes">
+                    <button class="btn-icon-acao" data-action="marcar-entregue" data-idx="${idx}">✅</button>
+                    <button class="btn-icon-acao delete" data-action="remover-parada" data-idx="${idx}">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+
+        // Adicionar eventos nos cards recém-criados
+        container.querySelectorAll('[data-action="abrir-card"]').forEach(el => {
+            el.onclick = () => this.abrirCardDetalhes(parseInt(el.dataset.idx));
+        });
+        container.querySelectorAll('[data-action="marcar-entregue"]').forEach(el => {
+            el.onclick = () => this.marcarParadaStatus(parseInt(el.dataset.idx), 'entregue');
+        });
+        container.querySelectorAll('[data-action="remover-parada"]').forEach(el => {
+            el.onclick = () => this.removerParada(parseInt(el.dataset.idx));
+        });
+    },
+
+    renderMapaMarkers() {
+        this.markersLayer.clearLayers();
+        this.polyLayer.clearLayers();
+
+        const latLngs = [];
+        this.state.paradas.forEach((p, idx) => {
+            latLngs.push([p.lat, p.lng]);
+            const corBg = p.status === 'entregue' ? '#10b981' : (p.status === 'falhou' ? '#ef4444' : '#ff5722');
+            const el = document.createElement('div');
+            el.className = 'marker-pin-custom';
+            el.style.background = corBg;
+            el.textContent = idx + 1;
+
+            const icon = L.divIcon({ html: el, className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
+            const marker = L.marker([p.lat, p.lng], { icon }).addTo(this.markersLayer);
+            marker.on('click', () => this.abrirCardDetalhes(idx));
+        });
+
+        if (latLngs.length > 1) {
+            const polyline = L.polyline(latLngs, { color: '#ff5722', weight: 4, opacity: 0.8 }).addTo(this.polyLayer);
+            this.mapa.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+        } else if (latLngs.length === 1) {
+            this.mapa.setView(latLngs[0], 15);
+        }
+    },
+
+    abrirCardDetalhes(idx) {
+        const p = this.state.paradas[idx];
+        if (!p) return;
+        this.state.indiceCardAtivo = idx;
+
+        document.getElementById('cardParadaTitulo').textContent = p.rua;
+        document.getElementById('cardParadaStatusTexto').textContent = `${idx + 1}/${this.state.paradas.length} · Status: ${p.status}`;
+        document.getElementById('cardInfoCodigoTxt').textContent = p.codigo;
+        document.getElementById('cardInfoCidadeCEP').textContent = `${p.cidade || ''} - CEP: ${p.cep || 'N/A'}`;
+        document.getElementById('cardInfoCidadeTxt').textContent = p.cidade || 'São Paulo';
+        document.getElementById('cardInfoID').textContent = p.id;
+
+        document.getElementById('modalCardParada').style.display = 'flex';
+    },
+
+    marcarParadaStatus(idx, status) {
+        if (!this.state.paradas[idx]) return;
+        this.state.paradas[idx].status = status;
+        this.salvarStorage(`Parada ${idx+1} ${status}`);
+        this.atualizarInterface();
+        this.falar(`Parada ${idx + 1} marcada como ${status === 'entregue' ? 'entregue' : 'não entregue'}`);
+    },
+
+    removerParada(idx) {
+        if (confirm('Deseja remover esta parada?')) {
+            this.state.paradas.splice(idx, 1);
+            this.salvarStorage('Parada removida');
+            this.atualizarInterface();
+        }
+    },
+
+    abrirScannerCamera() {
+        const modal = document.getElementById('modalScanner');
+        modal.style.display = 'flex';
+
+        this.html5QrCode = new Html5Qrcode("reader");
+        this.html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            decodedText => {
+                this.processarCodigoPacote(decodedText);
+            },
+            errorMessage => {}
+        ).catch(err => {
+            this.log('ERROR', 'Erro ao iniciar scanner de câmera', err);
+            alert('Não foi possível acessar a câmera.');
+            this.fecharScannerCamera();
+        });
+    },
+
+    fecharScannerCamera() {
+        if (this.html5QrCode) {
+            this.html5QrCode.stop().then(() => {
+                document.getElementById('modalScanner').style.display = 'none';
+            }).catch(() => {
+                document.getElementById('modalScanner').style.display = 'none';
+            });
+        } else {
+            document.getElementById('modalScanner').style.display = 'none';
+        }
+    },
+
+    processarCodigoPacote(codigo) {
+        this.state.lidosSessao++;
+        document.getElementById('scanner-total-lidos').textContent = this.state.lidosSessao;
+
+        const toast = document.getElementById('scanner-bip-toast');
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 2000);
+
+        this.falar(`Pacote ${codigo} bipado`);
+
+        // Tentar encontrar na lista de paradas
+        const parada = this.state.paradas.find(p => p.codigo === codigo || p.id === codigo);
+        if (parada) {
+            parada.status = 'entregue';
+            this.salvarStorage('Pacote entregue via scanner');
+            this.atualizarInterface();
+        } else {
+            // Adicionar nova parada avulsa se não existir
+            this.state.paradas.push({
+                id: 'SCAN-' + Date.now(),
+                codigo: codigo,
+                rua: 'Endereço escaneado (' + codigo + ')',
+                lat: this.state.gpsUser.lat + (Math.random() - 0.5) * 0.02,
+                lng: this.state.gpsUser.lng + (Math.random() - 0.5) * 0.02,
+                status: 'entregue'
+            });
+            this.salvarStorage('Nova parada escaneada');
+            this.atualizarInterface();
+        }
+    },
+
+    iniciarNavegacaoTurnByTurn() {
+        if (this.state.paradas.length === 0) {
+            alert('Nenhuma rota carregada para navegar.');
+            return;
+        }
+        this.state.modoNavegacao = true;
+        document.body.classList.add('modo-navegacao');
+        document.getElementById('painel-navegacao-topo').style.display = 'block';
+        document.getElementById('painel-navegacao-inferior').style.display = 'block';
+        document.querySelector('.botoes-navegacao-flutuantes').style.display = 'flex';
+
+        this.atualizarPainelNavegacao();
+        this.falar('Navegação iniciada. Siga em frente.');
+    },
+
+    sairNavegacao() {
+        this.state.modoNavegacao = false;
+        document.body.classList.remove('modo-navegacao');
+        document.getElementById('painel-navegacao-topo').style.display = 'none';
+        document.getElementById('painel-navegacao-inferior').style.display = 'none';
+        document.querySelector('.botoes-navegacao-flutuantes').style.display = 'none';
+        this.falar('Navegação encerrada.');
+    },
+
+    atualizarPainelNavegacao() {
+        const parada = this.state.paradas[this.state.indiceAtual] || this.state.paradas[0];
+        if (!parada) return;
+
+        document.getElementById('nav-badge-parada').textContent = this.state.indiceAtual + 1;
+        document.getElementById('nav-entrega-codigo').textContent = parada.codigo;
+        document.getElementById('nav-entrega-end').textContent = parada.rua;
+        document.getElementById('nav-rua-proxima').textContent = parada.rua;
+    },
+
+    abrirBackupModal() {
+        const jsonStr = JSON.stringify({
+            paradas: this.state.paradas,
+            historico: this.state.historico,
+            config: this.state.config
+        }, null, 2);
+        
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rota_backup_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.falar('Backup exportado com sucesso.');
+    },
+
+    exportarJson() {
+        this.abrirBackupModal();
+    },
+
+    exportarCsv() {
+        if (this.state.paradas.length === 0) {
+            alert('Nenhuma parada para exportar.');
+            return;
+        }
+        let csv = 'ID,Codigo,Rua,Cidade,CEP,Status,Lat,Lng\n';
+        this.state.paradas.forEach(p => {
+            csv += `"${p.id}","${p.codigo}","${p.rua}","${p.cidade || ''}","${p.cep || ''}","${p.status}","${p.lat}","${p.lng}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rota_exportada_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.falar('CSV exportado com sucesso.');
+    }
+};
+
+window.addEventListener('DOMContentLoaded', () => {
+    AppV4.init();
 });
-
-function inicializarMapa() {
-    // Inicializa o mapa sem chamar map.locate() para evitar a bolinha azul padrão
-    map = L.map('mapa', { zoomControl: false }).setView([-23.550520, -46.633308], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-
-    iniciarGeolocalizacaoTriangulo();
-}
-
-function iniciarGeolocalizacaoTriangulo() {
-    if ("geolocation" in navigator) {
-        watchId = navigator.geolocation.watchPosition(
-            (position) => {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                const latLng = [lat, lng];
-
-                atualizarMarcadorTriangulo(latLng);
-            },
-            (error) => {
-                console.error("Erro na geolocalização:", error);
-            },
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-        );
-    }
-}
-
-function atualizarMarcadorTriangulo(latLng) {
-    // Criação do icone de triângulo com ancoragem correta e sem camadas duplicadas
-    const iconeTriangulo = L.divIcon({
-        className: 'icone-veiculo',
-        html: '<div class="seta-veiculo"></div>',
-        iconSize: [28, 26],
-        iconAnchor: [14, 18] // Centralizado perfeitamente para evitar desalinhamento
-    });
-
-    if (!markerUsuario) {
-        markerUsuario = L.marker(latLng, { icon: iconeTriangulo }).addTo(map);
-    } else {
-        markerUsuario.setLatLng(latLng);
-    }
-}
-
-function centralizarUsuario() {
-    if (markerUsuario) {
-        map.setView(markerUsuario.getLatLng(), 17);
-    } else {
-        alert("Localização do usuário ainda não obtida.");
-    }
-}
-
-function abrirMenuLateral() {
-    alert("Menu Lateral do AppEgg");
-}
-
-function abrirScanner() {
-    alert("Scanner de códigos ativado.");
-}
-
-function abrirConfigRota() {
-    alert("Configurações de rota.");
-}
-
-function iniciarRotaApp() {
-    document.getElementById("fluxo-inicial-container").style.display = "none";
-}
-
-function alternarTemaApp() {
-    const html = document.documentElement;
-    const atual = html.getAttribute("data-theme");
-    html.setAttribute("data-theme", atual === "dark" ? "light" : "dark");
-}
-
-function toggleBottomSheet() {
-    const sheet = document.getElementById("bottom-sheet");
-    sheet.classList.toggle("recolhido");
-}
-
-function otimizarRota() {
-    alert("Rota otimizada com sucesso!");
-}
-
-function iniciarNavegacaoTurnByTurn() {
-    document.body.classList.add("modo-navegacao");
-    alert("Modo de navegação Turn-by-Turn iniciado.");
-}
 </script>
 </body>
 </html>
-
