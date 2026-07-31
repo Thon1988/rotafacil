@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Rota+Rápida V4 - AppEgg</title>
+<title>Rota+Rápida V4</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
@@ -118,30 +118,16 @@ button, input, select, textarea, h1, h2, h3, p, span, div, label {
     pointer-events: auto;
 }
 .btn-round-top:active { transform: scale(0.94); }
-
-/* MARCADOR DE LOCALIZAÇÃO DO USUÁRIO (BOLINHA PARADO) */
 .marker-user-location {
-    width: 20px; height: 20px; background: #2563eb;
+    width: 20px; height: 20px; background: #2196F3;
     border: 3px solid #fff; border-radius: 50%;
-    box-shadow: 0 0 12px rgba(37, 99, 235, 0.9);
+    box-shadow: 0 0 12px rgba(33, 150, 243, 0.9);
     animation: pulsarGps 2s infinite;
 }
 @keyframes pulsarGps {
-    0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); }
-    70% { box-shadow: 0 0 0 14px rgba(37, 99, 235, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
-}
-
-/* MARCADOR DE NAVEGAÇÃO (TRIÂNGULO EM ROTA) */
-.icone-veiculo { position: relative; }
-.seta-veiculo {
-    width: 0; height: 0;
-    border-left: 12px solid transparent;
-    border-right: 12px solid transparent;
-    border-bottom: 24px solid #2563eb;
-    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.6));
-    transform-origin: center 70%;
-    transition: transform 0.4s ease;
+    0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7); }
+    70% { box-shadow: 0 0 0 14px rgba(33, 150, 243, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
 }
 
 #fluxo-inicial-container {
@@ -354,18 +340,10 @@ button, input, select, textarea, h1, h2, h3, p, span, div, label {
 .card-info-texto { flex: 1; font-size: 13px; color: var(--texto-principal); line-height: 1.4; }
 .card-info-texto small { display: block; font-size: 11px; color: var(--texto-secundario); margin-top: 2px; }
 .card-info-chevron { color: var(--texto-secundario); font-size: 22px; font-weight: 400; }
-
-/* WIDGET DE AGRUPAMENTO */
-#widget-agrupado {
-    position: absolute; top: 75px; left: 16px; right: 16px;
-    background: var(--bg-card); border-radius: 16px; padding: 14px;
-    z-index: 1500;
-    border: 1px solid var(--cor-laranja);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-    display: none;
-}
-.carrossel-controles { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-.btn-carrossel { background: var(--cor-laranja); border: none; color: white; border-radius: 8px; padding: 6px 12px; font-weight: bold; cursor: pointer; }
+.card-info-label { font-size: 11px; color: var(--texto-secundario); font-weight: 700; text-transform: uppercase; min-width: 30px; }
+.card-info-valor { font-size: 13px; color: var(--texto-principal); }
+.card-info-valor strong { font-size: 15px; color: var(--texto-principal); margin-right: 6px; }
+.card-info-valor em { font-style: normal; color: var(--texto-secundario); font-weight: 600; }
 
 /* MODAL OVERLAY PADRÃO */
 .modal-overlay {
@@ -383,89 +361,10 @@ button, input, select, textarea, h1, h2, h3, p, span, div, label {
     max-height: 85vh; overflow-y: auto;
     border: 1px solid var(--border-color);
 }
-.modal-body.largo { max-width: 580px; }
-.input-dark {
-    width: 100%; padding: 12px;
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    color: var(--texto-principal);
-    border-radius: 8px;
-    margin: 10px 0 15px 0;
-    font-size: 14px;
-}
-
-/* SCANNER */
-#modalScanner { background: #000000; position: fixed; inset: 0; z-index: 9999999; display: none; flex-direction: column; align-items: center; }
-.scanner-header { width: 100%; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; z-index: 10; }
-.scanner-header-badge { background: var(--cor-laranja); color: white; font-weight: 800; padding: 8px 16px; border-radius: 20px; font-size: 14px; }
-.scanner-btn-close { background: rgba(255,255,255,0.2); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; }
-.scanner-viewport-container { position: relative; width: 100%; max-width: 450px; flex: 1; }
-#reader { width: 100% !important; border: none !important; position: absolute !important; inset: 0; z-index: 1; }
-#reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
-.scanner-instruction {
-    color: #ffffff; font-size: 16px; font-weight: 700; text-align: center;
-    margin-top: 180px; z-index: 10; position: relative;
-    text-shadow: 0 2px 6px rgba(0,0,0,0.9);
-    padding: 0 20px;
-}
-
-/* NAVEGAÇÃO TURN-BY-TURN */
-#painel-navegacao-topo {
-    position: fixed; top: 0; left: 0; right: 0;
-    z-index: 8000; background: var(--cor-azul); color: white;
-    padding: 14px 16px 16px 16px; display: none;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-}
-#painel-navegacao-topo .topo-linha { display: flex; align-items: center; gap: 14px; }
-#painel-navegacao-topo .icone-manobra {
-    font-size: 38px; width: 56px; height: 56px;
-    background: white; color: var(--cor-azul);
-    border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-}
-#painel-navegacao-inferior {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    z-index: 8000;
-    background: var(--bg-card);
-    border-top: 1px solid var(--border-color);
-    padding: 14px 16px 18px 16px; display: none;
-    box-shadow: 0 -6px 20px rgba(0,0,0,0.4);
-}
-.botoes-navegacao-flutuantes {
-    position: fixed; right: 14px; bottom: 230px;
-    z-index: 8500; display: none; flex-direction: column; gap: 10px;
-}
-.btn-nav-flutuante {
-    width: 50px; height: 50px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; color: var(--texto-principal);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-    cursor: pointer;
-}
-.btn-nav-flutuante.sair { background: var(--cor-vermelho); color: white; border: none; }
-#overlay-recalculando {
-    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
-    z-index: 9000;
-    background: rgba(37, 99, 235, 0.95); color: white;
-    padding: 10px 22px; border-radius: 30px;
-    font-weight: 700; font-size: 14px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
-    display: none; align-items: center; gap: 8px;
-}
-.pulse-recalc { width: 10px; height: 10px; background: white; border-radius: 50%; animation: pulseRecalc 1s infinite ease-in-out; }
-@keyframes pulseRecalc { 0%,100% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 1; } }
-
-body.modo-navegacao #bottom-sheet,
-body.modo-navegacao .top-bar-overlay,
-body.modo-navegacao #widget-agrupado,
-body.modo-navegacao #fluxo-inicial-container { display: none !important; }
 </style>
 </head>
 <body>
+
 <div class="save-badge" id="save-badge">
     <span class="pulse"></span>
     <span id="save-badge-txt">Salvo</span>
@@ -476,13 +375,13 @@ body.modo-navegacao #fluxo-inicial-container { display: none !important; }
     <div class="wizard-header">
         <div class="wizard-user-info">
             <div class="wizard-avatar" id="wizardAvatarLetra">T</div>
-            <h1 class="wizard-greeting">Olá, <span id="wizardNome">Thon</span></h1>
+            <h1 class="wizard-greeting">Olá, <span id="wizardNome">Entregador</span></h1>
         </div>
         <button class="btn-round-top" data-action="abrir-menu" type="button" style="width: 38px; height: 38px; font-size: 16px;">☰</button>
     </div>
     <div class="home-logo-box">
-        <div class="home-logo-circle">🥚</div>
-        <h2 class="home-title">AppEgg / Rota+Rápida</h2>
+        <div class="home-logo-circle">🧭</div>
+        <h2 class="home-title">Rota+Rápida</h2>
         <p class="home-subtitle">Bipe, ouça a parada e entregue.</p>
     </div>
     <div class="home-status-badge"><span>🟢</span> <span id="home-status-texto">Nenhuma rota carregada</span></div>
@@ -491,18 +390,10 @@ body.modo-navegacao #fluxo-inicial-container { display: none !important; }
             <div class="home-card-icon">📊</div>
             <div>
                 <p class="home-card-title">Carregar Rota</p>
-                <p class="home-card-desc" id="desc-rota-excel">Excel / CSV (Mapa)</p>
+                <p class="home-card-desc">Excel / CSV (Mapa)</p>
             </div>
         </div>
         <input type="file" id="inputExcelUnico" accept=".csv, .xlsx, .xls, .json" style="display:none;">
-        <div class="home-card-acao" data-action="input-pdf">
-            <div class="home-card-icon">📄</div>
-            <div>
-                <p class="home-card-title">Carregar PDF</p>
-                <p class="home-card-desc" id="desc-rota-pdf">Lista de entregas</p>
-            </div>
-        </div>
-        <input type="file" id="inputPdfUnico" accept=".pdf" style="display:none;">
         <div class="home-card-acao" data-action="abrir-mapa">
             <div class="home-card-icon">🗺️</div>
             <div>
@@ -510,35 +401,20 @@ body.modo-navegacao #fluxo-inicial-container { display: none !important; }
                 <p class="home-card-desc">Ver pontos</p>
             </div>
         </div>
-        <div class="home-card-acao" data-action="abrir-menu">
-            <div class="home-card-icon">📋</div>
-            <div>
-                <p class="home-card-title">Menu</p>
-                <p class="home-card-desc">Mais opções</p>
-            </div>
-        </div>
     </div>
     <button class="home-btn-principal" data-action="abrir-scanner">📦 Abrir Scanner</button>
-    <button class="home-btn-principal secundario" data-action="iniciar-navegacao" id="btnIniciarNavegacaoHome" style="display:none;">🛰️ Iniciar Navegação GPS</button>
 </div>
 
 <!-- MENU LATERAL -->
 <div id="menu-lateral-overlay"></div>
 <div id="menu-lateral">
     <div class="menu-header">
-        <span>AppEgg / Rota+Rápida</span>
-        <button data-action="fechar-menu" type="button" style="background: var(--bg-input); color: var(--texto-principal); border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer;">✕</button>
+        <span>Rota+Rápida</span>
+        <button data-action="fechar-menu" type="button" style="background: var(--bg-input); color: var(--texto-principal); border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">✕</button>
     </div>
-    <div class="menu-item" data-action="abrir-tela-inicial">🏠 Tela Inicial</div>
-    <div class="menu-item destaque" data-action="iniciar-navegacao">🛰️ Iniciar Navegação GPS</div>
-    <div class="menu-item" data-action="alternar-tema">🌓 Alternar Tema</div>
-    <div class="divisor-menu"></div>
-    <div class="menu-item" data-action="abrir-scanner">📦 Abrir Scanner</div>
-    <div class="menu-item" data-action="codigo-manual">⌨️ Inserir Código Manual</div>
-    <div class="divisor-menu"></div>
-    <div class="menu-item" data-action="roteirizar">⚡ Roteirizar</div>
-    <div class="menu-item" data-action="reotimizar">🔀 Reotimizar</div>
-    <div class="menu-item perigo" data-action="encerrar-rota">🛑 Encerrar e Salvar Rota</div>
+    <div class="menu-item" data-action="abrir-tela-inicial">Tela Inicial</div>
+    <div class="menu-item" data-action="alternar-tema">Alternar Tema</div>
+    <div class="menu-item perigo" data-action="encerrar-rota">Encerrar Rota</div>
 </div>
 
 <!-- MAPA -->
@@ -547,22 +423,7 @@ body.modo-navegacao #fluxo-inicial-container { display: none !important; }
     <div class="top-bar-overlay">
         <button class="btn-round-top" data-action="abrir-menu" type="button">☰</button>
         <button class="btn-round-top" data-action="centralizar-gps" type="button" style="margin-left: auto;">🛰️</button>
-        <button class="btn-round-top" data-action="abrir-tela-inicial" type="button" style="font-size: 16px;">🏠</button>
-    </div>
-</div>
-
-<!-- WIDGET AGRUPAMENTO -->
-<div id="widget-agrupado">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <span style="font-size:12px; color:var(--cor-laranja); font-weight:700;">MÚLTIPLOS PACOTES</span>
-        <span style="font-size: 12px; color: var(--texto-secundario);" id="agrupado-index-txt">Pacote 1 de 2</span>
-    </div>
-    <div style="font-weight: bold; font-size: 15px; color: var(--texto-principal);" id="agrupado-rua">---</div>
-    <div style="font-size: 13px; color: var(--cor-laranja);" id="agrupado-codigo">---</div>
-    <div class="carrossel-controles">
-        <button class="btn-carrossel" data-action="carrossel-ant" type="button">◄ Anterior</button>
-        <span style="flex:1; text-align:center; font-size:12px; color:var(--texto-secundario);">Deslize para trocar</span>
-        <button class="btn-carrossel" data-action="carrossel-prox" type="button">Próximo ►</button>
+        <button class="btn-round-top" data-action="abrir-tela-inicial" type="button">🏠</button>
     </div>
 </div>
 
@@ -572,238 +433,143 @@ body.modo-navegacao #fluxo-inicial-container { display: none !important; }
     <div class="sheet-header">
         <div>
             <h2 class="sheet-title">Paradas</h2>
-            <div id="info-tempo-estimado" style="font-size: 12px; font-weight: 700; color: var(--cor-laranja); margin-top: 2px;">🏁 Término: --:--</div>
         </div>
         <div class="badge-restantes">⚡ <span id="contador-restantes">0</span> restantes</div>
     </div>
     <div class="sheet-actions-row">
-        <button id="btnIniciarNavegacaoSheet" class="btn-sheet-action navegar" data-action="iniciar-navegacao" type="button" style="display:none;">🛰️ Navegar GPS</button>
         <button class="btn-sheet-action destaque" data-action="roteirizar" type="button">⚡ Roteirizar</button>
         <button class="btn-sheet-action" data-action="abrir-scanner" type="button">📦 Scanner</button>
     </div>
     <div id="lista-paradas"></div>
 </div>
 
-<!-- PAINEL DE NAVEGAÇÃO -->
-<div id="painel-navegacao-topo">
-    <div class="topo-linha">
-        <div class="icone-manobra" id="nav-icone-manobra">⬆️</div>
-        <div class="info-manobra">
-            <div class="distancia-manobra" id="nav-distancia-manobra" style="font-size: 20px; font-weight: 800;">250 m</div>
-            <div class="texto-manobra" id="nav-texto-manobra" style="font-size: 15px;">Siga em frente</div>
-            <div class="rua-proxima" id="nav-rua-proxima" style="font-size: 12px; opacity: 0.8;">—</div>
+<!-- CARD DETALHES DA PARADA -->
+<div id="modalCardParada">
+    <div class="card-parada-detalhes">
+        <div class="card-drag-handle" data-action="fechar-card-parada"></div>
+        <button class="card-fechar" data-action="fechar-card-parada" type="button">✕</button>
+        <h2 class="card-titulo-endereco" id="cardParadaTitulo">Endereço</h2>
+        <div class="card-status-linha">
+            <span class="card-status-dot"></span>
+            <span id="cardParadaStatusTexto">1/1 · --:--</span>
         </div>
-    </div>
-</div>
-
-<div id="painel-navegacao-inferior">
-    <div style="display:flex; gap:10px; margin-bottom: 10px; align-items: center;">
-        <div id="nav-badge-parada" style="background:var(--cor-laranja); color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800;">1</div>
-        <div>
-            <div id="nav-entrega-codigo" style="font-weight:700; color:var(--cor-laranja); font-size:13px;">—</div>
-            <div id="nav-entrega-end" style="font-size:13px; color:var(--texto-principal);">—</div>
+        <div class="card-botoes-acao">
+            <button class="card-btn card-btn-navegar" data-action="card-navegar" type="button">
+                <span class="card-btn-icone">🧭</span>
+                <span class="card-btn-texto">Navegar</span>
+            </button>
+            <button class="card-btn card-btn-nao-entregue" data-action="card-nao-entregue" type="button">
+                <span class="card-btn-icone">❌</span>
+                <span class="card-btn-texto">Falha</span>
+            </button>
+            <button class="card-btn card-btn-entregue" data-action="card-entregue" type="button">
+                <span class="card-btn-icone">✅</span>
+                <span class="card-btn-texto">Entregue</span>
+            </button>
         </div>
-    </div>
-    <div style="display:flex; gap:10px;">
-        <button class="btn-sheet-action destaque" style="flex: 2;" data-action="cheguei-bipar" type="button">✅ Cheguei / Bipar</button>
-        <button class="btn-sheet-action" style="flex: 1; background: var(--cor-vermelho); color: white; border: none;" data-action="falhou-nav" type="button">❌ Falhou</button>
-    </div>
-</div>
-
-<div class="botoes-navegacao-flutuantes">
-    <button class="btn-nav-flutuante sair" data-action="sair-navegacao" title="Sair">✕</button>
-</div>
-
-<!-- MODAL SCANNER -->
-<div id="modalScanner">
-    <div class="scanner-header">
-        <div class="scanner-header-badge">Scanner AppEgg</div>
-        <button class="scanner-btn-close" data-action="fechar-scanner">✕</button>
-    </div>
-    <div class="scanner-viewport-container">
-        <div id="reader"></div>
+        <div class="card-info-linhas">
+            <div class="card-info-linha">
+                <span class="card-info-icone">📄</span>
+                <div class="card-info-texto">
+                    <div class="card-info-valor" id="cardInfoCodigoTxt">—</div>
+                    <small id="cardInfoCidadeCEP">—</small>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
-// --- ESTADO GLOBAL DA APLICAÇÃO ---
-let appState = {
-    paradas: [],
-    rotaAtiva: false,
-    modoNav: false,
-    indiceAtual: 0,
-    vozAtivada: true,
-    tema: 'dark'
+// Estado global da aplicação
+let state = {
+    paradas: [
+        { id: 1, codigo: "PKG001", rua: "Av. Paulista, 1000 - São Paulo", status: "pendente", lat: -23.561684, lng: -46.655981 },
+        { id: 2, codigo: "PKG002", rua: "Rua Augusta, 500 - São Paulo", status: "pendente", lat: -23.550520, lng: -46.650400 }
+    ],
+    paradaAtivaIndex: 0
 };
 
-let map, userMarker = null, routePolyline = null;
-let watchId = null;
+let map = L.map('mapa', { zoomControl: false }).setView([-23.550520, -46.650400], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
-// Inicialização
-document.addEventListener('DOMContentLoaded', () => {
-    initMap();
-    setupEventListeners();
-    carregarDadosSalvos();
+function renderizarLista() {
+    const lista = document.getElementById('lista-paradas');
+    lista.innerHTML = '';
+    state.paradas.forEach((p, idx) => {
+        let statusClass = p.status === 'entregue' ? 'entregue' : (p.status === 'falhou' ? 'falhou' : '');
+        let card = document.createElement('div');
+        card.className = 'card-parada';
+        card.innerHTML = `
+            <button class="badge-numero-parada ${statusClass}" data-index="${idx}">${idx + 1}</button>
+            <div class="parada-info" data-index="${idx}">
+                <div class="parada-codigo">${p.codigo}</div>
+                <div class="parada-rua">${p.rua}</div>
+            </div>
+        `;
+        lista.appendChild(card);
+    });
+    document.getElementById('contador-restantes').innerText = state.paradas.filter(p => p.status === 'pendente').length;
+}
+
+// Event delegation para abrir o card ao clicar no número ou nas informações da parada
+document.getElementById('lista-paradas').addEventListener('click', (e) => {
+    let target = e.target.closest('[data-index]');
+    if (!target) return;
+    let idx = parseInt(target.getAttribute('data-index'));
+    abrirCardParada(idx);
 });
 
-function initMap() {
-    // Inicializa o mapa centrado em São Paulo ou posição padrão
-    map = L.map('mapa', { zoomControl: false }).setView([-23.5505, -46.6333], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
-
-    // Iniciar monitoramento de geolocalização SEM camadas duplicadas
-    iniciarGeolocalizacao();
+function abrirCardParada(idx) {
+    state.paradaAtivaIndex = idx;
+    let p = state.paradas[idx];
+    document.getElementById('cardParadaTitulo').innerText = p.rua;
+    document.getElementById('cardInfoCodigoTxt').innerText = p.codigo;
+    document.getElementById('cardParadaStatusTexto').innerText = `Parada ${idx + 1} de ${state.paradas.length} · ${p.status}`;
+    document.getElementById('modalCardParada').style.display = 'flex';
 }
 
-// CORREÇÃO DA LOCALIZAÇÃO E MARCADOR ÚNICO / ÂNCORA
-function iniciarGeolocalizacao() {
-    if ('geolocation' in navigator) {
-        watchId = navigator.geolocation.watchPosition(
-            (position) => {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                const heading = position.coords.heading || 0;
-                const latLng = [lat, lng];
+function fecharCardParada() {
+    document.getElementById('modalCardParada').style.display = 'none';
+}
 
-                atualizarPosicaoUsuarioNoMapa(latLng, heading);
-            },
-            (error) => {
-                console.error("Erro GPS:", error);
-            },
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-        );
+// Ações globais de clique (data-action)
+document.addEventListener('click', (e) => {
+    let btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    let action = btn.getAttribute('data-action');
+
+    if (action === 'abrir-menu') {
+        document.getElementById('menu-lateral').classList.add('aberto');
+        document.getElementById('menu-lateral-overlay').style.display = 'block';
+    } else if (action === 'fechar-menu' || e.target.id === 'menu-lateral-overlay') {
+        document.getElementById('menu-lateral').classList.remove('aberto');
+        document.getElementById('menu-lateral-overlay').style.display = 'none';
+    } else if (action === 'fechar-card-parada') {
+        fecharCardParada();
+    } else if (action === 'card-entregue') {
+        state.paradas[state.paradaAtivaIndex].status = 'entregue';
+        fecharCardParada();
+        renderizarLista();
+    } else if (action === 'card-nao-entregue') {
+        state.paradas[state.paradaAtivaIndex].status = 'falhou';
+        fecharCardParada();
+        renderizarLista();
+    } else if (action === 'card-navegar') {
+        alert("Iniciando navegação para " + state.paradas[state.paradaAtivaIndex].rua);
+        fecharCardParada();
+    } else if (action === 'abrir-tela-inicial') {
+        document.getElementById('fluxo-inicial-container').style.display = 'flex';
+    } else if (action === 'abrir-mapa') {
+        document.getElementById('fluxo-inicial-container').style.display = 'none';
+    } else if (action === 'alternar-tema') {
+        let html = document.documentElement;
+        html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
     }
-}
+});
 
-function atualizarPosicaoUsuarioNoMapa(latLng, heading) {
-    if (!map) return;
-
-    if (appState.modoNav) {
-        // MODO NAVEGAÇÃO: Exibe apenas o Triângulo de Navegação com âncora correta
-        const triangleIcon = L.divIcon({
-            className: 'icone-veiculo',
-            html: `<div class="seta-veiculo" style="transform: rotate(${heading}deg);"></div>`,
-            iconSize: [28, 28],
-            iconAnchor: [14, 20] // Âncora centralizada corretamente para evitar desalinhamento
-        });
-
-        if (!userMarker) {
-            userMarker = L.marker(latLng, { icon: triangleIcon }).addTo(map);
-        } else {
-            userMarker.setIcon(triangleIcon);
-            userMarker.setLatLng(latLng);
-        }
-        map.setView(latLng, 17, { animate: true });
-    } else {
-        // MODO NORMAL / PARADO: Exibe apenas a bolinha azul de localização com âncora correta
-        const dotIcon = L.divIcon({
-            className: '',
-            html: `<div class="marker-user-location"></div>`,
-            iconSize: [20, 20],
-            iconAnchor: [10, 10] // Âncora centralizada no meio da bolinha (20x20 / 2)
-        });
-
-        if (!userMarker) {
-            userMarker = L.marker(latLng, { icon: dotIcon }).addTo(map);
-        } else {
-            userMarker.setIcon(dotIcon);
-            userMarker.setLatLng(latLng);
-        }
-    }
-}
-
-function setupEventListeners() {
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-action]');
-        if (!btn) return;
-        const action = btn.getAttribute('data-action');
-        executarAcao(action);
-    });
-}
-
-function executarAcao(action) {
-    switch(action) {
-        case 'abrir-menu':
-            document.getElementById('menu-lateral').classList.add('aberto');
-            document.getElementById('menu-lateral-overlay').style.display = 'block';
-            break;
-        case 'fechar-menu':
-        case 'abrir-tela-inicial':
-            document.getElementById('menu-lateral').classList.remove('aberto');
-            document.getElementById('menu-lateral-overlay').style.display = 'none';
-            break;
-        case 'iniciar-navegacao':
-            ativarModoNavegacao(true);
-            break;
-        case 'sair-navegacao':
-            ativarModoNavegacao(false);
-            break;
-        case 'abrir-scanner':
-            document.getElementById('modalScanner').style.display = 'flex';
-            break;
-        case 'fechar-scanner':
-            document.getElementById('modalScanner').style.display = 'none';
-            break;
-        case 'alternar-tema':
-            alternarTema();
-            break;
-        case 'centralizar-gps':
-            if (userMarker) map.setView(userMarker.getLatLng(), 16);
-            break;
-    }
-}
-
-function ativarModoNavegacao(ativar) {
-    appState.modoNav = ativar;
-    if (ativar) {
-        document.body.classList.add('modo-navegacao');
-        document.getElementById('painel-navegacao-topo').style.display = 'block';
-        document.getElementById('painel-navegacao-inferior').style.display = 'block';
-        document.querySelector('.botoes-navegacao-flutuantes').style.display = 'flex';
-    } else {
-        document.body.classList.remove('modo-navegacao');
-        document.getElementById('painel-navegacao-topo').style.display = 'none';
-        document.getElementById('painel-navegacao-inferior').style.display = 'none';
-        document.querySelector('.botoes-navegacao-flutuantes').style.display = 'none';
-    }
-}
-
-function alternarTema() {
-    const html = document.documentElement;
-    appState.tema = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    html.setAttribute('data-theme', appState.tema);
-}
-
-function carregarDadosSalvos() {
-    const saved = localStorage.getItem('appegg_dados');
-    if (saved) {
-        try {
-            const data = JSON.parse(saved);
-            appState.paradas = data.paradas || [];
-            atualizarInterface();
-        } catch(e) {}
-    }
-}
-
-function salvarDados() {
-    localStorage.setItem('appegg_dados', JSON.stringify({ paradas: appState.paradas }));
-    const badge = document.getElementById('save-badge');
-    badge.classList.remove('saving');
-    document.getElementById('save-badge-txt').innerText = 'Salvo';
-}
-
-function atualizarInterface() {
-    const restantes = appState.paradas.filter(p => !p.entregue && !p.falhou).length;
-    document.getElementById('contador-restantes').innerText = restantes;
-    if (appState.paradas.length > 0) {
-        document.getElementById('home-status-texto').innerText = `${appState.paradas.length} paradas carregadas`;
-        document.getElementById('btnIniciarNavegacaoHome').style.display = 'block';
-        document.getElementById('btnIniciarNavegacaoSheet').style.display = 'flex';
-    }
-}
+// Inicialização
+renderizarLista();
 </script>
 </body>
 </html>
+
