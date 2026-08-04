@@ -94,6 +94,10 @@
             transform: translateX(0);
         }
 
+        #menu-lateral {
+            gap: 6px;
+        }
+
         .menu-item {
             display: flex;
             align-items: center;
@@ -104,7 +108,6 @@
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            margin-bottom: 2px;
             transition: background 0.2s;
         }
 
@@ -126,7 +129,7 @@
         .divisor-menu {
             height: 1px;
             background: var(--border-color);
-            margin: 8px 0;
+            margin: 2px 0;
         }
 
         /* MAPA */
@@ -165,6 +168,14 @@
         }
 
         /* ESTILO DO MARCADOR DE GPS DO USUÁRIO */
+        .user-marker-wrapper {
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .marker-user-location {
             width: 20px;
             height: 20px;
@@ -175,11 +186,22 @@
             animation: pulsarGps 2s infinite;
         }
 
+        .marker-user-triangle {
+            width: 0;
+            height: 0;
+            border-left: 9px solid transparent;
+            border-right: 9px solid transparent;
+            border-bottom: 18px solid #2196F3;
+            filter: drop-shadow(0 2px 4px rgba(33, 150, 243, 0.8));
+            transition: transform 0.3s ease;
+        }
+
         @keyframes pulsarGps {
             0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7); }
             70% { box-shadow: 0 0 0 14px rgba(33, 150, 243, 0); }
             100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
         }
+
         /* TELA DE FLUXO INICIAL SEPARADA */
         #fluxo-inicial-container {
             position: fixed;
@@ -576,6 +598,11 @@
             overflow-y: auto;
         }
 
+        /* Garante que os modais fiquem sempre acima da tela inicial (z-index: 9999999) */
+        #modalCardParada, #modalConfigRota, #modalEdit, #modalResumo, #modalOtimizacaoEtapas, #modalScanner {
+            z-index: 99999999;
+        }
+
         .input-dark {
             width: 100%;
             padding: 12px;
@@ -959,9 +986,213 @@
             text-align: center;
             white-space: nowrap;
         }
+        /* ===== NAVEGAÇÃO TURN-BY-TURN (modo interno) ===== */
+        body.modo-navegacao #bottom-sheet,
+        body.modo-navegacao .top-bar-overlay,
+        body.modo-navegacao #widget-agrupado {
+            display: none !important;
+        }
+
+        #painel-navegacao-topo {
+            position: fixed; top: 0; left: 0; right: 0;
+            z-index: 8000; background: var(--cor-azul, #2563eb); color: white;
+            padding: 16px 16px 18px 16px; display: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        #painel-navegacao-topo .topo-linha { display: flex; align-items: center; gap: 14px; }
+        .icone-manobra {
+            font-size: 28px; width: 52px; height: 52px;
+            background: rgba(255,255,255,0.18); border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        #painel-navegacao-inferior {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            z-index: 8000; background: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            padding: 14px 16px 20px 16px; display: none;
+            box-shadow: 0 -6px 20px rgba(0,0,0,0.4);
+        }
+
+        .botoes-navegacao-flutuantes {
+            position: fixed; right: 14px; bottom: 110px;
+            z-index: 8500; display: none; flex-direction: column; gap: 10px;
+        }
+        .btn-nav-flutuante {
+            width: 50px; height: 50px; background: var(--bg-card);
+            border: 1px solid var(--border-color); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.4); cursor: pointer;
+        }
+
+        #overlay-recalculando {
+            position: fixed; top: 90px; left: 50%; transform: translateX(-50%);
+            z-index: 9000; background: rgba(37,99,235,0.95); color: white;
+            padding: 10px 22px; border-radius: 30px; font-weight: 700; font-size: 14px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4); display: none; align-items: center; gap: 8px;
+        }
+        .pulse-recalc { width: 10px; height: 10px; background: white; border-radius: 50%; animation: pulseRecalcAnim 1s infinite ease-in-out; }
+        @keyframes pulseRecalcAnim { 0%,100% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 1; } }
+
+        /* SAVE BADGE */
+        .save-badge {
+            position: fixed; top: 8px; right: 16px; z-index: 5000;
+            background: rgba(16,185,129,0.95); color: #fff;
+            font-size: 11px; font-weight: 700;
+            padding: 4px 10px; border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            display: flex; align-items: center; gap: 6px;
+            transition: background 0.3s;
+        }
+        .save-badge.saving { background: rgba(245,158,11,0.95); }
+        .save-badge .pulse { width: 6px; height: 6px; background: #fff; border-radius: 50%; animation: pulseSave 1s infinite; }
+        @keyframes pulseSave { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
     </style>
 </head>
 <body>
+<div class="save-badge" id="save-badge">
+    <span class="pulse"></span>
+    <span id="save-badge-txt">Salvo</span>
+</div>
+
+    <!-- TELA INICIAL SEPARADA -->
+    <div id="fluxo-inicial-container">
+        <div class="wizard-header">
+            <div class="wizard-user-info">
+                <div class="wizard-avatar">T</div>
+                <h1 class="wizard-greeting">Olá, Thon</h1>
+            </div>
+            <button class="btn-round-top" onclick="abrirMenuLateral()" style="width: 38px; height: 38px; font-size: 16px;">☰</button>
+        </div>
+
+        <div class="home-logo-box">
+            <div class="home-logo-circle">🧭</div>
+            <h2 class="home-title">Rota+Rápida</h2>
+            <p class="home-subtitle">Bipe, ouça a parada e entregue.</p>
+        </div>
+
+        <div class="home-status-badge">
+            <span>🟢</span> <span id="home-status-texto">Nenhuma rota carregada</span>
+        </div>
+
+        <div class="home-grid">
+            <!-- Card 1: Carregar Rota (Excel / CSV) -->
+            <div class="home-card-acao" onclick="acionarInputExcelUnico()">
+                <div class="home-card-icon">📊</div>
+                <div>
+                    <p class="home-card-title">Carregar Rota</p>
+                    <p class="home-card-desc" id="desc-rota-excel">Excel / CSV (Mapa)</p>
+                </div>
+            </div>
+            <input type="file" id="inputExcelUnico" accept=".csv, .xlsx, .xls" style="display:none;" onchange="processarExcelRota(this)">
+
+            <!-- Card 2: Carregar PDF -->
+            <div class="home-card-acao" onclick="acionarInputPdfUnico()">
+                <div class="home-card-icon">📄</div>
+                <div>
+                    <p class="home-card-title">Carregar PDF</p>
+                    <p class="home-card-desc" id="desc-rota-pdf">Lista de entregas</p>
+                </div>
+            </div>
+            <input type="file" id="inputPdfUnico" accept=".pdf" style="display:none;" onchange="processarPdfEntregas(this)">
+
+            <!-- Card 3: Mapa -->
+            <div class="home-card-acao" onclick="abrirMapaDaRota()">
+                <div class="home-card-icon">🗺️</div>
+                <div>
+                    <p class="home-card-title">Mapa</p>
+                    <p class="home-card-desc">Ver pontos</p>
+                </div>
+            </div>
+
+            <!-- Card 4: Menu -->
+            <div class="home-card-acao" onclick="abrirMenuLateral()">
+                <div class="home-card-icon">☰</div>
+                <div>
+                    <p class="home-card-title">Menu</p>
+                    <p class="home-card-desc">Mais opções</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botão Laranja Principal: Abrir Scanner -->
+        <button class="home-btn-principal" onclick="abrirScanner()">
+            📦 Abrir Scanner
+        </button>
+
+        <div class="home-footer-tip">
+            💡 <b>Dica:</b> Carregue o mapa via Excel/CSV e o PDF de correspondência independentemente para começar a bipar!
+        </div>
+    </div>/* ===== NAVEGAÇÃO TURN-BY-TURN (modo interno) ===== */
+        body.modo-navegacao #bottom-sheet,
+        body.modo-navegacao .top-bar-overlay,
+        body.modo-navegacao #widget-agrupado {
+            display: none !important;
+        }
+
+        #painel-navegacao-topo {
+            position: fixed; top: 0; left: 0; right: 0;
+            z-index: 8000; background: var(--cor-azul, #2563eb); color: white;
+            padding: 16px 16px 18px 16px; display: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        #painel-navegacao-topo .topo-linha { display: flex; align-items: center; gap: 14px; }
+        .icone-manobra {
+            font-size: 28px; width: 52px; height: 52px;
+            background: rgba(255,255,255,0.18); border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        #painel-navegacao-inferior {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            z-index: 8000; background: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            padding: 14px 16px 20px 16px; display: none;
+            box-shadow: 0 -6px 20px rgba(0,0,0,0.4);
+        }
+
+        .botoes-navegacao-flutuantes {
+            position: fixed; right: 14px; bottom: 110px;
+            z-index: 8500; display: none; flex-direction: column; gap: 10px;
+        }
+        .btn-nav-flutuante {
+            width: 50px; height: 50px; background: var(--bg-card);
+            border: 1px solid var(--border-color); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.4); cursor: pointer;
+        }
+
+        #overlay-recalculando {
+            position: fixed; top: 90px; left: 50%; transform: translateX(-50%);
+            z-index: 9000; background: rgba(37,99,235,0.95); color: white;
+            padding: 10px 22px; border-radius: 30px; font-weight: 700; font-size: 14px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4); display: none; align-items: center; gap: 8px;
+        }
+        .pulse-recalc { width: 10px; height: 10px; background: white; border-radius: 50%; animation: pulseRecalcAnim 1s infinite ease-in-out; }
+        @keyframes pulseRecalcAnim { 0%,100% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 1; } }
+
+        /* SAVE BADGE */
+        .save-badge {
+            position: fixed; top: 8px; right: 16px; z-index: 5000;
+            background: rgba(16,185,129,0.95); color: #fff;
+            font-size: 11px; font-weight: 700;
+            padding: 4px 10px; border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            display: flex; align-items: center; gap: 6px;
+            transition: background 0.3s;
+        }
+        .save-badge.saving { background: rgba(245,158,11,0.95); }
+        .save-badge .pulse { width: 6px; height: 6px; background: #fff; border-radius: 50%; animation: pulseSave 1s infinite; }
+        @keyframes pulseSave { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+    </style>
+</head>
+<body>
+<div class="save-badge" id="save-badge">
+    <span class="pulse"></span>
+    <span id="save-badge-txt">Salvo</span>
+</div>
 
     <!-- TELA INICIAL SEPARADA -->
     <div id="fluxo-inicial-container">
@@ -1032,7 +1263,7 @@
             💡 <b>Dica:</b> Carregue o mapa via Excel/CSV e o PDF de correspondência independentemente para começar a bipar!
         </div>
     </div>
-
+    
     <!-- OVERLAY E MENU LATERAL -->
     <div id="menu-lateral-overlay" onclick="fecharMenuLateral()"></div>
     <div id="menu-lateral">
@@ -1183,6 +1414,7 @@
             </div>
         </div>
     </div>
+
     <!-- MODAL CONFIGURAR ROTA (Circuit) -->
     <div id="modalConfigRota" class="modal-overlay">
         <div class="modal-body">
@@ -1243,26 +1475,43 @@
 
             <div class="config-divisor"></div>
 
-            <!-- Seção Volta ao Início / Casa -->
-            <div class="config-section-title">🔄 Volta ao início / Casa</div>
-            <div class="config-switch-row">
-                <div>
-                    <div class="config-box-title">Voltar para o ponto inicial / Casa no final</div>
-                    <div class="config-box-desc">Inclui a viagem de retorno no cálculo real de tempo e distância</div>
+            <!-- Seção Ponto Final -->
+            <div class="config-section-title">🏁 Ponto final da rota</div>
+            <div class="config-section-desc">Onde a rota deve terminar? Isso também ajuda a otimizar a ordem das paradas.</div>
+
+            <div class="config-opcao-box ativo" id="cfg-final-ultima" onclick="selecionarPontoFinal('ultima')">
+                <div class="config-box-icon">📦</div>
+                <div class="config-box-info">
+                    <div class="config-box-title">Terminar na última parada</div>
+                    <div class="config-box-desc">Não inclui viagem de volta no cálculo</div>
                 </div>
-                <label class="switch">
-                    <input type="checkbox" id="cfgVoltaInicio" onchange="atualizarConfigEstado()">
-                    <span class="slider"></span>
-                </label>
+                <div class="config-box-radio"></div>
             </div>
 
-            <div id="container-input-volta-manual" style="display: none; padding: 0 4px;">
-                <label style="font-size: 11px; color: var(--texto-secundario); font-weight: 600;">Endereço real de volta para casa (opcional):</label>
-                <input type="text" id="cfgEnderecoVoltaInput" class="input-dark" style="margin-top: 4px; margin-bottom: 12px;" placeholder="Ex: Rua Vergueiro, 500 - São Paulo, SP (Vazio usa o ponto de saída)">
+            <div class="config-opcao-box" id="cfg-final-voltar" onclick="selecionarPontoFinal('voltar')">
+                <div class="config-box-icon">🔄</div>
+                <div class="config-box-info">
+                    <div class="config-box-title">Voltar para o ponto de partida</div>
+                    <div class="config-box-desc">Repete o ponto de saída como destino final</div>
+                </div>
+                <div class="config-box-radio"></div>
+            </div>
+
+            <div class="config-opcao-box" id="cfg-final-endereco" onclick="selecionarPontoFinal('endereco')">
+                <div class="config-box-icon">🏠</div>
+                <div class="config-box-info">
+                    <div class="config-box-title">Terminar em outro endereço</div>
+                    <div class="config-box-desc">Ex: sua casa, base, outro ponto real</div>
+                </div>
+                <div class="config-box-radio"></div>
+            </div>
+
+            <div id="container-input-final-endereco" style="display: none; padding: 0 4px;">
+                <input type="text" id="cfgEnderecoFinalInput" class="input-dark" style="margin-top: 0; margin-bottom: 4px;" placeholder="Ex: Rua Vergueiro, 500 - São Paulo, SP" onblur="verificarEnderecoFinal()">
+                <div id="cfgEnderecoFinalStatus" style="font-size: 11px; margin-bottom: 12px; min-height: 14px;"></div>
             </div>
 
             <div class="config-divisor"></div>
-
             <!-- Seção Tempo por Parada -->
             <div class="config-section-title">⏱️ Tempo por parada</div>
             <div class="config-section-desc">Quanto tempo você leva em média em cada entrega? Isso ajuda a estimar quando você termina.</div>
@@ -1402,7 +1651,43 @@
                 <div id="barraProgressoEtapa" style="width: 0%; background: var(--cor-laranja); height: 100%; transition: width 0.4s ease;"></div>
             </div>
         </div>
-                    </div>
+    </div>
+
+    <!-- PAINEL DE NAVEGAÇÃO TURN-BY-TURN -->
+    <div id="painel-navegacao-topo">
+        <div class="topo-linha">
+            <div class="icone-manobra" id="nav-icone-manobra">⬆️</div>
+            <div style="flex:1; min-width:0;">
+                <div id="nav-instrucao-principal" style="font-size:17px; font-weight:800;">Calculando rota...</div>
+                <div id="nav-instrucao-rua" style="font-size:12px; opacity:0.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">--</div>
+            </div>
+            <div id="nav-distancia-proxima" style="font-size:16px; font-weight:800; text-align:right; flex-shrink:0;">--</div>
+        </div>
+    </div>
+
+    <div id="painel-navegacao-inferior">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap: 10px;">
+            <div>
+                <div style="font-size:11px; color:var(--texto-secundario);">Chegada</div>
+                <div id="nav-eta" style="font-size:18px; font-weight:800; color: var(--texto-principal);">--:--</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size:11px; color:var(--texto-secundario);">Distância</div>
+                <div id="nav-distancia-restante" style="font-size:16px; font-weight:800; color: var(--texto-principal);">-- km</div>
+            </div>
+            <button class="btn-sheet-action" style="background:var(--cor-vermelho); color:white; border:none; flex:0 0 auto; padding:12px 20px;" onclick="pararNavegacaoInterna()">Encerrar</button>
+        </div>
+    </div>
+
+    <div class="botoes-navegacao-flutuantes" id="botoes-nav-flutuantes">
+        <div class="btn-nav-flutuante" onclick="centralizarNoUsuarioNavegacao()" title="Centralizar">🎯</div>
+    </div>
+
+    <div id="overlay-recalculando">
+        <div class="pulse-recalc"></div>
+        Recalculando rota...
+    </div>
+
     <script>
         let bdRotas = JSON.parse(localStorage.getItem('appegg_db_oficial')) || [];
         let historicoDias = JSON.parse(localStorage.getItem('appegg_historico')) || [];
@@ -1412,26 +1697,38 @@
         let configRotaData = JSON.parse(localStorage.getItem('appegg_config')) || {
             pontoSaida: 'primeira',
             enderecoManualSaida: '',
-            voltaInicio: false,
-            enderecoManualVolta: '',
+            pontoFinal: 'ultima',
+            enderecoPontoFinal: '',
             tempoParada: 3,
             velocidadeMedia: 30,
             fixarExtremos: true
         };
-
-        let html5QrcodeScanner = null;
+let html5QrcodeScanner = null;
         let indexAtivo = 0;
         let cardParadaIndexAtivo = null;
         let editIndexTarget = null;
         let sortableInstance = null;
         let map, layerMarkers = [], mapPolyline = null, mapPolylineDecorator = null;
         let userLocation = null, markerUsuario = null;
+        let watchIdGps = null;
+        let ultimoRumoConhecido = 0;
+        let usuarioEmMovimento = false;
+        let ultimaAtualizacaoGpsTime = null;
 
         let grupoAtual = [];
         let indexAgrupadoInterno = 0;
         let listaBipados = new Set();
         let pdfTabelaCorrespondencia = {};
         let audioCtxCompartilhado = null;
+
+        // Estado da navegação turn-by-turn interna
+        let navegacaoAtiva = false;
+        let navRotaSteps = [];
+        let navStepAtual = 0;
+        let navDestino = null;
+        let navDestinoParadaIdx = null;
+        let navPolylineNav = null;
+        let navRecalculando = false;
 
         try {
             if (typeof pdfjsLib !== 'undefined') {
@@ -1456,6 +1753,7 @@
             try { inicializarSortable(); } catch (e) { console.error("Erro em inicializarSortable:", e); }
             try { configurarGestoBottomSheet(); } catch (e) { console.error("Erro em configurarGestoBottomSheet:", e); }
             try { obterLocalizacaoAtual(); } catch (e) { console.error("Erro em obterLocalizacaoAtual:", e); }
+            try { iniciarRastreamentoContinuo(); } catch (e) { console.error("Erro em iniciarRastreamentoContinuo:", e); }
 
             try {
                 if (bdRotas.length > 0) {
@@ -1473,8 +1771,28 @@
             }
         };
 
+        let timeoutSaveBadge = null;
+        function atualizarSaveBadge(salvando) {
+            const badge = document.getElementById('save-badge');
+            const txt = document.getElementById('save-badge-txt');
+            if (!badge || !txt) return;
+            if (salvando) {
+                badge.classList.add('saving');
+                txt.innerText = 'Salvando...';
+            } else {
+                badge.classList.remove('saving');
+                const agora = new Date();
+                txt.innerText = 'Salvo ' + agora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+        }
+
         function salvarBD() {
-            localStorage.setItem('appegg_db_oficial', JSON.stringify(bdRotas));
+            atualizarSaveBadge(true);
+            if (timeoutSaveBadge) clearTimeout(timeoutSaveBadge);
+            timeoutSaveBadge = setTimeout(() => {
+                localStorage.setItem('appegg_db_oficial', JSON.stringify(bdRotas));
+                atualizarSaveBadge(false);
+            }, 400);
         }
 
         function atualizarContador() {
@@ -1491,11 +1809,7 @@
                 }
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
-                        userLocation = {
-                            lat: pos.coords.latitude,
-                            lon: pos.coords.longitude
-                        };
-                        plotarLocalizacaoUsuario();
+                        processarNovaPosicaoUsuario(pos);
                         resolve(userLocation);
                     },
                     (err) => {
@@ -1507,273 +1821,789 @@
             });
         }
 
+        function iniciarRastreamentoContinuo() {
+            if (!navigator.geolocation || watchIdGps !== null) return;
+            watchIdGps = navigator.geolocation.watchPosition(
+                (pos) => processarNovaPosicaoUsuario(pos),
+                (err) => console.warn("Erro no rastreamento contínuo de GPS:", err),
+                { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
+            );
+        }
+
+        function calcularRumo(lat1, lon1, lat2, lon2) {
+            const toRad = d => d * Math.PI / 180;
+            const toDeg = r => r * 180 / Math.PI;
+            const y = Math.sin(toRad(lon2 - lon1)) * Math.cos(toRad(lat2));
+            const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2 - lon1));
+            return (toDeg(Math.atan2(y, x)) + 360) % 360;
+        }
+
+        function processarNovaPosicaoUsuario(pos) {
+            const novaLat = pos.coords.latitude;
+            const novaLon = pos.coords.longitude;
+            const agora = Date.now();
+
+            let velocidadeMs = (typeof pos.coords.speed === 'number' && pos.coords.speed !== null) ? pos.coords.speed : 0;
+
+            if (userLocation && ultimaAtualizacaoGpsTime) {
+                const dtSeg = (agora - ultimaAtualizacaoGpsTime) / 1000;
+                const distM = calcularDistanciaKM(userLocation.lat, userLocation.lon, novaLat, novaLon) * 1000;
+                if (dtSeg > 0.5 && distM > 3) {
+                    ultimoRumoConhecido = calcularRumo(userLocation.lat, userLocation.lon, novaLat, novaLon);
+                    if (!velocidadeMs) velocidadeMs = distM / dtSeg;
+                }
+            }
+
+            if (typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && velocidadeMs > 0.3) {
+                ultimoRumoConhecido = pos.coords.heading;
+            }
+
+            userLocation = { lat: novaLat, lon: novaLon };
+            ultimaAtualizacaoGpsTime = agora;
+            usuarioEmMovimento = velocidadeMs > 0.8; // ~3 km/h: acima disso considera "em navegação"
+
+            plotarLocalizacaoUsuario();
+
+            if (navegacaoAtiva) {
+                atualizarProgressoNavegacao();
+            }
+        }
+
         function plotarLocalizacaoUsuario() {
             if (!userLocation || !map) return;
-            if (markerUsuario) map.removeLayer(markerUsuario);
+let html5QrcodeScanner = null;
+        let indexAtivo = 0;
+        let cardParadaIndexAtivo = null;
+        let editIndexTarget = null;
+        let sortableInstance = null;
+        let map, layerMarkers = [], mapPolyline = null, mapPolylineDecorator = null;
+        let userLocation = null, markerUsuario = null;
+        let watchIdGps = null;
+        let ultimoRumoConhecido = 0;
+        let usuarioEmMovimento = false;
+        let ultimaAtualizacaoGpsTime = null;
 
-            let userIcon = L.divIcon({
-                className: 'custom-user-pin',
-                html: `<div class="marker-user-location"></div>`,
-                iconSize: [20, 20],
-                iconAnchor: [10, 10]
-            });
+        let grupoAtual = [];
+        let indexAgrupadoInterno = 0;
+        let listaBipados = new Set();
+        let pdfTabelaCorrespondencia = {};
+        let audioCtxCompartilhado = null;
 
-            markerUsuario = L.marker([userLocation.lat, userLocation.lon], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
-        }
-        async function executarOtimizacaoOSRM(fixarExtremos = false) {
-            if (bdRotas.length < 1) return;
+        // Estado da navegação turn-by-turn interna
+        let navegacaoAtiva = false;
+        let navRotaSteps = [];
+        let navStepAtual = 0;
+        let navDestino = null;
+        let navDestinoParadaIdx = null;
+        let navPolylineNav = null;
+        let navRecalculando = false;
 
-            let pontoInicial = await obterPontoInicialConfig();
-
-            if (bdRotas.length >= 2) {
-                bdRotas = otimizarOrdemParadasLocal(bdRotas, fixarExtremos, pontoInicial);
-                salvarBD();
-                renderizarLista();
-                await plotarNoMapa();
-            }
-
-            let listaParaTrajeto = [...bdRotas];
-            if (pontoInicial) {
-                listaParaTrajeto.unshift({ lat: pontoInicial.lat, lon: pontoInicial.lon });
-            }
-
-            let pontoVolta = await obterPontoVoltaConfig(pontoInicial);
-            if (pontoVolta) {
-                listaParaTrajeto.push({ lat: pontoVolta.lat, lon: pontoVolta.lon });
-            }
-
-            let routeCoords = await obterGeometriaRuasCompleta(listaParaTrajeto);
-            if (routeCoords.length > 0) {
-                desenharRotaComSetas(routeCoords);
+        try {
+            if (typeof pdfjsLib !== 'undefined') {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
             } else {
-                let latlngs = listaParaTrajeto.map(r => [r.lat, r.lon]);
-                desenharRotaComSetas(latlngs);
+                console.error("pdf.js não carregou do CDN. Recursos de PDF ficarão indisponíveis.");
             }
-
-            await calcularEstatisticasEAtualizarUI();
+        } catch (e) {
+            console.error("Erro configurando pdf.js:", e);
         }
 
-        async function calcularEstatisticasEAtualizarUI() {
-            if (bdRotas.length === 0) {
-                const elInfo = document.getElementById('info-tempo-estimado');
-                if (elInfo) elInfo.innerText = '🏁 Término: --:--';
+        window.onload = () => {
+            try { aplicarTema(temaAtual); } catch (e) { console.error("Erro em aplicarTema:", e); }
+            try { atualizarLabelNavegacao(); } catch (e) { console.error("Erro em atualizarLabelNavegacao:", e); }
+
+            try {
+                inicializarMapa();
+            } catch (e) {
+                console.error("Erro ao inicializar o mapa (Leaflet pode não ter carregado):", e);
+            }
+
+            try { inicializarSortable(); } catch (e) { console.error("Erro em inicializarSortable:", e); }
+            try { configurarGestoBottomSheet(); } catch (e) { console.error("Erro em configurarGestoBottomSheet:", e); }
+            try { obterLocalizacaoAtual(); } catch (e) { console.error("Erro em obterLocalizacaoAtual:", e); }
+            try { iniciarRastreamentoContinuo(); } catch (e) { console.error("Erro em iniciarRastreamentoContinuo:", e); }
+
+            try {
+                if (bdRotas.length > 0) {
+                    document.getElementById('fluxo-inicial-container').style.display = 'none';
+                    atualizarStatusHome();
+                    renderizarLista();
+                    atualizarContador();
+                    plotarNoMapa();
+                    calcularEstatisticasEAtualizarUI();
+                } else {
+                    atualizarStatusHome();
+                }
+            } catch (e) {
+                console.error("Erro ao restaurar a rota salva:", e);
+            }
+        };
+
+        let timeoutSaveBadge = null;
+        function atualizarSaveBadge(salvando) {
+            const badge = document.getElementById('save-badge');
+            const txt = document.getElementById('save-badge-txt');
+            if (!badge || !txt) return;
+            if (salvando) {
+                badge.classList.add('saving');
+                txt.innerText = 'Salvando...';
+            } else {
+                badge.classList.remove('saving');
+                const agora = new Date();
+                txt.innerText = 'Salvo ' + agora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+        }
+
+        function salvarBD() {
+            atualizarSaveBadge(true);
+            if (timeoutSaveBadge) clearTimeout(timeoutSaveBadge);
+            timeoutSaveBadge = setTimeout(() => {
+                localStorage.setItem('appegg_db_oficial', JSON.stringify(bdRotas));
+                atualizarSaveBadge(false);
+            }, 400);
+        }
+
+        function atualizarContador() {
+            let pendentes = bdRotas.filter(r => r.status === 'pendente').length;
+            const elContador = document.getElementById('contador-restantes');
+            if (elContador) elContador.innerText = pendentes;
+        }
+
+        function obterLocalizacaoAtual() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    console.warn("Geolocalização não suportada.");
+                    return resolve(null);
+                }
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        processarNovaPosicaoUsuario(pos);
+                        resolve(userLocation);
+                    },
+                    (err) => {
+                        console.warn("Erro ao obter localização GPS:", err);
+                        resolve(null);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            });
+        }
+
+        function iniciarRastreamentoContinuo() {
+            if (!navigator.geolocation || watchIdGps !== null) return;
+            watchIdGps = navigator.geolocation.watchPosition(
+                (pos) => processarNovaPosicaoUsuario(pos),
+                (err) => console.warn("Erro no rastreamento contínuo de GPS:", err),
+                { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
+            );
+        }
+
+        function calcularRumo(lat1, lon1, lat2, lon2) {
+            const toRad = d => d * Math.PI / 180;
+            const toDeg = r => r * 180 / Math.PI;
+            const y = Math.sin(toRad(lon2 - lon1)) * Math.cos(toRad(lat2));
+            const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2 - lon1));
+            return (toDeg(Math.atan2(y, x)) + 360) % 360;
+        }
+
+        function processarNovaPosicaoUsuario(pos) {
+            const novaLat = pos.coords.latitude;
+            const novaLon = pos.coords.longitude;
+            const agora = Date.now();
+
+            let velocidadeMs = (typeof pos.coords.speed === 'number' && pos.coords.speed !== null) ? pos.coords.speed : 0;
+
+            if (userLocation && ultimaAtualizacaoGpsTime) {
+                const dtSeg = (agora - ultimaAtualizacaoGpsTime) / 1000;
+                const distM = calcularDistanciaKM(userLocation.lat, userLocation.lon, novaLat, novaLon) * 1000;
+                if (dtSeg > 0.5 && distM > 3) {
+                    ultimoRumoConhecido = calcularRumo(userLocation.lat, userLocation.lon, novaLat, novaLon);
+                    if (!velocidadeMs) velocidadeMs = distM / dtSeg;
+                }
+            }
+
+            if (typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && velocidadeMs > 0.3) {
+                ultimoRumoConhecido = pos.coords.heading;
+            }
+
+            userLocation = { lat: novaLat, lon: novaLon };
+            ultimaAtualizacaoGpsTime = agora;
+            usuarioEmMovimento = velocidadeMs > 0.8; // ~3 km/h: acima disso considera "em navegação"
+
+            plotarLocalizacaoUsuario();
+
+            if (navegacaoAtiva) {
+                atualizarProgressoNavegacao();
+            }
+        }
+
+        function plotarLocalizacaoUsuario() {
+            if (!userLocation || !map) return;
+function cleanAddressString(rawText) {
+            if (!rawText) return "";
+            return rawText
+                .replace(/[\r\n]+/g, " ")
+                .replace(/\s+/g, " ")
+                .replace(/ã \no/g, "ônio")
+                .replace(/Sã o Pr ó spero/g, "São Próspero")
+                .replace(/Const â ncia/g, "Constância")
+                .replace(/Ant ô nio/g, "Antonio")
+                .trim();
+        }
+
+        async function buscarGeocodingBackend(endereco) {
+            if (!endereco || !endereco.trim()) return null;
+            try {
+                let queryEnc = encodeURIComponent(endereco.trim());
+                let response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${queryEnc}&limit=1`, {
+                    headers: { 'User-Agent': 'AppEggRotas/1.0' }
+                });
+                if (response.ok) {
+                    let data = await response.json();
+                    if (data && data.length > 0) {
+                        return { 
+                            lat: parseFloat(data[0].lat), 
+                            lon: parseFloat(data[0].lon) 
+                        };
+                    }
+                }
+            } catch (e) { 
+                console.error("Erro na busca de endereço real:", e);
+            }
+            return null;
+        }
+
+        async function obterPontoInicialConfig() {
+            if (configRotaData.pontoSaida === 'gps') {
+                let loc = await obterLocalizacaoAtual();
+                return loc;
+            } else if (configRotaData.pontoSaida === 'manual' && configRotaData.enderecoManualSaida) {
+                let coords = await buscarGeocodingBackend(configRotaData.enderecoManualSaida);
+                if (!coords) {
+                    alert("Atenção: O endereço manual de saída não foi encontrado na busca real. Verifique se digitou o endereço correto.");
+                }
+                return coords;
+            }
+            return null;
+        }
+
+        async function obterPontoFinalConfig(pontoInicial) {
+            const tipo = configRotaData.pontoFinal || 'ultima';
+
+            if (tipo === 'ultima') {
+                return null; // termina na última parada, sem trecho de retorno
+            }
+
+            if (tipo === 'voltar') {
+                if (pontoInicial) return pontoInicial;
+                if (bdRotas.length > 0) return { lat: bdRotas[0].lat, lon: bdRotas[0].lon };
+                return null;
+            }
+
+            if (tipo === 'endereco' && configRotaData.enderecoPontoFinal) {
+                let coords = await buscarGeocodingBackend(configRotaData.enderecoPontoFinal);
+                if (coords) return coords;
+                alert("Atenção: o endereço final não foi localizado. A rota vai terminar na última parada.");
+                return null;
+            }
+
+            return null;
+        }
+
+        function acionarInputExcelUnico() {
+            document.getElementById('inputExcelUnico').click();
+        }
+
+        async function processarExcelRota(inputElement) {
+            if (inputElement.files.length === 0) return;
+            const arquivo = inputElement.files[0];
+            const leitor = new FileReader();
+
+            leitor.onload = async function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonObjetos = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                
+                let itensPlanilha = [];
+                let codigosVistos = new Set();
+                let duplicatasIgnoradas = 0;
+
+                jsonObjetos.forEach((row, idx) => {
+                    let keys = Object.keys(row);
+                    let latKey = keys.find(k => /latitude|^lat$/i.test(k.trim()));
+                    let lonKey = keys.find(k => /longitude|^lon$|^lng$/i.test(k.trim()));
+                    let codKey = keys.find(k => /código|codigo|rastreio|spx|tracking|pacote|tn/i.test(k.trim()));
+                    let endKey = keys.find(k => /endereço|endereco|rua|logradouro|address/i.test(k.trim()));
+                    let bairroKey = keys.find(k => /bairro/i.test(k.trim()));
+                    let cidadeKey = keys.find(k => /cidade|municipio/i.test(k.trim()));
+                    let cepKey = keys.find(k => /cep|zip/i.test(k.trim()));
+
+                    let lat = latKey ? parseFloat(row[latKey]) : NaN;
+                    let lon = lonKey ? parseFloat(row[lonKey]) : NaN;
+                    let latValido = !isNaN(lat) && lat !== 0;
+                    let lonValido = !isNaN(lon) && lon !== 0;
+                    let codigo = codKey && row[codKey] ? cleanAddressString(String(row[codKey])).toUpperCase() : '';
+                    
+                    let partesEndereco = [];
+                    if (endKey && row[endKey]) partesEndereco.push(cleanAddressString(String(row[endKey])));
+                    if (bairroKey && row[bairroKey]) partesEndereco.push(cleanAddressString(String(row[bairroKey])));
+                    if (cidadeKey && row[cidadeKey]) partesEndereco.push(cleanAddressString(String(row[cidadeKey])));
+                    if (cepKey && row[cepKey]) partesEndereco.push(`CEP ${cleanAddressString(String(row[cepKey]))}`);
+
+                    let enderecoTexto = partesEndereco.join(', ');
+
+                    if (!codigo) codigo = `EXC-${String(idx + 1).padStart(3, '0')}`;
+
+                    if (codigosVistos.has(codigo)) {
+                        duplicatasIgnoradas++;
+                        return;
+                    }
+
+                    if (enderecoTexto.length > 3 || (latValido && lonValido)) {
+                        codigosVistos.add(codigo);
+                        itensPlanilha.push({
+                            codigo: codigo,
+                            endereco: enderecoTexto || "Localização Exata via Coordenadas",
+                            lat: latValido ? lat : null,
+                            lon: lonValido ? lon : null
+                        });
+                    }
+                });
+
+                await estruturarBancoDeDados(itensPlanilha);
+                let msgDuplicatas = duplicatasIgnoradas > 0 ? `\n${duplicatasIgnoradas} código(s) duplicado(s) ignorado(s).` : '';
+                alert(`Mapa carregado com sucesso! ${bdRotas.length} paradas criadas a partir do Excel/CSV.${msgDuplicatas}`);
+                abrirMapaDaRota();
+            };
+            leitor.readAsArrayBuffer(arquivo);
+        }
+
+        function acionarInputPdfUnico() {
+            document.getElementById('inputPdfUnico').click();
+        }
+
+        async function processarPdfEntregas(inputElement) {
+            if (inputElement.files.length === 0) return;
+            await lerArquivoPdfLogica(inputElement.files[0]);
+        }
+
+        async function processarPdfEntregasNoScanner(inputElement) {
+            if (inputElement.files.length === 0) return;
+            await lerArquivoPdfLogica(inputElement.files[0]);
+            atualizarEstatisticasScanner();
+        }
+
+        async function lerArquivoPdfLogica(arquivo) {
+            try {
+                const pdf = await pdfjsLib.getDocument(new Uint8Array(await arquivo.arrayBuffer())).promise;
+                pdfTabelaCorrespondencia = {}; 
+                let ultimaParadaDetectada = "Parada 1";
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    
+                    let linhasPorY = {};
+                    textContent.items.forEach(item => {
+                        let y = Math.round(item.transform[5] / 6) * 6; 
+                        if (!linhasPorY[y]) linhasPorY[y] = [];
+                        linhasPorY[y].push({ x: item.transform[4], str: item.str });
+                    });
+
+                    let chavesY = Object.keys(linhasPorY).map(Number).sort((a, b) => b - a);
+
+                    chavesY.forEach(y => {
+                        let elementos = linhasPorY[y].sort((a, b) => a.x - b.x);
+                        let linhaTexto = elementos.map(e => e.str).join(" ");
+                        let limpo = cleanAddressString(linhaTexto);
+
+                        if (/^(página|relatório|total|data|emitido|sumário)/i.test(limpo)) {
+                            return;
+                        }
+
+                        let matchSeq = limpo.match(/^(?:parada\s*)?(\d{1,3})[\s\-]/i);
+                        if (matchSeq) {
+                            ultimaParadaDetectada = `Parada ${parseInt(matchSeq[1])}`;
+                        }
+
+                        let matchesCodigos = limpo.match(/(BR\d{9,13}\w?|[A-Z]{2}\d{9}[A-Z]{2}|AMAZON-\w+|\d{10,})/gi);
+                        if (matchesCodigos) {
+                            matchesCodigos.forEach(codigo => {
+                                let codigoUpper = codigo.toUpperCase();
+                                if (codigoUpper.length >= 6) {
+                                    pdfTabelaCorrespondencia[codigoUpper] = ultimaParadaDetectada;
+                                }
+                            });
+                        }
+                    });
+                }
+let totalCodigos = Object.keys(pdfTabelaCorrespondencia).length;
+                if (totalCodigos === 0) {
+                    alert("Não foi possível extrair a tabela de correspondência deste PDF.");
+                    return;
+                }
+
+                atualizarStatusHome();
+                alert(`✅ PDF carregado com sucesso na memória! ${totalCodigos} códigos mapeados.`);
+
+            } catch (err) {
+                alert("Erro ao processar o arquivo PDF.");
+                console.error(err);
+            }
+        }
+
+        async function estruturarBancoDeDados(listaItens) {
+            bdRotas = [];
+
+            for (let i = 0; i < listaItens.length; i++) {
+                let item = listaItens[i];
+                let lat = item.lat;
+                let lon = item.lon;
+
+                if (!lat || !lon) {
+                    let coords = await buscarGeocodingBackend(item.endereco);
+                    if (coords) {
+                        lat = coords.lat;
+                        lon = coords.lon;
+                    } else {
+                        lat = -23.5505;
+                        lon = -46.6333;
+                    }
+                }
+
+                bdRotas.push({
+                    id: i + 1,
+                    codigo: item.codigo,
+                    endereco: item.endereco,
+                    status: 'pendente',
+                    timestamp: null,
+                    lat: lat,
+                    lon: lon
+                });
+            }
+
+            if (bdRotas.length > 0) {
+                salvarBD();
+                atualizarStatusHome();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+                await calcularEstatisticasEAtualizarUI();
+            } else {
+                alert("Nenhuma parada válida foi estruturada.");
+            }
+        }
+
+        function contarPacotesNoMesmoEndereco(endereco) {
+            let endLimpo = endereco.trim().toLowerCase();
+            return bdRotas.filter(r => r.endereco.trim().toLowerCase() === endLimpo).length;
+        }
+
+        function renderizarLista() {
+            const container = document.getElementById('lista-paradas');
+            container.innerHTML = '';
+           
+            bdRotas.forEach((e, idx) => {
+                const qtdNoLocal = contarPacotesNoMesmoEndereco(e.endereco);
+
+                const card = document.createElement('div');
+                card.className = 'card-parada';
+               
+                card.innerHTML = `
+                    <div class="handle-drag">☰</div>
+                    <div class="badge-numero-parada" onclick="abrirCardParada(${idx})" style="background:${e.status==='entregue'?'var(--cor-verde)':(e.status==='falhou'?'var(--cor-vermelho)':'var(--cor-laranja)')}" title="Ações da Parada">${idx + 1}</div>
+                    <div class="parada-info" onclick="selecionarParadaEVerificarAgrupamento(${idx})">
+                        <div class="parada-codigo">
+                            ${e.codigo}
+                            ${qtdNoLocal > 1 ? `<span class="tag-multi">${qtdNoLocal}x Pacotes</span>` : ''}
+                        </div>
+                        <div class="parada-rua">${e.endereco}</div>
+                    </div>
+                    <div class="parada-acoes">
+                        <button class="btn-icon-acao" onclick="acionarLapisEditar(${idx})" title="${e.status === 'pendente' ? 'Editar Endereço' : 'Editar Baixa / Status'}">✎</button>
+                        <button class="btn-icon-acao delete" onclick="excluirParada(${idx})" title="Excluir Parada">🗑</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function abrirCardParada(idx) {
+            cardParadaIndexAtivo = idx;
+            const p = bdRotas[idx];
+            if (!p) return;
+
+            document.getElementById('cardParadaTitulo').innerText = `Parada #${idx + 1}`;
+            document.getElementById('cardParadaCodigo').innerText = `Código: ${p.codigo}`;
+            document.getElementById('cardParadaEndereco').innerText = p.endereco;
+
+            document.getElementById('modalCardParada').style.display = 'flex';
+        }
+
+        function fecharModalCardParada() {
+            document.getElementById('modalCardParada').style.display = 'none';
+            cardParadaIndexAtivo = null;
+        }
+
+        function executarNavegacaoCard() {
+            if (cardParadaIndexAtivo === null) return;
+            const idxParada = cardParadaIndexAtivo;
+            const p = bdRotas[idxParada];
+            fecharModalCardParada();
+
+            if (modoNavegacao === 'interna') {
+                if (!map) {
+                    alert("O mapa não está disponível no momento. Tente novamente após recarregar a página.");
+                    return;
+                }
+                iniciarNavegacaoInterna(idxParada);
+            } else if (modoNavegacao === 'maps') {
+                let url = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}`;
+                window.open(url, '_blank');
+            } else if (modoNavegacao === 'waze') {
+                let url = `https://waze.com/ul?ll=${p.lat},${p.lon}&navigate=yes`;
+                window.open(url, '_blank');
+            }
+        }
+
+        // ===== MOTOR DE NAVEGAÇÃO TURN-BY-TURN =====
+
+        async function iniciarNavegacaoInterna(paradaIdx) {
+            const p = bdRotas[paradaIdx];
+            if (!p) return;
+
+            if (!userLocation) {
+                await obterLocalizacaoAtual();
+            }
+            if (!userLocation) {
+                alert("Não foi possível obter sua localização GPS para iniciar a navegação. Verifique se a localização está ativada.");
                 return;
             }
 
-            let distTotalKm = 0;
-            let pontoInicial = await obterPontoInicialConfig();
+            navDestinoParadaIdx = paradaIdx;
+            navDestino = { lat: p.lat, lon: p.lon };
+            navegacaoAtiva = true;
 
-            if (pontoInicial && bdRotas.length > 0) {
-                distTotalKm += calcularDistanciaKM(pontoInicial.lat, pontoInicial.lon, bdRotas[0].lat, bdRotas[0].lon);
-            }
+            document.getElementById('fluxo-inicial-container').style.display = 'none';
+            document.body.classList.add('modo-navegacao');
+            document.getElementById('painel-navegacao-topo').style.display = 'block';
+            document.getElementById('painel-navegacao-inferior').style.display = 'block';
+            document.getElementById('botoes-nav-flutuantes').style.display = 'flex';
+            document.getElementById('nav-instrucao-principal').innerText = 'Calculando rota...';
 
-            for (let i = 0; i < bdRotas.length - 1; i++) {
-                distTotalKm += calcularDistanciaKM(bdRotas[i].lat, bdRotas[i].lon, bdRotas[i+1].lat, bdRotas[i+1].lon);
-            }
-
-            if (configRotaData.voltaInicio && bdRotas.length > 0) {
-                let ultimaParada = bdRotas[bdRotas.length - 1];
-                let pontoVolta = await obterPontoVoltaConfig(pontoInicial);
-                if (pontoVolta) {
-                    distTotalKm += calcularDistanciaKM(ultimaParada.lat, ultimaParada.lon, pontoVolta.lat, pontoVolta.lon);
-                }
-            }
-
-            let paradasPendentes = bdRotas.filter(r => r.status === 'pendente').length;
-            let velMedia = configRotaData.velocidadeMedia || 30;
-            let tempoAtendimentoMin = paradasPendentes * (configRotaData.tempoParada || 3);
-            let tempoDeslocamentoMin = (distTotalKm / velMedia) * 60;
-            let tempoTotalMin = Math.round(tempoAtendimentoMin + tempoDeslocamentoMin);
-
-            let horas = Math.floor(tempoTotalMin / 60);
-            let minutos = tempoTotalMin % 60;
-            let duracaoFormatada = `${horas > 0 ? horas + 'h' : ''}${minutos}min`;
-
-            let agora = new Date();
-            agora.setMinutes(agora.getMinutes() + tempoTotalMin);
-            let horaTermino = agora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            const distFormatada = distTotalKm.toFixed(1) + ' km';
-            const textoResumo = `🏁 Término: ${horaTermino} • ${duracaoFormatada} • ${distFormatada}`;
-
-            const elInfo = document.getElementById('info-tempo-estimado');
-            if (elInfo) elInfo.innerText = textoResumo;
-
-            const elBadge = document.getElementById('home-status-texto');
-            if (elBadge && bdRotas.length > 0) {
-                elBadge.innerText = `Rota carregada · ${bdRotas.length} paradas · Término ~${horaTermino}`;
-            }
+            await calcularRotaNavegacao(userLocation, navDestino);
+            map.setZoom(18);
+            map.panTo([userLocation.lat, userLocation.lon]);
         }
 
-        function calcularDistanciaKM(lat1, lon1, lat2, lon2) {
-            let R = 6371;
-            let dLat = (lat2-lat1) * Math.PI / 180;
-            let dLon = (lon2-lon1) * Math.PI / 180;
-            let a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-        }
+        async function calcularRotaNavegacao(origem, destino) {
+            try {
+                const url = `https://router.project-osrm.org/route/v1/driving/${origem.lon},${origem.lat};${destino.lon},${destino.lat}?overview=full&geometries=geojson&steps=true`;
+                const res = await fetch(url);
+                const data = await res.json();
 
-        function inverterOrdemParadas() {
-            if (bdRotas.length < 2) return alert("Paradas insuficientes para inverter.");
-            bdRotas.reverse();
-            salvarBD();
-            renderizarLista();
-            plotarNoMapa();
-            executarOtimizacaoOSRM(false);
-            alert("Ordem das paradas invertida!");
-        }
+                if (data.code === 'Ok' && data.routes && data.routes[0]) {
+                    const rota = data.routes[0];
+                    navRotaSteps = (rota.legs[0] && rota.legs[0].steps) ? rota.legs[0].steps : [];
+                    navStepAtual = 0;
 
-        function exportarRelatorioCSV() {
-            if (bdRotas.length === 0) return alert("Sem rota para exportar.");
-            let csv = "\uFEFFOrdem,Codigo_Rastreio,Endereco,Latitude,Longitude,Status\n";
-            bdRotas.forEach((p, idx) => {
-                csv += `"${idx + 1}","${p.codigo}","${p.endereco.replace(/"/g, '""')}","${p.lat}","${p.lon}","${p.status}"\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            const url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", `Rota_Rapida_${new Date().toISOString().slice(0,10)}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+                    const coords = rota.geometry.coordinates.map(c => [c[1], c[0]]);
+                    if (navPolylineNav) map.removeLayer(navPolylineNav);
+                    navPolylineNav = L.polyline(coords, { color: '#2563eb', weight: 6, opacity: 0.9, lineJoin: 'round' }).addTo(map);
 
-        function gerarPDFRota() {
-            if (bdRotas.length === 0) return alert("Nenhuma rota disponível para gerar PDF.");
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            doc.setFontSize(18);
-            doc.setTextColor(255, 87, 34);
-            doc.text("Rota+Rápida - Relatório de Entregas", 14, 20);
-
-            doc.setFontSize(10);
-            doc.setTextColor(100);
-            doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')} | Total de Paradas: ${bdRotas.length}`, 14, 28);
-
-            doc.setDrawColor(200);
-            doc.line(14, 32, 196, 32);
-
-            let y = 40;
-
-            bdRotas.forEach((item, index) => {
-                if (y > 270) {
-                    doc.addPage();
-                    y = 20;
-                }
-                let statusTxt = item.status === 'entregue' ? '[ENTREGUE]' : (item.status === 'falhou' ? '[FALHOU]' : '[PENDENTE]');
-                
-                if (item.status === 'entregue') {
-                    doc.setTextColor(16, 185, 129);
-                } else if (item.status === 'falhou') {
-                    doc.setTextColor(239, 68, 68);
+                    atualizarPainelNavegacao();
+                    atualizarDistanciaEtaNavegacao(rota.distance, rota.duration);
                 } else {
-                    doc.setTextColor(255, 87, 34);
+                    alert("Não foi possível calcular a rota real para navegação (sem resposta do serviço de rotas).");
                 }
-
-                doc.setFont("helvetica", "bold");
-                doc.text(`#${index + 1} ${statusTxt} - Código: ${item.codigo}`, 14, y);
-                
-                doc.setFont("helvetica", "normal");
-                doc.setTextColor(50);
-                let endLinhas = doc.splitTextToSize(`Endereço: ${item.endereco}`, 180);
-                doc.text(endLinhas, 14, y + 6);
-                
-                y += 8 + (endLinhas.length * 5);
-            });
-
-            doc.save(`Rota_Rapida_${new Date().toISOString().slice(0,10)}.pdf`);
+            } catch (e) {
+                console.error("Erro ao calcular rota de navegação:", e);
+            }
         }
-
-        function novaRota() {
-            if (bdRotas.length > 0) {
-                if (!confirm("Deseja realmente iniciar uma nova rota? A rota atual não salva será limpa.")) {
+            let totalCodigos = Object.keys(pdfTabelaCorrespondencia).length;
+                if (totalCodigos === 0) {
+                    alert("Não foi possível extrair a tabela de correspondência deste PDF.");
                     return;
                 }
+
+                atualizarStatusHome();
+                alert(`✅ PDF carregado com sucesso na memória! ${totalCodigos} códigos mapeados.`);
+
+            } catch (err) {
+                alert("Erro ao processar o arquivo PDF.");
+                console.error(err);
             }
+        }
+
+        async function estruturarBancoDeDados(listaItens) {
             bdRotas = [];
-            listaBipados.clear();
-            salvarBD();
-            renderizarLista();
-            atualizarContador();
-            plotarNoMapa();
-            if (mapPolyline) map.removeLayer(mapPolyline);
-            if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
-            atualizarStatusHome();
-            calcularEstatisticasEAtualizarUI();
-            alert("Nova rota iniciada.");
-        }
 
-        function encerrarESalvarRota() {
-            if (bdRotas.length === 0) return alert("Nenhuma rota para encerrar.");
-            if (!confirm("Deseja encerrar e salvar esta rota no histórico?")) return;
+            for (let i = 0; i < listaItens.length; i++) {
+                let item = listaItens[i];
+                let lat = item.lat;
+                let lon = item.lon;
 
-            let dataHoje = new Date().toISOString().slice(0, 10);
-            let entregues = bdRotas.filter(r => r.status === 'entregue').length;
-            let falhas = bdRotas.filter(r => r.status === 'falhou').length;
-            let pendentes = bdRotas.filter(r => r.status === 'pendente').length;
-
-            historicoDias.push({
-                id: Date.now(),
-                data: dataHoje,
-                total: bdRotas.length,
-                entregues: entregues,
-                falhas: falhas,
-                pendentes: pendentes,
-                itens: [...bdRotas]
-            });
-
-            localStorage.setItem('appegg_historico', JSON.stringify(historicoDias));
-            
-            bdRotas = [];
-            listaBipados.clear();
-            salvarBD();
-            renderizarLista();
-            atualizarContador();
-            plotarNoMapa();
-            if (mapPolyline) map.removeLayer(mapPolyline);
-            if (mapPolylineDecorator) map.removeLayer(mapPolylineDecorator);
-            atualizarStatusHome();
-            calcularEstatisticasEAtualizarUI();
-
-            alert("Rota encerrada e salva no histórico com sucesso!");
-        }
-
-        function fecharModalEdit() {
-            document.getElementById('modalEdit').style.display = 'none';
-            editIndexTarget = null;
-        }
-
-        async function salvarEdicaoEndereco() {
-            if (editIndexTarget === null || !bdRotas[editIndexTarget]) return;
-
-            let novoEnd = document.getElementById('inputEditEndereco').value.trim();
-            if (!novoEnd) return alert("O endereço não pode ser vazio.");
-
-            bdRotas[editIndexTarget].endereco = novoEnd;
-
-            if (bdRotas[editIndexTarget].status !== 'pendente') {
-                let novoStatus = document.getElementById('selectEditStatus').value;
-                bdRotas[editIndexTarget].status = novoStatus;
-                if (novoStatus === 'pendente') {
-                    bdRotas[editIndexTarget].timestamp = null;
+                if (!lat || !lon) {
+                    let coords = await buscarGeocodingBackend(item.endereco);
+                    if (coords) {
+                        lat = coords.lat;
+                        lon = coords.lon;
+                    } else {
+                        lat = -23.5505;
+                        lon = -46.6333;
+                    }
                 }
+
+                bdRotas.push({
+                    id: i + 1,
+                    codigo: item.codigo,
+                    endereco: item.endereco,
+                    status: 'pendente',
+                    timestamp: null,
+                    lat: lat,
+                    lon: lon
+                });
             }
 
-            let coords = await buscarGeocodingBackend(novoEnd);
-            if (coords) {
-                bdRotas[editIndexTarget].lat = coords.lat;
-                bdRotas[editIndexTarget].lon = coords.lon;
+            if (bdRotas.length > 0) {
+                salvarBD();
+                atualizarStatusHome();
+                renderizarLista();
+                atualizarContador();
+                plotarNoMapa();
+                await calcularEstatisticasEAtualizarUI();
+            } else {
+                alert("Nenhuma parada válida foi estruturada.");
             }
-
-            salvarBD();
-            renderizarLista();
-            plotarNoMapa();
-            await calcularEstatisticasEAtualizarUI();
-            fecharModalEdit();
         }
 
+        function contarPacotesNoMesmoEndereco(endereco) {
+            let endLimpo = endereco.trim().toLowerCase();
+            return bdRotas.filter(r => r.endereco.trim().toLowerCase() === endLimpo).length;
+        }
+
+        function renderizarLista() {
+            const container = document.getElementById('lista-paradas');
+            container.innerHTML = '';
+           
+            bdRotas.forEach((e, idx) => {
+                const qtdNoLocal = contarPacotesNoMesmoEndereco(e.endereco);
+
+                const card = document.createElement('div');
+                card.className = 'card-parada';
+               
+                card.innerHTML = `
+                    <div class="handle-drag">☰</div>
+                    <div class="badge-numero-parada" onclick="abrirCardParada(${idx})" style="background:${e.status==='entregue'?'var(--cor-verde)':(e.status==='falhou'?'var(--cor-vermelho)':'var(--cor-laranja)')}" title="Ações da Parada">${idx + 1}</div>
+                    <div class="parada-info" onclick="selecionarParadaEVerificarAgrupamento(${idx})">
+                        <div class="parada-codigo">
+                            ${e.codigo}
+                            ${qtdNoLocal > 1 ? `<span class="tag-multi">${qtdNoLocal}x Pacotes</span>` : ''}
+                        </div>
+                        <div class="parada-rua">${e.endereco}</div>
+                    </div>
+                    <div class="parada-acoes">
+                        <button class="btn-icon-acao" onclick="acionarLapisEditar(${idx})" title="${e.status === 'pendente' ? 'Editar Endereço' : 'Editar Baixa / Status'}">✎</button>
+                        <button class="btn-icon-acao delete" onclick="excluirParada(${idx})" title="Excluir Parada">🗑</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function abrirCardParada(idx) {
+            cardParadaIndexAtivo = idx;
+            const p = bdRotas[idx];
+            if (!p) return;
+
+            document.getElementById('cardParadaTitulo').innerText = `Parada #${idx + 1}`;
+            document.getElementById('cardParadaCodigo').innerText = `Código: ${p.codigo}`;
+            document.getElementById('cardParadaEndereco').innerText = p.endereco;
+
+            document.getElementById('modalCardParada').style.display = 'flex';
+        }
+
+        function fecharModalCardParada() {
+            document.getElementById('modalCardParada').style.display = 'none';
+            cardParadaIndexAtivo = null;
+        }
+
+        function executarNavegacaoCard() {
+            if (cardParadaIndexAtivo === null) return;
+            const idxParada = cardParadaIndexAtivo;
+            const p = bdRotas[idxParada];
+            fecharModalCardParada();
+
+            if (modoNavegacao === 'interna') {
+                if (!map) {
+                    alert("O mapa não está disponível no momento. Tente novamente após recarregar a página.");
+                    return;
+                }
+                iniciarNavegacaoInterna(idxParada);
+            } else if (modoNavegacao === 'maps') {
+                let url = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}`;
+                window.open(url, '_blank');
+            } else if (modoNavegacao === 'waze') {
+                let url = `https://waze.com/ul?ll=${p.lat},${p.lon}&navigate=yes`;
+                window.open(url, '_blank');
+            }
+        }
+
+        // ===== MOTOR DE NAVEGAÇÃO TURN-BY-TURN =====
+
+        async function iniciarNavegacaoInterna(paradaIdx) {
+            const p = bdRotas[paradaIdx];
+            if (!p) return;
+
+            if (!userLocation) {
+                await obterLocalizacaoAtual();
+            }
+            if (!userLocation) {
+                alert("Não foi possível obter sua localização GPS para iniciar a navegação. Verifique se a localização está ativada.");
+                return;
+            }
+
+            navDestinoParadaIdx = paradaIdx;
+            navDestino = { lat: p.lat, lon: p.lon };
+            navegacaoAtiva = true;
+
+            document.getElementById('fluxo-inicial-container').style.display = 'none';
+            document.body.classList.add('modo-navegacao');
+            document.getElementById('painel-navegacao-topo').style.display = 'block';
+            document.getElementById('painel-navegacao-inferior').style.display = 'block';
+            document.getElementById('botoes-nav-flutuantes').style.display = 'flex';
+            document.getElementById('nav-instrucao-principal').innerText = 'Calculando rota...';
+
+            await calcularRotaNavegacao(userLocation, navDestino);
+            map.setZoom(18);
+            map.panTo([userLocation.lat, userLocation.lon]);
+        }
+
+        async function calcularRotaNavegacao(origem, destino) {
+            try {
+                const url = `https://router.project-osrm.org/route/v1/driving/${origem.lon},${origem.lat};${destino.lon},${destino.lat}?overview=full&geometries=geojson&steps=true`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (data.code === 'Ok' && data.routes && data.routes[0]) {
+                    const rota = data.routes[0];
+                    navRotaSteps = (rota.legs[0] && rota.legs[0].steps) ? rota.legs[0].steps : [];
+                    navStepAtual = 0;
+
+                    const coords = rota.geometry.coordinates.map(c => [c[1], c[0]]);
+                    if (navPolylineNav) map.removeLayer(navPolylineNav);
+                    navPolylineNav = L.polyline(coords, { color: '#2563eb', weight: 6, opacity: 0.9, lineJoin: 'round' }).addTo(map);
+
+                    atualizarPainelNavegacao();
+                    atualizarDistanciaEtaNavegacao(rota.distance, rota.duration);
+                } else {
+                    alert("Não foi possível calcular a rota real para navegação (sem resposta do serviço de rotas).");
+                }
+            } catch (e) {
+                console.error("Erro ao calcular rota de navegação:", e);
+            }
+        }
         function excluirParada(idx) {
             if (!confirm(`Excluir parada #${idx + 1}?`)) return;
             bdRotas.splice(idx, 1);
@@ -1809,6 +2639,32 @@
                 osc.stop(ctx.currentTime + 0.15);
             } catch (e) {
                 console.log("Erro ao tocar som de bip", e);
+            }
+        }
+
+        function falarNumeroParada(numero, status) {
+            if (!('speechSynthesis' in window)) return;
+            const frases = {
+                entregue: `Parada ${numero} confirmada`,
+                jaBipada: `Parada ${numero} já estava confirmada`,
+                falhou: `Parada ${numero} marcada como falha`,
+                naoEncontrada: 'Código não encontrado'
+            };
+            const texto = frases[status] || `Parada ${numero}`;
+            try {
+                speechSynthesis.cancel();
+                setTimeout(() => {
+                    try {
+                        const fala = new SpeechSynthesisUtterance(texto);
+                        fala.lang = 'pt-BR';
+                        fala.rate = 1.05;
+                        speechSynthesis.speak(fala);
+                    } catch (e) {
+                        console.warn("Erro ao criar fala:", e);
+                    }
+                }, 80);
+            } catch (e) {
+                console.warn("Erro em falarNumeroParada:", e);
             }
         }
 
@@ -1860,6 +2716,7 @@
 
             if (idx !== -1) {
                 let parada = bdRotas[idx];
+                let jaEstavaEntregue = parada.status === 'entregue';
                 parada.status = 'entregue';
                 parada.timestamp = new Date().toISOString();
                 salvarBD();
@@ -1867,6 +2724,8 @@
                 atualizarContador();
                 plotarNoMapa();
                 calcularEstatisticasEAtualizarUI();
+
+                falarNumeroParada(idx + 1, jaEstavaEntregue ? 'jaBipada' : 'entregue');
 
                 if (paradaEncontradaTxt) {
                     paradaEncontradaTxt.innerText = `Parada #${idx + 1}`;
@@ -1888,6 +2747,7 @@
                     setTimeout(() => { toast.style.display = 'none'; }, 2000);
                 }
             } else {
+                falarNumeroParada(0, 'naoEncontrada');
                 if (paradaEncontradaTxt) {
                     paradaEncontradaTxt.innerText = "Não encontrada";
                 }
