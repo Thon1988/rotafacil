@@ -1,24 +1,21 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR" data-theme="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rota+Rápida</title>
-   
-    <!-- Bibliotecas Necessárias -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-   
-    <!-- Leaflet CSS & JS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-    <!-- Decorador de Direção de Rotas (Setas no Mapa) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.1.0/leaflet.polylineDecorator.min.js"></script>
-   
-    <style>
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Rota+Rápida</title>
+  <!-- Bibliotecas Necessárias -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <!-- Decorador de Direção de Rotas (Setas no Mapa) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.1.0/leaflet.polylineDecorator.min.js"></script>
+  <style>
         :root[data-theme="dark"] {
             --cor-laranja: #ff5722;
             --cor-laranja-hover: #e64a19;
@@ -1052,6 +1049,25 @@
             font-size: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.4); cursor: pointer;
         }
 
+        /* PRÉ-VISUALIZAÇÃO DA ROTA (antes de iniciar a navegação) */
+        #painel-preview-rota {
+            position: fixed; left: 0; right: 0; bottom: 0;
+            z-index: 8000; display: none;
+            background: var(--bg-card);
+            border-radius: 20px 20px 0 0;
+            padding: 18px 18px 22px 18px;
+            box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
+        }
+        #painel-preview-rota .preview-endereco {
+            font-size: 15px; font-weight: 800; color: var(--texto-principal);
+            margin-bottom: 10px; line-height: 1.35;
+        }
+        #painel-preview-rota .preview-stats {
+            display: flex; align-items: baseline; gap: 8px; margin-bottom: 16px;
+        }
+        #painel-preview-rota .preview-tempo { font-size: 26px; font-weight: 900; color: var(--cor-verde); }
+        #painel-preview-rota .preview-distancia { font-size: 14px; color: var(--texto-secundario); font-weight: 700; }
+
         #overlay-recalculando {
             position: fixed; top: 90px; left: 50%; transform: translateX(-50%);
             z-index: 9000; background: rgba(37,99,235,0.95); color: white;
@@ -1075,509 +1091,462 @@
         .save-badge .pulse { width: 6px; height: 6px; background: #fff; border-radius: 50%; animation: pulseSave 1s infinite; }
         @keyframes pulseSave { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
     </style>
-</head>
-<body>
-<div class="save-badge" id="save-badge">
-    <span class="pulse"></span>
-    <span id="save-badge-txt">Salvo</span>
-</div>
-
-    <!-- TELA INICIAL SEPARADA -->
-    <div id="fluxo-inicial-container">
-        <div class="wizard-header">
-            <div class="wizard-user-info">
-                <div class="wizard-avatar">T</div>
-                <h1 class="wizard-greeting">Olá, Thon</h1>
-            </div>
-            <button class="btn-round-top" onclick="abrirMenuLateral()" style="width: 38px; height: 38px; font-size: 16px;">☰</button>
-        </div>
-
-        <div class="home-logo-box">
-            <div class="home-logo-circle">🧭</div>
-            <h2 class="home-title">Rota+Rápida</h2>
-            <p class="home-subtitle">Bipe, ouça a parada e entregue.</p>
-        </div>
-
-        <div class="home-status-badge">
-            <span>🟢</span> <span id="home-status-texto">Nenhuma rota carregada</span>
-        </div>
-
-        <div class="home-grid">
-            <!-- Card 1: Carregar Rota (Excel / CSV) -->
-            <div class="home-card-acao" onclick="acionarInputExcelUnico()">
-                <div class="home-card-icon">📊</div>
-                <div>
-                    <p class="home-card-title">Carregar Rota</p>
-                    <p class="home-card-desc" id="desc-rota-excel">Excel / CSV (Mapa)</p>
-                </div>
-            </div>
-            <input type="file" id="inputExcelUnico" accept=".csv, .xlsx, .xls" style="display:none;" onchange="processarExcelRota(this)">
-
-            <!-- Card 2: Carregar PDF -->
-            <div class="home-card-acao" onclick="acionarInputPdfUnico()">
-                <div class="home-card-icon">📄</div>
-                <div>
-                    <p class="home-card-title">Carregar PDF</p>
-                    <p class="home-card-desc" id="desc-rota-pdf">Lista de entregas</p>
-                </div>
-            </div>
-            <input type="file" id="inputPdfUnico" accept=".pdf" style="display:none;" onchange="processarPdfEntregas(this)">
-
-            <!-- Card 3: Mapa -->
-            <div class="home-card-acao" onclick="abrirMapaDaRota()">
-                <div class="home-card-icon">🗺️</div>
-                <div>
-                    <p class="home-card-title">Mapa</p>
-                    <p class="home-card-desc">Ver pontos</p>
-                </div>
-            </div>
-
-            <!-- Card 4: Menu -->
-            <div class="home-card-acao" onclick="abrirMenuLateral()">
-                <div class="home-card-icon">☰</div>
-                <div>
-                    <p class="home-card-title">Menu</p>
-                    <p class="home-card-desc">Mais opções</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Botão Laranja Principal: Abrir Scanner -->
-        <button class="home-btn-principal" onclick="abrirScanner()">
-            📦 Abrir Scanner
-        </button>
-
-        <div class="home-footer-tip">
-            💡 <b>Dica:</b> Carregue o mapa via Excel/CSV e o PDF de correspondência independentemente para começar a bipar!
-        </div>
+ </head>
+ <body>
+  <div class="save-badge" id="save-badge">
+   <span class="pulse"></span> <span id="save-badge-txt">Salvo</span>
+  </div>
+  <!-- TELA INICIAL SEPARADA -->
+  <div id="fluxo-inicial-container">
+   <div class="wizard-header">
+    <div class="wizard-user-info">
+     <div class="wizard-avatar">T</div>
+     <h1 class="wizard-greeting">Olá, Thon</h1>
     </div>
-
-    <!-- OVERLAY E MENU LATERAL -->
-    <div id="menu-lateral-overlay" onclick="fecharMenuLateral()"></div>
-    <div id="menu-lateral">
-        <div style="font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--cor-laranja);">Rota+Rápida</div>
-
-        <div class="menu-item" onclick="abrirTelaInicial()">
-            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            Tela Inicial
-        </div>
-
-        <div class="menu-item" onclick="alternarTema()">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-            Alternar Tema (Claro/Escuro)
-        </div>
-
-        <div class="menu-item" onclick="alternarModoNavegacao()">
-            <svg viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-            Navegação: <span id="label-gps-preferido" style="margin-left: 5px; color: var(--cor-laranja);">Google Maps</span>
-        </div>
-
-        <div class="divisor-menu"></div>
-
-        <div class="menu-item" onclick="abrirConfigRota(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            Configurar Rota (Circuit)
-        </div>
-
-        <div class="menu-item" onclick="abrirScanner(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2-2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
-            Abrir Scanner
-        </div>
-
-        <div class="menu-item" onclick="inserirCodigoManual(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Inserir Código Manual
-        </div>
-
-        <div class="divisor-menu"></div>
-
-        <div class="menu-item" onclick="iniciarOtimizacaoComEtapas(false); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            Roteirizar (Padrão)
-        </div>
-
-        <div class="menu-item" onclick="iniciarOtimizacaoComEtapas(true); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg>
-            Reotimizar (Intermediárias)
-        </div>
-
-        <div class="menu-item" onclick="inverterOrdemParadas(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><line x1="21" y1="5" x2="9" y2="5"/><polyline points="7 23 3 19 7 15"/><line x1="3" y1="19" x2="15" y2="19"/></svg>
-            Inverter Ordem
-        </div>
-
-        <div class="divisor-menu"></div>
-
-        <div class="menu-item" onclick="abrirResumo(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            Ver Resumo
-        </div>
-
-        <div class="menu-item" onclick="exportarRelatorioCSV(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Exportar CSV
-        </div>
-
-        <div class="menu-item" onclick="gerarPDFRota(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Gerar PDF da Rota
-        </div>
-
-        <div class="divisor-menu"></div>
-
-        <div class="menu-item" onclick="novaRota(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            Nova Rota
-        </div>
-
-        <div class="menu-item perigo" onclick="encerrarESalvarRota(); fecharMenuLateral();">
-            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-            Encerrar e Salvar Rota
-        </div>
+    <button class="btn-round-top" onclick="abrirMenuLateral()" style="width: 38px; height: 38px; font-size: 16px;">☰</button>
+   </div>
+   <div class="home-logo-box">
+    <div class="home-logo-circle">🧭</div>
+    <h2 class="home-title">Rota+Rápida</h2>
+    <p class="home-subtitle">Bipe, ouça a parada e entregue.</p>
+   </div>
+   <div class="home-status-badge">
+    <span>🟢</span> <span id="home-status-texto">Nenhuma rota carregada</span>
+   </div>
+   <div class="home-grid">
+    <!-- Card 1: Carregar Rota (Excel / CSV) -->
+    <div class="home-card-acao" onclick="acionarInputExcelUnico()">
+     <div class="home-card-icon">📊</div>
+     <div>
+      <p class="home-card-title">Carregar Rota</p>
+      <p class="home-card-desc" id="desc-rota-excel">Excel / CSV (Mapa)</p>
+     </div>
     </div>
-
-    <!-- MAPA -->
-    <div id="mapa-container">
-        <div id="mapa"></div>
-        <div class="top-bar-overlay">
-            <button class="btn-round-top" onclick="abrirMenuLateral()">☰</button>
-            <button class="btn-round-top" onclick="centralizarNoGPS()" title="Minha Localização" style="margin-left: auto;">🎯</button>
-            <button class="btn-round-top" onclick="abrirTelaInicial()" style="font-size: 16px;">🏠</button>
-        </div>
+    <input type="file" id="inputExcelUnico" accept=".csv, .xlsx, .xls" style="display:none;" onchange="processarExcelRota(this)"> <!-- Card 2: Carregar PDF -->
+    <div class="home-card-acao" onclick="acionarInputPdfUnico()">
+     <div class="home-card-icon">📄</div>
+     <div>
+      <p class="home-card-title">Carregar PDF</p>
+      <p class="home-card-desc" id="desc-rota-pdf">Lista de entregas</p>
+     </div>
     </div>
-
-    <!-- WIDGET DE PACOTES AGRUPADOS -->
-    <div id="widget-agrupado">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-size:12px; color:var(--cor-laranja); font-weight:700;">MÚLTIPLOS PACOTES NESTE LOCAL</span>
-            <span style="font-size: 12px; color: var(--texto-secundario);" id="agrupado-index-txt">Pacote 1 de 2</span>
-        </div>
-        <div style="font-weight: bold; font-size: 15px; color: var(--texto-principal);" id="agrupado-rua">---</div>
-        <div style="font-size: 13px; color: var(--cor-laranja);" id="agrupado-codigo">---</div>
-        
-        <div class="carrossel-controles">
-            <button class="btn-carrossel" onclick="navegarAgrupado(-1)">◄ Anterior</button>
-            <span style="flex:1; text-align:center; font-size:12px; color:var(--texto-secundario);">Deslize para trocar</span>
-            <button class="btn-carrossel" onclick="navegarAgrupado(1)">Próximo ►</button>
-        </div>
+    <input type="file" id="inputPdfUnico" accept=".pdf" style="display:none;" onchange="processarPdfEntregas(this)"> <!-- Card 3: Mapa -->
+    <div class="home-card-acao" onclick="abrirMapaDaRota()">
+     <div class="home-card-icon">🗺️</div>
+     <div>
+      <p class="home-card-title">Mapa</p>
+      <p class="home-card-desc">Ver pontos</p>
+     </div>
     </div>
-
-    <!-- PAINEL INFERIOR -->
-    <div id="bottom-sheet">
-        <div class="sheet-handle" id="handleTouch">
-            <div class="handle-bar"></div>
-        </div>
-
-        <div class="sheet-header">
-            <div>
-                <h2 class="sheet-title">Paradas</h2>
-                <div id="info-tempo-estimado" style="font-size: 12px; font-weight: 700; color: var(--cor-laranja); margin-top: 2px;">🏁 Término: --:--</div>
-            </div>
-            <div class="badge-restantes">⚡ <span id="contador-restantes">0</span> restantes</div>
-        </div>
-
-        <div class="sheet-actions-row">
-            <button class="btn-sheet-action destaque" onclick="iniciarOtimizacaoComEtapas(false)">⚡ Roteirizar</button>
-            <button class="btn-sheet-action" onclick="iniciarOtimizacaoComEtapas(true)">🔀 Reotimizar</button>
-            <button class="btn-sheet-action" onclick="abrirScanner()">📦 Abrir Scanner</button>
-        </div>
-
-        <div id="lista-paradas"></div>
+    <!-- Card 4: Menu -->
+    <div class="home-card-acao" onclick="abrirMenuLateral()">
+     <div class="home-card-icon">☰</div>
+     <div>
+      <p class="home-card-title">Menu</p>
+      <p class="home-card-desc">Mais opções</p>
+     </div>
     </div>
-
-    <!-- MODAL CARD AÇÕES DA PARADA -->
-    <div id="modalCardParada" class="modal-overlay">
-        <div class="modal-body" style="text-align: center;">
-            <h3 id="cardParadaTitulo" style="margin-top:0; color:var(--cor-laranja); font-size: 22px;">Parada #1</h3>
-            <p id="cardParadaCodigo" style="font-weight:bold; font-size: 15px; margin: 6px 0; color: var(--texto-principal);"></p>
-            <p id="cardParadaEndereco" style="font-size:13px; color:var(--texto-secundario); margin-bottom: 20px; line-height: 1.4;"></p>
-
-            <div style="display:flex; flex-direction:column; gap:10px;">
-                <button class="btn-sheet-action destaque" onclick="executarNavegacaoCard()" style="padding:14px; font-size:16px; border-radius: 12px;">🧭 Navegar</button>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-sheet-action" style="background:var(--cor-verde); color:white; border:none; padding:12px; font-size: 15px;" onclick="marcarStatusParadaCard('entregue')">✅ Entregue</button>
-                    <button class="btn-sheet-action" style="background:var(--cor-vermelho); color:white; border:none; padding:12px; font-size: 15px;" onclick="marcarStatusParadaCard('falhou')">❌ Falhou</button>
-                </div>
-                <button class="btn-sheet-action" style="margin-top:5px; padding: 10px;" onclick="fecharModalCardParada()">Fechar</button>
-            </div>
-        </div>
+   </div>
+   <!-- Botão Laranja Principal: Abrir Scanner -->
+   <button class="home-btn-principal" onclick="abrirScanner()">📦 Abrir Scanner</button>
+   <div class="home-footer-tip">
+    💡 <b>Dica:</b> Carregue o mapa via Excel/CSV e o PDF de correspondência independentemente para começar a bipar!
+   </div>
+  </div>
+  <!-- OVERLAY E MENU LATERAL -->
+  <div id="menu-lateral-overlay" onclick="fecharMenuLateral()"></div>
+  <div id="menu-lateral">
+   <div style="font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--cor-laranja);">Rota+Rápida</div>
+   <div class="menu-item" onclick="abrirTelaInicial()">
+    <svg viewBox="0 0 24 24">
+     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+    Tela Inicial
+   </div>
+   <div class="menu-item" onclick="alternarTema()">
+    <svg viewBox="0 0 24 24">
+     <circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+    </svg>
+    Alternar Tema (Claro/Escuro)
+   </div>
+   <div class="menu-item" onclick="alternarModoNavegacao()">
+    <svg viewBox="0 0 24 24">
+     <polygon points="3 11 22 2 13 21 11 13 3 11" />
+    </svg>
+    Navegação: <span id="label-gps-preferido" style="margin-left: 5px; color: var(--cor-laranja);">Google Maps</span>
+   </div>
+   <div class="divisor-menu"></div>
+   <div class="menu-item" onclick="abrirConfigRota(); fecharMenuLateral();">
+    <svg viewBox="0 0 24 24">
+     <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+    Configurar Rota (Circuit)
+   </div>
+   <div class="menu-item" onclick="abrirScanner(); fecharMenuLateral();">
+    <svg viewBox="0 0 24 24">
+     <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2-2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+    </svg>
+    Abrir Scanner
+   </div>
+   <div class="menu-item" onclick="inserirCodigoManual(); fecharMenuLateral();">
+    <svg viewBox="0 0 24 24">
+     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+    Inserir Código Manual
+   </div>
+   <div class="divisor-menu"></div>
+   <div class="menu-item" onclick="iniciarOtimizacaoComEtapas(false); fecharMenuLateral();">
+    <svg viewBox="0 0 24 24">
+     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+    Roteirizar (Padrão)
+   </div>
+   <div class="menu-item" onclick="iniciarOtimizacaoComEtapas(true); fecharMenuLateral();">
+    <svg viewBox="0 0 24 24">
+     <circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M6 21V9a9 9 0 0 0 9 9" />
+    </svg>
+    Reotimizar (Intermediárias)
+   </div>
+   <div class="menu-item" onclick="inverterOrdemParadas(); fecharMenuLateral();">
+    <svg viewBox="0 0 24 24">
+     <polyline points="17 1 21 5 17 9" /><line x1="21" y1="5" x2="9" y2="5" /><polyline points="7 23 3 19 7 15" /><line x1="3" y1="19" x2="15" y2="19" />
+    </svg>
+    Inverter Ordem
+   </div>
+   <div class="divisor-menu"></div>
+   <div class="menu-item" onclick="abrirResumo(); fecharMenuLateral();">
+    <svg viewBox="0 0 24 24">
+     <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+    Ver Resumo
+   </div>
+   <div class="menu-item" onclick="exportarRelatorioCSV(); fecharMenuLateral();">
+    <svg viewBox="0 0 24 24">
+     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+    Exportar CSV
+   </div>
+   <div class="menu-item" onclick="gerarPDFRota(); fecharMenuLateral();">
+    <svg viewBox="0 0 24 24">
+     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+    </svg>
+    Gerar PDF da Rota
+   </div>
+   <div class="divisor-menu"></div>
+   <div class="menu-item" onclick="novaRota(); fecharMenuLateral();">
+    <svg viewBox="0 0 24 24">
+     <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
+    </svg>
+    Nova Rota
+   </div>
+   <div class="menu-item perigo" onclick="encerrarESalvarRota(); fecharMenuLateral();">
+    <svg viewBox="0 0 24 24">
+     <polyline points="20 6 9 17 4 12" />
+    </svg>
+    Encerrar e Salvar Rota
+   </div>
+  </div>
+  <!-- MAPA -->
+  <div id="mapa-container">
+   <div id="mapa"></div>
+   <div class="top-bar-overlay">
+    <button class="btn-round-top" onclick="abrirMenuLateral()">☰</button>
+    <button class="btn-round-top" onclick="centralizarNoGPS()" title="Minha Localização" style="margin-left: auto;">🎯</button>
+    <button class="btn-round-top" onclick="abrirTelaInicial()" style="font-size: 16px;">🏠</button>
+   </div>
+  </div>
+  <!-- WIDGET DE PACOTES AGRUPADOS -->
+  <div id="widget-agrupado">
+   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+    <span style="font-size:12px; color:var(--cor-laranja); font-weight:700;">MÚLTIPLOS PACOTES NESTE LOCAL</span> <span style="font-size: 12px; color: var(--texto-secundario);" id="agrupado-index-txt">Pacote 1 de 2</span>
+   </div>
+   <div style="font-weight: bold; font-size: 15px; color: var(--texto-principal);" id="agrupado-rua">---</div>
+   <div style="font-size: 13px; color: var(--cor-laranja);" id="agrupado-codigo">---</div>
+   <div class="carrossel-controles">
+    <button class="btn-carrossel" onclick="navegarAgrupado(-1)">◄ Anterior</button>
+    <span style="flex:1; text-align:center; font-size:12px; color:var(--texto-secundario);">Deslize para trocar</span>
+    <button class="btn-carrossel" onclick="navegarAgrupado(1)">Próximo ►</button>
+   </div>
+  </div>
+  <!-- PAINEL INFERIOR -->
+  <div id="bottom-sheet">
+   <div class="sheet-handle" id="handleTouch">
+    <div class="handle-bar"></div>
+   </div>
+   <div class="sheet-header">
+    <div>
+     <h2 class="sheet-title">Paradas</h2>
+     <div id="info-tempo-estimado" style="font-size: 12px; font-weight: 700; color: var(--cor-laranja); margin-top: 2px;">🏁 Término: --:--</div>
     </div>
-
-    <!-- MODAL CONFIGURAR ROTA (Circuit) -->
-    <div id="modalConfigRota" class="modal-overlay">
-        <div class="modal-body">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="margin: 0; font-size: 20px; font-weight: 800; color: var(--texto-principal);">Configurar Rota</h3>
-                <button class="scanner-btn-close" style="background: var(--bg-input); color: var(--texto-principal);" onclick="fecharConfigRota()">✕</button>
-            </div>
-
-            <!-- Seção Fixar 1ª e Última Parada -->
-            <div class="config-section-title">🔒 Fixar Extremos na Reotimização</div>
-            <div class="config-switch-row">
-                <div>
-                    <div class="config-box-title">Fixar 1ª e última parada</div>
-                    <div class="config-box-desc">Mantém a 1ª e a última parada fixas enquanto reordena de forma inteligente as paradas intermediárias para o trajeto mais rápido.</div>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" id="cfgFixarExtremos" onchange="atualizarConfigEstado()">
-                    <span class="slider"></span>
-                </label>
-            </div>
-
-            <div class="config-divisor"></div>
-
-            <!-- Seção Ponto de Saída -->
-            <div class="config-section-title">📍 Ponto de saída</div>
-            <div class="config-section-desc">De onde você vai começar?</div>
-
-            <div class="config-opcao-box" id="cfg-saida-gps" onclick="selecionarPontoSaida('gps')">
-                <div class="config-box-icon">🧭</div>
-                <div class="config-box-info">
-                    <div class="config-box-title">Minha localização atual (GPS)</div>
-                    <div class="config-box-desc">Toque para usar GPS</div>
-                </div>
-                <div class="config-box-radio"></div>
-            </div>
-
-            <div class="config-opcao-box" id="cfg-saida-manual" onclick="selecionarPontoSaida('manual')">
-                <div class="config-box-icon">✏️</div>
-                <div class="config-box-info">
-                    <div class="config-box-title">Endereço manual</div>
-                    <div class="config-box-desc">Digite um endereço de partida real</div>
-                </div>
-                <div class="config-box-radio"></div>
-            </div>
-
-            <div id="container-input-saida-manual" style="display: none; padding: 0 4px;">
-                <input type="text" id="cfgEnderecoSaidaInput" class="input-dark" style="margin-top: 0; margin-bottom: 12px;" placeholder="Ex: Av. Paulista, 1000 - São Paulo, SP">
-            </div>
-
-            <div class="config-opcao-box ativo" id="cfg-saida-primeira" onclick="selecionarPontoSaida('primeira')">
-                <div class="config-box-icon">🗺️</div>
-                <div class="config-box-info">
-                    <div class="config-box-title">Começar pela primeira parada</div>
-                    <div class="config-box-desc">Use a primeira encomenda como ponto inicial</div>
-                </div>
-                <div class="config-box-radio"></div>
-            </div>
-
-            <div class="config-divisor"></div>
-
-            <!-- Seção Ponto Final -->
-            <div class="config-section-title">🏁 Ponto final da rota</div>
-            <div class="config-section-desc">Onde a rota deve terminar? Isso também ajuda a otimizar a ordem das paradas.</div>
-
-            <div class="config-opcao-box ativo" id="cfg-final-ultima" onclick="selecionarPontoFinal('ultima')">
-                <div class="config-box-icon">📦</div>
-                <div class="config-box-info">
-                    <div class="config-box-title">Terminar na última parada</div>
-                    <div class="config-box-desc">Não inclui viagem de volta no cálculo</div>
-                </div>
-                <div class="config-box-radio"></div>
-            </div>
-
-            <div class="config-opcao-box" id="cfg-final-voltar" onclick="selecionarPontoFinal('voltar')">
-                <div class="config-box-icon">🔄</div>
-                <div class="config-box-info">
-                    <div class="config-box-title">Voltar para o ponto de partida</div>
-                    <div class="config-box-desc">Repete o ponto de saída como destino final</div>
-                </div>
-                <div class="config-box-radio"></div>
-            </div>
-
-            <div class="config-opcao-box" id="cfg-final-endereco" onclick="selecionarPontoFinal('endereco')">
-                <div class="config-box-icon">🏠</div>
-                <div class="config-box-info">
-                    <div class="config-box-title">Terminar em outro endereço</div>
-                    <div class="config-box-desc">Ex: sua casa, base, outro ponto real</div>
-                </div>
-                <div class="config-box-radio"></div>
-            </div>
-
-            <div id="container-input-final-endereco" style="display: none; padding: 0 4px;">
-                <input type="text" id="cfgEnderecoFinalInput" class="input-dark" style="margin-top: 0; margin-bottom: 4px;" placeholder="Ex: Rua Vergueiro, 500 - São Paulo, SP" onblur="verificarEnderecoFinal()">
-                <div id="cfgEnderecoFinalStatus" style="font-size: 11px; margin-bottom: 12px; min-height: 14px;"></div>
-            </div>
-
-            <div class="config-divisor"></div>
-
-            <!-- Seção Tempo por Parada -->
-            <div class="config-section-title">⏱️ Tempo por parada</div>
-            <div class="config-section-desc">Quanto tempo você leva em média em cada entrega? Isso ajuda a estimar quando você termina.</div>
-
-            <div class="config-card-destaque">
-                <div class="config-card-valor"><span id="lblTempoMin">3</span> min</div>
-                <div class="config-card-sub">por parada</div>
-                <div class="config-card-sub" style="color: var(--cor-laranja); font-weight: 700; margin-top: 4px;" id="lblPacotesHora">≈ 20 pacotes/hora</div>
-            </div>
-
-            <div class="config-opcoes-grid" id="grid-tempo-parada">
-                <div class="config-opcao-pill" onclick="definirTempoParada(1)">1m</div>
-                <div class="config-opcao-pill" onclick="definirTempoParada(2)">2m</div>
-                <div class="config-opcao-pill ativo" id="pill-tempo-3" onclick="definirTempoParada(3)">3m</div>
-                <div class="config-opcao-pill" onclick="definirTempoParada(4)">4m</div>
-                <div class="config-opcao-pill" onclick="definirTempoParada(5)">5m</div>
-                <div class="config-opcao-pill" onclick="definirTempoParada(7)">7m</div>
-            </div>
-
-            <div class="config-divisor"></div>
-
-            <!-- Seção Velocidade Média -->
-            <div class="config-section-title">🚗 Velocidade média</div>
-            <div class="config-section-desc">Velocidade média estimada para deslocamento entre paradas</div>
-
-            <div class="config-opcoes-grid" id="grid-velocidade" style="flex-wrap: wrap;">
-                <div class="config-opcao-pill" style="flex: 1 0 30%;" onclick="definirVelocidade(20)">20 km/h</div>
-                <div class="config-opcao-pill ativo" id="pill-vel-30" style="flex: 1 0 30%;" onclick="definirVelocidade(30)">30 km/h</div>
-                <div class="config-opcao-pill" style="flex: 1 0 30%;" onclick="definirVelocidade(40)">40 km/h</div>
-                <div class="config-opcao-pill" style="flex: 1 0 30%;" onclick="definirVelocidade(50)">50 km/h</div>
-                <div class="config-opcao-pill" style="flex: 1 0 30%;" onclick="definirVelocidade(60)">60 km/h</div>
-            </div>
-
-            <button class="btn-sheet-action destaque" style="width: 100%; margin-top: 20px; padding: 14px; font-size: 15px;" onclick="salvarEFecharConfigRota()">Salvar e Voltar</button>
-        </div>
+    <div class="badge-restantes">
+     ⚡ <span id="contador-restantes">0</span> restantes
     </div>
-
-    <!-- MODAL EDITAR PARADA E EDITAR STATUS -->
-    <div id="modalEdit" class="modal-overlay">
-        <div class="modal-body">
-            <h3 style="margin-top:0;" id="modalEditTitulo">Editar Parada</h3>
-            
-            <label style="font-size: 12px; color: var(--texto-secundario); font-weight: 600;">Endereço:</label>
-            <input type="text" id="inputEditEndereco" class="input-dark">
-
-            <div id="containerEditStatus" style="display: none; margin-bottom: 15px;">
-                <label style="font-size: 12px; color: var(--texto-secundario); font-weight: 600;">Status da Parada / Baixa:</label>
-                <select id="selectEditStatus" class="input-dark" style="margin-top: 4px; margin-bottom: 0;">
-                    <option value="pendente">⏳ Pendente (Reabrir)</option>
-                    <option value="entregue">✅ Entregue</option>
-                    <option value="falhou">❌ Falhou</option>
-                </select>
-            </div>
-
-            <div style="display:flex; gap:10px;">
-                <button class="btn-sheet-action" onclick="fecharModalEdit()">Cancelar</button>
-                <button class="btn-sheet-action destaque" onclick="salvarEdicaoEndereco()">Salvar</button>
-            </div>
-        </div>
+   </div>
+   <div class="sheet-actions-row">
+    <button class="btn-sheet-action destaque" onclick="iniciarOtimizacaoComEtapas(false)">⚡ Roteirizar</button>
+    <button class="btn-sheet-action" onclick="iniciarOtimizacaoComEtapas(true)">🔀 Reotimizar</button>
+    <button class="btn-sheet-action" onclick="abrirScanner()">📦 Abrir Scanner</button>
+   </div>
+   <div id="lista-paradas"></div>
+  </div>
+  <!-- MODAL CARD AÇÕES DA PARADA -->
+  <div id="modalCardParada" class="modal-overlay">
+   <div class="modal-body" style="text-align: center;">
+    <h3 id="cardParadaTitulo" style="margin-top:0; color:var(--cor-laranja); font-size: 22px;">Parada #1</h3>
+    <p id="cardParadaCodigo" style="font-weight:bold; font-size: 15px; margin: 6px 0; color: var(--texto-principal);"></p>
+    <p id="cardParadaEndereco" style="font-size:13px; color:var(--texto-secundario); margin-bottom: 20px; line-height: 1.4;"></p>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+     <button class="btn-sheet-action destaque" onclick="executarNavegacaoCard()" style="padding:14px; font-size:16px; border-radius: 12px;">🧭 Navegar</button>
+     <div style="display:flex; gap:10px;">
+      <button class="btn-sheet-action" style="background:var(--cor-verde); color:white; border:none; padding:12px; font-size: 15px;" onclick="marcarStatusParadaCard('entregue')">✅ Entregue</button>
+      <button class="btn-sheet-action" style="background:var(--cor-vermelho); color:white; border:none; padding:12px; font-size: 15px;" onclick="marcarStatusParadaCard('falhou')">❌ Falhou</button>
+     </div>
+     <button class="btn-sheet-action" style="margin-top:5px; padding: 10px;" onclick="fecharModalCardParada()">Fechar</button>
     </div>
-
-    <!-- MODAL RESUMO -->
-    <div id="modalResumo" class="modal-overlay">
-        <div class="modal-body">
-            <h3 style="margin-top:0; color:var(--cor-laranja);">Resumo dos Dias de Trabalho</h3>
-            <label style="font-size:12px; color:var(--texto-secundario);">Filtrar por Data:</label>
-            <input type="date" id="filtroDataResumo" class="input-dark" onchange="filtrarResumoPorData()">
-            
-            <div id="conteudoResumo"></div>
-
-            <button class="btn-sheet-action destaque" style="width:100%; margin-top:15px;" onclick="fecharModalResumo()">Fechar</button>
-        </div>
+   </div>
+  </div>
+  <!-- MODAL CONFIGURAR ROTA (Circuit) -->
+  <div id="modalConfigRota" class="modal-overlay">
+   <div class="modal-body">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+     <h3 style="margin: 0; font-size: 20px; font-weight: 800; color: var(--texto-principal);">Configurar Rota</h3>
+     <button class="scanner-btn-close" style="background: var(--bg-input); color: var(--texto-principal);" onclick="fecharConfigRota()">✕</button>
     </div>
-
-    <!-- MODAL SCANNER -->
-    <div id="modalScanner" class="modal-overlay">
-        <div class="scanner-header">
-            <button class="scanner-btn-close" onclick="fecharScanner()">✕</button>
-            <div class="scanner-header-badge" id="scanner-topo-badge">📦 0 de 0</div>
-            <button class="scanner-btn-close" onclick="abrirMenuLateral()">☰</button>
-        </div>
-
-        <div class="scanner-viewport-container">
-            <div id="scanner-bip-toast">Parada #1 (1x)</div>
-            <div id="reader"></div>
-            <div class="scanner-instruction">Aponte para o código de barras ou QR Code do pacote</div>
-        </div>
-
-        <div class="scanner-stats-bar">
-            <div style="display: flex; gap: 8px; width: 100%; margin-bottom: 4px;">
-                <div class="scanner-stat-card" onclick="document.getElementById('inputPdfScannerUnico').click()" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px;">
-                    <div style="font-size: 16px;">📄</div>
-                    <div class="scanner-stat-label" style="font-size: 11px; color: white;">Carregar PDF</div>
-                </div>
-                <input type="file" id="inputPdfScannerUnico" accept=".pdf" style="display:none;" onchange="processarPdfEntregasNoScanner(this)">
-
-                <div class="scanner-stat-card" onclick="inserirCodigoManual()" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px;">
-                    <div style="font-size: 16px;">🔢</div>
-                    <div class="scanner-stat-label" style="font-size: 11px; color: white;">Digitar Manual</div>
-                </div>
-            </div>
-
-            <div style="display: flex; gap: 8px; width: 100%; margin-bottom: 4px;">
-                <div class="scanner-stat-card active" style="padding: 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <div style="font-size: 16px;">📍</div>
-                    <div style="text-align: left;">
-                        <div class="scanner-stat-label" style="font-size: 10px;">Parada Encontrada:</div>
-                        <div class="scanner-stat-num" id="scanner-parada-encontrada-txt" style="font-size: 14px; color: var(--cor-laranja);">Nenhuma</div>
-                    </div>
-                </div>
-            </div>
-
-            <div style="display: flex; gap: 10px; width: 100%;">
-                <div class="scanner-stat-card">
-                    <div class="scanner-stat-num" id="scanner-stat-bipados">0</div>
-                    <div class="scanner-stat-label">Bipados</div>
-                </div>
-                <div class="scanner-stat-card active">
-                    <div class="scanner-stat-num" id="scanner-stat-faltam">0</div>
-                    <div class="scanner-stat-label">Faltam</div>
-                </div>
-                <div class="scanner-stat-card">
-                    <div class="scanner-stat-num" id="scanner-stat-total">0</div>
-                    <div class="scanner-stat-label">Total Pacotes</div>
-                </div>
-            </div>
-        </div>
+    <!-- Seção Fixar 1ª e Última Parada -->
+    <div class="config-section-title">🔒 Fixar Extremos na Reotimização</div>
+    <div class="config-switch-row">
+     <div>
+      <div class="config-box-title">Fixar 1ª e última parada</div>
+      <div class="config-box-desc">Mantém a 1ª e a última parada fixas enquanto reordena de forma inteligente as paradas intermediárias para o trajeto mais rápido.</div>
+     </div>
+     <label class="switch"> <input type="checkbox" id="cfgFixarExtremos" onchange="atualizarConfigEstado()"> <span class="slider"></span> </label>
     </div>
-
-    <!-- MODAL OTIMIZAÇÃO POR ETAPAS -->
-    <div id="modalOtimizacaoEtapas" class="modal-overlay">
-        <div class="modal-body" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <div class="spinner-otimizacao" style="margin-bottom: 20px;"></div>
-            <h3 style="margin: 0 0 10px 0; color: var(--texto-principal);">Otimizando sua rota</h3>
-            <p id="textoStatusEtapa" style="color: var(--cor-laranja); font-weight: bold; font-size: 14px; margin-bottom: 20px;">Analisando suas paradas...</p>
-            <div style="width: 100%; background: var(--bg-input); height: 8px; border-radius: 4px; overflow: hidden;">
-                <div id="barraProgressoEtapa" style="width: 0%; background: var(--cor-laranja); height: 100%; transition: width 0.4s ease;"></div>
-            </div>
-        </div>
+    <div class="config-divisor"></div>
+    <!-- Seção Ponto de Saída -->
+    <div class="config-section-title">📍 Ponto de saída</div>
+    <div class="config-section-desc">De onde você vai começar?</div>
+    <div class="config-opcao-box" id="cfg-saida-gps" onclick="selecionarPontoSaida('gps')">
+     <div class="config-box-icon">🧭</div>
+     <div class="config-box-info">
+      <div class="config-box-title">Minha localização atual (GPS)</div>
+      <div class="config-box-desc">Toque para usar GPS</div>
+     </div>
+     <div class="config-box-radio"></div>
     </div>
-
-    <!-- PAINEL DE NAVEGAÇÃO TURN-BY-TURN -->
-    <div id="painel-navegacao-topo">
-        <div class="topo-linha">
-            <div class="icone-manobra" id="nav-icone-manobra">⬆️</div>
-            <div style="flex:1; min-width:0;">
-                <div id="nav-instrucao-principal" style="font-size:17px; font-weight:800;">Calculando rota...</div>
-                <div id="nav-instrucao-rua" style="font-size:12px; opacity:0.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">--</div>
-            </div>
-            <div id="nav-distancia-proxima" style="font-size:16px; font-weight:800; text-align:right; flex-shrink:0;">--</div>
-        </div>
+    <div class="config-opcao-box" id="cfg-saida-manual" onclick="selecionarPontoSaida('manual')">
+     <div class="config-box-icon">✏️</div>
+     <div class="config-box-info">
+      <div class="config-box-title">Endereço manual</div>
+      <div class="config-box-desc">Digite um endereço de partida real</div>
+     </div>
+     <div class="config-box-radio"></div>
     </div>
-
-    <div id="painel-navegacao-inferior">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap: 10px;">
-            <div>
-                <div style="font-size:11px; color:var(--texto-secundario);">Chegada</div>
-                <div id="nav-eta" style="font-size:18px; font-weight:800; color: var(--texto-principal);">--:--</div>
-            </div>
-            <div style="text-align:center;">
-                <div style="font-size:11px; color:var(--texto-secundario);">Distância</div>
-                <div id="nav-distancia-restante" style="font-size:16px; font-weight:800; color: var(--texto-principal);">-- km</div>
-            </div>
-            <button class="btn-sheet-action" style="background:var(--cor-vermelho); color:white; border:none; flex:0 0 auto; padding:12px 20px;" onclick="pararNavegacaoInterna()">Encerrar</button>
-        </div>
+    <div id="container-input-saida-manual" style="display: none; padding: 0 4px;">
+     <input type="text" id="cfgEnderecoSaidaInput" class="input-dark" style="margin-top: 0; margin-bottom: 12px;" placeholder="Ex: Av. Paulista, 1000 - São Paulo, SP">
     </div>
-
-    <div class="botoes-navegacao-flutuantes" id="botoes-nav-flutuantes">
-        <div class="btn-nav-flutuante" onclick="centralizarNoUsuarioNavegacao()" title="Centralizar">🎯</div>
+    <div class="config-opcao-box ativo" id="cfg-saida-primeira" onclick="selecionarPontoSaida('primeira')">
+     <div class="config-box-icon">🗺️</div>
+     <div class="config-box-info">
+      <div class="config-box-title">Começar pela primeira parada</div>
+      <div class="config-box-desc">Use a primeira encomenda como ponto inicial</div>
+     </div>
+     <div class="config-box-radio"></div>
     </div>
-
-    <div id="overlay-recalculando">
-        <div class="pulse-recalc"></div>
-        Recalculando rota...
+    <div class="config-divisor"></div>
+    <!-- Seção Ponto Final -->
+    <div class="config-section-title">🏁 Ponto final da rota</div>
+    <div class="config-section-desc">Onde a rota deve terminar? Isso também ajuda a otimizar a ordem das paradas.</div>
+    <div class="config-opcao-box ativo" id="cfg-final-ultima" onclick="selecionarPontoFinal('ultima')">
+     <div class="config-box-icon">📦</div>
+     <div class="config-box-info">
+      <div class="config-box-title">Terminar na última parada</div>
+      <div class="config-box-desc">Não inclui viagem de volta no cálculo</div>
+     </div>
+     <div class="config-box-radio"></div>
     </div>
-
-    <script>
+    <div class="config-opcao-box" id="cfg-final-voltar" onclick="selecionarPontoFinal('voltar')">
+     <div class="config-box-icon">🔄</div>
+     <div class="config-box-info">
+      <div class="config-box-title">Voltar para o ponto de partida</div>
+      <div class="config-box-desc">Repete o ponto de saída como destino final</div>
+     </div>
+     <div class="config-box-radio"></div>
+    </div>
+    <div class="config-opcao-box" id="cfg-final-endereco" onclick="selecionarPontoFinal('endereco')">
+     <div class="config-box-icon">🏠</div>
+     <div class="config-box-info">
+      <div class="config-box-title">Terminar em outro endereço</div>
+      <div class="config-box-desc">Ex: sua casa, base, outro ponto real</div>
+     </div>
+     <div class="config-box-radio"></div>
+    </div>
+    <div id="container-input-final-endereco" style="display: none; padding: 0 4px;">
+     <input type="text" id="cfgEnderecoFinalInput" class="input-dark" style="margin-top: 0; margin-bottom: 4px;" placeholder="Ex: Rua Vergueiro, 500 - São Paulo, SP" onblur="verificarEnderecoFinal()">
+     <div id="cfgEnderecoFinalStatus" style="font-size: 11px; margin-bottom: 12px; min-height: 14px;"></div>
+    </div>
+    <div class="config-divisor"></div>
+    <!-- Seção Tempo por Parada -->
+    <div class="config-section-title">⏱️ Tempo por parada</div>
+    <div class="config-section-desc">Quanto tempo você leva em média em cada entrega? Isso ajuda a estimar quando você termina.</div>
+    <div class="config-card-destaque">
+     <div class="config-card-valor">
+      <span id="lblTempoMin">3</span> min
+     </div>
+     <div class="config-card-sub">por parada</div>
+     <div class="config-card-sub" style="color: var(--cor-laranja); font-weight: 700; margin-top: 4px;" id="lblPacotesHora">≈ 20 pacotes/hora</div>
+    </div>
+    <div class="config-opcoes-grid" id="grid-tempo-parada">
+     <div class="config-opcao-pill" onclick="definirTempoParada(1)">1m</div>
+     <div class="config-opcao-pill" onclick="definirTempoParada(2)">2m</div>
+     <div class="config-opcao-pill ativo" id="pill-tempo-3" onclick="definirTempoParada(3)">3m</div>
+     <div class="config-opcao-pill" onclick="definirTempoParada(4)">4m</div>
+     <div class="config-opcao-pill" onclick="definirTempoParada(5)">5m</div>
+     <div class="config-opcao-pill" onclick="definirTempoParada(7)">7m</div>
+    </div>
+    <div class="config-divisor"></div>
+    <!-- Seção Velocidade Média -->
+    <div class="config-section-title">🚗 Velocidade média</div>
+    <div class="config-section-desc">Velocidade média estimada para deslocamento entre paradas</div>
+    <div class="config-opcoes-grid" id="grid-velocidade" style="flex-wrap: wrap;">
+     <div class="config-opcao-pill" style="flex: 1 0 30%;" onclick="definirVelocidade(20)">20 km/h</div>
+     <div class="config-opcao-pill ativo" id="pill-vel-30" style="flex: 1 0 30%;" onclick="definirVelocidade(30)">30 km/h</div>
+     <div class="config-opcao-pill" style="flex: 1 0 30%;" onclick="definirVelocidade(40)">40 km/h</div>
+     <div class="config-opcao-pill" style="flex: 1 0 30%;" onclick="definirVelocidade(50)">50 km/h</div>
+     <div class="config-opcao-pill" style="flex: 1 0 30%;" onclick="definirVelocidade(60)">60 km/h</div>
+    </div>
+    <button class="btn-sheet-action destaque" style="width: 100%; margin-top: 20px; padding: 14px; font-size: 15px;" onclick="salvarEFecharConfigRota()">Salvar e Voltar</button>
+   </div>
+  </div>
+  <!-- MODAL EDITAR PARADA E EDITAR STATUS -->
+  <div id="modalEdit" class="modal-overlay">
+   <div class="modal-body">
+    <h3 style="margin-top:0;" id="modalEditTitulo">Editar Parada</h3>
+    <label style="font-size: 12px; color: var(--texto-secundario); font-weight: 600;">Endereço:</label> <input type="text" id="inputEditEndereco" class="input-dark">
+    <div id="containerEditStatus" style="display: none; margin-bottom: 15px;">
+     <label style="font-size: 12px; color: var(--texto-secundario); font-weight: 600;">Status da Parada / Baixa:</label> <select id="selectEditStatus" class="input-dark" style="margin-top: 4px; margin-bottom: 0;"> <option value="pendente">⏳ Pendente (Reabrir)</option> <option value="entregue">✅ Entregue</option> <option value="falhou">❌ Falhou</option> </select>
+    </div>
+    <div style="display:flex; gap:10px;">
+     <button class="btn-sheet-action" onclick="fecharModalEdit()">Cancelar</button>
+     <button class="btn-sheet-action destaque" onclick="salvarEdicaoEndereco()">Salvar</button>
+    </div>
+   </div>
+  </div>
+  <!-- MODAL RESUMO -->
+  <div id="modalResumo" class="modal-overlay">
+   <div class="modal-body">
+    <h3 style="margin-top:0; color:var(--cor-laranja);">Resumo dos Dias de Trabalho</h3>
+    <label style="font-size:12px; color:var(--texto-secundario);">Filtrar por Data:</label> <input type="date" id="filtroDataResumo" class="input-dark" onchange="filtrarResumoPorData()">
+    <div id="conteudoResumo"></div>
+    <button class="btn-sheet-action destaque" style="width:100%; margin-top:15px;" onclick="fecharModalResumo()">Fechar</button>
+   </div>
+  </div>
+  <!-- MODAL SCANNER -->
+  <div id="modalScanner" class="modal-overlay">
+   <div class="scanner-header">
+    <button class="scanner-btn-close" onclick="fecharScanner()">✕</button>
+    <div class="scanner-header-badge" id="scanner-topo-badge">📦 0 de 0</div>
+    <button class="scanner-btn-close" onclick="abrirMenuLateral()">☰</button>
+   </div>
+   <div class="scanner-viewport-container">
+    <div id="scanner-bip-toast">Parada #1 (1x)</div>
+    <div id="reader"></div>
+    <div class="scanner-instruction">Aponte para o código de barras ou QR Code do pacote</div>
+   </div>
+   <div class="scanner-stats-bar">
+    <div style="display: flex; gap: 8px; width: 100%; margin-bottom: 4px;">
+     <div class="scanner-stat-card" onclick="document.getElementById('inputPdfScannerUnico').click()" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px;">
+      <div style="font-size: 16px;">📄</div>
+      <div class="scanner-stat-label" style="font-size: 11px; color: white;">Carregar PDF</div>
+     </div>
+     <input type="file" id="inputPdfScannerUnico" accept=".pdf" style="display:none;" onchange="processarPdfEntregasNoScanner(this)">
+     <div class="scanner-stat-card" onclick="inserirCodigoManual()" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px;">
+      <div style="font-size: 16px;">🔢</div>
+      <div class="scanner-stat-label" style="font-size: 11px; color: white;">Digitar Manual</div>
+     </div>
+    </div>
+    <div style="display: flex; gap: 8px; width: 100%; margin-bottom: 4px;">
+     <div class="scanner-stat-card active" style="padding: 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+      <div style="font-size: 16px;">📍</div>
+      <div style="text-align: left;">
+       <div class="scanner-stat-label" style="font-size: 10px;">Parada Encontrada:</div>
+       <div class="scanner-stat-num" id="scanner-parada-encontrada-txt" style="font-size: 14px; color: var(--cor-laranja);">Nenhuma</div>
+      </div>
+     </div>
+    </div>
+    <div style="display: flex; gap: 10px; width: 100%;">
+     <div class="scanner-stat-card">
+      <div class="scanner-stat-num" id="scanner-stat-bipados">0</div>
+      <div class="scanner-stat-label">Bipados</div>
+     </div>
+     <div class="scanner-stat-card active">
+      <div class="scanner-stat-num" id="scanner-stat-faltam">0</div>
+      <div class="scanner-stat-label">Faltam</div>
+     </div>
+     <div class="scanner-stat-card">
+      <div class="scanner-stat-num" id="scanner-stat-total">0</div>
+      <div class="scanner-stat-label">Total Pacotes</div>
+     </div>
+    </div>
+   </div>
+  </div>
+  <!-- MODAL OTIMIZAÇÃO POR ETAPAS -->
+  <div id="modalOtimizacaoEtapas" class="modal-overlay">
+   <div class="modal-body" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <div class="spinner-otimizacao" style="margin-bottom: 20px;"></div>
+    <h3 style="margin: 0 0 10px 0; color: var(--texto-principal);">Otimizando sua rota</h3>
+    <p id="textoStatusEtapa" style="color: var(--cor-laranja); font-weight: bold; font-size: 14px; margin-bottom: 20px;">Analisando suas paradas...</p>
+    <div style="width: 100%; background: var(--bg-input); height: 8px; border-radius: 4px; overflow: hidden;">
+     <div id="barraProgressoEtapa" style="width: 0%; background: var(--cor-laranja); height: 100%; transition: width 0.4s ease;"></div>
+    </div>
+   </div>
+  </div>
+  <!-- PAINEL DE NAVEGAÇÃO TURN-BY-TURN -->
+  <div id="painel-navegacao-topo">
+   <div class="topo-linha">
+    <div class="icone-manobra" id="nav-icone-manobra">⬆️</div>
+    <div style="flex:1; min-width:0;">
+     <div id="nav-instrucao-principal" style="font-size:17px; font-weight:800;">Calculando rota...</div>
+     <div id="nav-instrucao-rua" style="font-size:12px; opacity:0.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">--</div>
+    </div>
+    <div id="nav-distancia-proxima" style="font-size:16px; font-weight:800; text-align:right; flex-shrink:0;">--</div>
+   </div>
+  </div>
+  <div id="painel-navegacao-inferior">
+   <div style="display:flex; justify-content:space-between; align-items:center; gap: 10px;">
+    <div>
+     <div style="font-size:11px; color:var(--texto-secundario);">Chegada</div>
+     <div id="nav-eta" style="font-size:18px; font-weight:800; color: var(--texto-principal);">--:--</div>
+    </div>
+    <div style="text-align:center;">
+     <div style="font-size:11px; color:var(--texto-secundario);">Distância</div>
+     <div id="nav-distancia-restante" style="font-size:16px; font-weight:800; color: var(--texto-principal);">-- km</div>
+    </div>
+    <button class="btn-sheet-action" style="background:var(--cor-vermelho); color:white; border:none; flex:0 0 auto; padding:12px 20px;" onclick="pararNavegacaoInterna()">Encerrar</button>
+   </div>
+   <div style="display:flex; gap:10px; margin-top: 10px;">
+    <button class="btn-sheet-action destaque" style="padding:12px; font-size:14px; flex:1;" onclick="abrirScanner()">📦 Abrir Scanner</button>
+   </div>
+  </div>
+  <div class="botoes-navegacao-flutuantes" id="botoes-nav-flutuantes">
+   <div class="btn-nav-flutuante" onclick="abrirCardParadaAtualNav()" title="Detalhes da Parada">📋</div>
+   <div class="btn-nav-flutuante" onclick="centralizarNoUsuarioNavegacao()" title="Centralizar">🎯</div>
+  </div>
+  <!-- PRÉ-VISUALIZAÇÃO DA ROTA (antes de iniciar) -->
+  <div id="painel-preview-rota">
+   <div class="preview-endereco" id="preview-rota-endereco">--</div>
+   <div class="preview-stats">
+    <span class="preview-tempo" id="preview-rota-tempo">-- min</span> <span class="preview-distancia" id="preview-rota-distancia">(-- km)</span>
+   </div>
+   <div style="display:flex; gap:10px;">
+    <button class="btn-sheet-action" style="flex:1; padding:14px;" onclick="cancelarPreviewRota()">Cancelar</button>
+    <button class="btn-sheet-action destaque" style="flex:2; padding:14px; font-size:15px;" onclick="confirmarIniciarNavegacao()">🧭 Iniciar</button>
+   </div>
+  </div>
+  <div id="overlay-recalculando">
+   <div class="pulse-recalc"></div>
+   Recalculando rota...
+  </div>
+  <script>
         let bdRotas = JSON.parse(localStorage.getItem('appegg_db_oficial')) || [];
         let historicoDias = JSON.parse(localStorage.getItem('appegg_historico')) || [];
         let modoNavegacao = localStorage.getItem('appegg_modo_nav') || 'maps';
@@ -2356,7 +2325,7 @@
                     alert("O mapa não está disponível no momento. Tente novamente após recarregar a página.");
                     return;
                 }
-                iniciarNavegacaoInterna(idxParada);
+                abrirPreviewRota(idxParada);
             } else if (modoNavegacao === 'maps') {
                 let url = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}`;
                 window.open(url, '_blank');
@@ -2368,7 +2337,30 @@
 
         // ===== MOTOR DE NAVEGAÇÃO TURN-BY-TURN =====
 
-        async function iniciarNavegacaoInterna(paradaIdx) {
+        let navRotaDistanciaTotal = 0;
+        let navRotaDuracaoTotal = 0;
+
+        async function buscarRotaOSRM(origem, destino) {
+            try {
+                const url = `https://router.project-osrm.org/route/v1/driving/${origem.lon},${origem.lat};${destino.lon},${destino.lat}?overview=full&geometries=geojson&steps=true`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.code === 'Ok' && data.routes && data.routes[0]) return data.routes[0];
+            } catch (e) {
+                console.error("Erro ao buscar rota OSRM:", e);
+            }
+            return null;
+        }
+
+        function desenharPolylineNavegacao(rota) {
+            const coords = rota.geometry.coordinates.map(c => [c[1], c[0]]);
+            if (navPolylineNav) map.removeLayer(navPolylineNav);
+            navPolylineNav = L.polyline(coords, { color: '#2563eb', weight: 6, opacity: 0.9, lineJoin: 'round' }).addTo(map);
+            return coords;
+        }
+
+        // Etapa 1: mostra prévia da rota (tempo, distância) com botão "Iniciar" — igual ao fluxo do Google Maps
+        async function abrirPreviewRota(paradaIdx) {
             const p = bdRotas[paradaIdx];
             if (!p) return;
 
@@ -2376,49 +2368,75 @@
                 await obterLocalizacaoAtual();
             }
             if (!userLocation) {
-                alert("Não foi possível obter sua localização GPS para iniciar a navegação. Verifique se a localização está ativada.");
+                alert("Não foi possível obter sua localização GPS. Verifique se a localização está ativada.");
                 return;
             }
 
             navDestinoParadaIdx = paradaIdx;
             navDestino = { lat: p.lat, lon: p.lon };
-            navegacaoAtiva = true;
 
             document.getElementById('fluxo-inicial-container').style.display = 'none';
+            recolherBottomSheet();
+
+            const rota = await buscarRotaOSRM(userLocation, navDestino);
+            if (!rota) {
+                alert("Não foi possível calcular a rota até esse endereço.");
+                return;
+            }
+
+            navRotaSteps = (rota.legs[0] && rota.legs[0].steps) ? rota.legs[0].steps : [];
+            navStepAtual = 0;
+            navRotaDistanciaTotal = rota.distance;
+            navRotaDuracaoTotal = rota.duration;
+            const coords = desenharPolylineNavegacao(rota);
+
+            document.getElementById('preview-rota-endereco').innerText = p.endereco;
+            document.getElementById('preview-rota-tempo').innerText = Math.max(1, Math.round(rota.duration / 60)) + ' min';
+            document.getElementById('preview-rota-distancia').innerText = '(' + (rota.distance / 1000).toFixed(1) + ' km)';
+            document.getElementById('painel-preview-rota').style.display = 'block';
+
+            if (coords.length > 0) map.fitBounds(coords, { padding: [60, 160] });
+        }
+
+        function cancelarPreviewRota() {
+            document.getElementById('painel-preview-rota').style.display = 'none';
+            if (navPolylineNav) { map.removeLayer(navPolylineNav); navPolylineNav = null; }
+            navDestino = null;
+            navDestinoParadaIdx = null;
+            navRotaSteps = [];
+        }
+
+        // Etapa 2: começa de fato a navegação turn-by-turn (chamado pelo botão "Iniciar")
+        function confirmarIniciarNavegacao() {
+            document.getElementById('painel-preview-rota').style.display = 'none';
+            navegacaoAtiva = true;
+
             document.body.classList.add('modo-navegacao');
             document.getElementById('painel-navegacao-topo').style.display = 'block';
             document.getElementById('painel-navegacao-inferior').style.display = 'block';
             document.getElementById('botoes-nav-flutuantes').style.display = 'flex';
-            document.getElementById('nav-instrucao-principal').innerText = 'Calculando rota...';
 
-            await calcularRotaNavegacao(userLocation, navDestino);
-            map.setZoom(18);
-            map.panTo([userLocation.lat, userLocation.lon]);
+            atualizarPainelNavegacao();
+            atualizarDistanciaEtaNavegacao(navRotaDistanciaTotal, navRotaDuracaoTotal);
+
+            if (map && userLocation) {
+                map.setZoom(18);
+                map.panTo([userLocation.lat, userLocation.lon]);
+            }
         }
 
+        // Usada apenas para recalcular a rota DURANTE a navegação já ativa (usuário errou o caminho)
         async function calcularRotaNavegacao(origem, destino) {
-            try {
-                const url = `https://router.project-osrm.org/route/v1/driving/${origem.lon},${origem.lat};${destino.lon},${destino.lat}?overview=full&geometries=geojson&steps=true`;
-                const res = await fetch(url);
-                const data = await res.json();
-
-                if (data.code === 'Ok' && data.routes && data.routes[0]) {
-                    const rota = data.routes[0];
-                    navRotaSteps = (rota.legs[0] && rota.legs[0].steps) ? rota.legs[0].steps : [];
-                    navStepAtual = 0;
-
-                    const coords = rota.geometry.coordinates.map(c => [c[1], c[0]]);
-                    if (navPolylineNav) map.removeLayer(navPolylineNav);
-                    navPolylineNav = L.polyline(coords, { color: '#2563eb', weight: 6, opacity: 0.9, lineJoin: 'round' }).addTo(map);
-
-                    atualizarPainelNavegacao();
-                    atualizarDistanciaEtaNavegacao(rota.distance, rota.duration);
-                } else {
-                    alert("Não foi possível calcular a rota real para navegação (sem resposta do serviço de rotas).");
-                }
-            } catch (e) {
-                console.error("Erro ao calcular rota de navegação:", e);
+            const rota = await buscarRotaOSRM(origem, destino);
+            if (!rota) {
+                console.error("Não foi possível recalcular a rota.");
+                return;
             }
+            navRotaSteps = (rota.legs[0] && rota.legs[0].steps) ? rota.legs[0].steps : [];
+            navStepAtual = 0;
+            desenharPolylineNavegacao(rota);
+            atualizarPainelNavegacao();
+            atualizarDistanciaEtaNavegacao(rota.distance, rota.duration);
         }
 
         function iconeParaManobra(maneuver) {
@@ -2556,6 +2574,7 @@
             navegacaoAtiva = false;
             navRotaSteps = [];
             navStepAtual = 0;
+            const idxParadaEncerrada = navDestinoParadaIdx;
             navDestino = null;
             navDestinoParadaIdx = null;
 
@@ -2566,11 +2585,20 @@
             document.getElementById('overlay-recalculando').style.display = 'none';
 
             if (navPolylineNav) { map.removeLayer(navPolylineNav); navPolylineNav = null; }
-            if (map) map.setZoom(13);
+            if (map) {
+                map.setZoom(13);
+                plotarNoMapa(); // restaura os pinos numerados, que ficam escondidos durante a navegação
+            }
         }
 
         function centralizarNoUsuarioNavegacao() {
-            if (userLocation && map) map.panTo([userLocation.lat, userLocation.lon]);
+            if (userLocation && map) map.setView([userLocation.lat, userLocation.lon], 18, { animate: true });
+        }
+
+        function abrirCardParadaAtualNav() {
+            if (navDestinoParadaIdx !== null && bdRotas[navDestinoParadaIdx]) {
+                abrirCardParada(navDestinoParadaIdx);
+            }
         }
 
         function marcarStatusParadaCard(novoStatus) {
@@ -3425,5 +3453,5 @@
             });
         }
     </script>
-</body>
-</html>
+ </body>
+    </html>
